@@ -1,5 +1,5 @@
 import * as wasm from "wasm-app";
-import { Universe, Cell } from "wasm-app";
+import { Field, GameObject } from "wasm-app";
 import { memory } from "wasm-app/rust_wasm_bg";
 
 // ...
@@ -10,7 +10,7 @@ const GRID_COLOR = "#CCCCCC";
 const DEAD_COLOR = "#FFFFFF";
 const ALIVE_COLOR = "#000000";
 
-const universe = Universe.new();
+const universe = Field.new();
 const width = universe.width();
 const height = universe.height();
 
@@ -21,13 +21,13 @@ canvas.width = (CELL_SIZE + 1) * width + 1;
 const ctx = canvas.getContext('2d');
 
 const renderLoop = () => {
-    debugger;
     universe.tick();
 
-    drawGrid();
-    drawCells();
-
     requestAnimationFrame(renderLoop);
+}
+
+const drawObjects = () => {
+    const cells = new Uint8Array(memory.buffer, cellsPtr, width * height);
 }
 
 const drawGrid = () => {

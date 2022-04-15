@@ -2,7 +2,9 @@ mod utils;
 
 use std::fmt;
 use wasm_bindgen::prelude::*;
+use serde::{Serialize, Deserialize};
 
+extern crate serde_json;
 extern crate web_sys;
 
 // A macro to provide `println!(..)`-style syntax for `console.log` logging.
@@ -19,141 +21,94 @@ macro_rules! log {
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
-extern {
-    fn alert(s: &str);
-}
-
-#[wasm_bindgen]
-pub struct Universe {
+pub struct Field {
     width: u32,
     height: u32,
-    cells: Vec<Cell>,
+    players: Vec<Player>,
+    balls: Vec<Ball>,
 }
 
 #[wasm_bindgen]
-#[repr(u8)]
+#[repr(packed)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Cell {
-    Dead = 0,
-    Alive = 1,
-}
-
-impl Universe {
-    fn get_index(&self, row: u32, column: u32) -> usize {
-        (row * self.width + column) as usize
-    }
-
-    fn live_neighbor_count(&self, row: u32, column: u32) -> u8 {
-        let mut count = 0;
-        for delta_row in [self.height - 1, 0, 1].iter().cloned() {
-            for delta_col in [self.width - 1, 0, 1].iter().cloned() {
-                if delta_row == 0 && delta_col == 0 {
-                    continue;
-                }
-
-                let neighbor_row = (row + delta_row) % self.height;
-                let neighbor_col = (column + delta_col) % self.width;
-                let idx = self.get_index(neighbor_row, neighbor_col);
-                count += self.cells[idx] as u8;
-            }
-        }
-        count
-    }
+pub struct GameObject {
+    pub id: u8,
+    pub x: u16,
+    pub y: u16,
 }
 
 #[wasm_bindgen]
-impl Universe {
-    pub fn tick(&mut self) {
-        let mut next = self.cells.clone();
-
-        for row in 0..self.height {
-            for col in 0..self.width {
-                let idx = self.get_index(row, col);
-                let cell = self.cells[idx];
-                let live_neighbors = self.live_neighbor_count(row, col);
-
-                log!(
-                    "cell[{}, {}] is initially {:?} and has {} live neighbors",
-                    row,
-                    col,
-                    cell,
-                    live_neighbors
-                );
-
-                let next_cell = match (cell, live_neighbors) {
-                    // Rule 1: Any live cell with fewer than two live neighbours
-                    // dies, as if caused by underpopulation.
-                    (Cell::Alive, x) if x < 2 => Cell::Dead,
-                    // Rule 2: Any live cell with two or three live neighbours
-                    // lives on to the next generation.
-                    (Cell::Alive, 2) | (Cell::Alive, 3) => Cell::Alive,
-                    // Rule 3: Any live cell with more than three live
-                    // neighbours dies, as if by overpopulation.
-                    (Cell::Alive, x) if x > 3 => Cell::Dead,
-                    // Rule 4: Any dead cell with exactly three live neighbours
-                    // becomes a live cell, as if by reproduction.
-                    (Cell::Dead, 3) => Cell::Alive,
-                    // All other cells remain in the same state.
-                    (otherwise, _) => otherwise,
-                };
-
-                next[idx] = next_cell;
-            }
-        }
-
-        self.cells = next;
-    }
-
-    pub fn new() -> Universe {
-        utils::set_panic_hook();
-
-        let width = 64;
-        let height = 64;
-
-        let cells = (0..width * height)
-            .map(|i| {
-                if i % 2 == 0 || i % 7 == 0 {
-                    Cell::Alive
-                } else {
-                    Cell::Dead
-                }
-            })
-            .collect();
-
-        Universe {
-            width,
-            height,
-            cells,
-        }
-    }
-
-    pub fn render(&self) -> String {
-        self.to_string()
-    }
-
-    pub fn width(&self) -> u32 {
-        self.width
-    }
-
-    pub fn height(&self) -> u32 {
-        self.height
-    }
-
-    pub fn cells(&self) -> *const Cell {
-        self.cells.as_ptr()
-    }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Player {
+    pub obj: GameObject,
 }
 
-impl fmt::Display for Universe {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for line in self.cells.as_slice().chunks(self.width as usize) {
-            for &cell in line {
-                let symbol = if cell == Cell::Dead { '◻' } else { '◼' };
-                write!(f, "{}", symbol)?;
-            }
-            write!(f, "\n")?;
-        }
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Ball {
+    pub obj: GameObject,
+}
 
-        Ok(())
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum InputType {
+    UP,
+    DOWN,
+}
+
+#[wasm_bindgen]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Input {
+    pub input: InputType,
+    pub obj_id: u8,
+}
+
+#[wasm_bindgen]
+impl Field {
+    pub fn new() -> Field {
+        Field {
+            width: 0,
+            height: 0,
+            players: vec![Player {
+                obj: GameObject { id: 1, x: 0, y: 0 },
+            }],
+            balls: vec![],
+        }
+    }
+    pub fn tick(&self, inputs_js: &JsValue) {
+        let inputs: Vec<Input> = inputs_js.into_serde().unwrap();
+        log!("### tick start ###");
+        for input in inputs.iter() {
+            let mut obj_opt = self.players.iter().find(|p| p.obj.id == input.obj_id);
+            if let None = obj_opt {
+                log!("Could not find player with id {}", input.obj_id);
+                continue;
+            }
+            let obj = obj_opt.unwrap();
+            match input.input {
+                InputType::UP => obj.obj.y + 1,
+                InputType::DOWN => obj.obj.y - 1,
+            };
+        }
+        log!("### tick end ###");
+    }
+
+    pub fn objects(&self) -> *const GameObject {
+        let mut objs = vec![];
+        objs.append(
+            &mut self
+                .balls
+                .iter()
+                .map(|ball| ball.obj)
+                .collect::<Vec<GameObject>>(),
+        );
+        objs.append(
+            &mut self
+                .players
+                .iter()
+                .map(|player| player.obj)
+                .collect::<Vec<GameObject>>(),
+        );
+        objs.as_ptr()
     }
 }

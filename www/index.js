@@ -2,12 +2,7 @@ import * as wasm from "wasm-app";
 import { Field, GameObject } from "wasm-app";
 import { memory } from "wasm-app/rust_wasm_bg";
 
-// ...
-
-const CELL_SIZE = 5; // px
 const GRID_COLOR = "#CCCCCC";
-const DEAD_COLOR = "#FFFFFF";
-const ALIVE_COLOR = "#000000";
 
 const field = Field.new();
 const width = field.width;

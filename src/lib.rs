@@ -74,35 +74,34 @@ impl Field {
             height,
             players: vec![
                 Player {
-                    obj: GameObject { id: 1, x: 0 + width / 20, y: height / 2, padding: 0 },
+                    obj: GameObject { id: 0, x: 0 + width / 20, y: height / 2, padding: 0 },
                 },
                 Player {
-                    obj: GameObject { id: 2, x: width - width / 20, y: height / 2, padding: 0 },
+                    obj: GameObject { id: 1, x: width - width / 20, y: height / 2, padding: 0 },
                 }
             ],
             balls: vec![
                 Ball {
-                    obj: GameObject {id: 3, x: width / 2, y: width / 2, padding: 0 }
+                    obj: GameObject {id: 2, x: width / 2, y: height / 2, padding: 0 }
                 }
             ],
         }
     }
-    pub fn tick(&self, inputs_js: &JsValue) {
+    pub fn tick(&mut self, inputs_js: &JsValue) {
         let inputs: Vec<Input> = inputs_js.into_serde().unwrap();
-        // log!("### tick start ###");
         for input in inputs.iter() {
-            let mut obj_opt = self.players.iter().find(|p| p.obj.id == input.obj_id);
+            let obj_opt = self.players.iter_mut().find(|p| p.obj.id == input.obj_id);
             if let None = obj_opt {
-                log!("Could not find player with id {}", input.obj_id);
+                log!("Could not find player with id {} with players: {:?}", input.obj_id, self.players);
                 continue;
             }
-            let obj = obj_opt.unwrap();
+            let player = obj_opt.unwrap();
+            let mut player_obj = &mut player.obj;
             match input.input {
-                InputType::UP => obj.obj.y + 1,
-                InputType::DOWN => obj.obj.y - 1,
+                InputType::UP => player_obj.y += 1,
+                InputType::DOWN => player_obj.y -= 1,
             };
         }
-        // log!("### tick end ###");
     }
 
     pub fn objects(&self) -> *const GameObject {

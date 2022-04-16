@@ -17,16 +17,22 @@ const canvas = document.getElementById('wasm-app-canvas');
 canvas.height = height
 canvas.width = width
 
-console.log(({width, height}))
-
 const ctx = canvas.getContext('2d');
 
-const renderLoop = () => {
-    field.tick([]);
+let keysDown = new Set();
 
+const renderLoop = () => {
+    let actions = getInputActions();
+    field.tick(actions);
+
+    render();
+    requestAnimationFrame(renderLoop);
+}
+
+const render = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawField();
     drawObjects();
-    requestAnimationFrame(renderLoop);
 }
 
 const drawField = () => {
@@ -64,10 +70,39 @@ const getObjects = () => {
             }
             return [...acc.slice(0, -1), [...last, val]]
         }, [])
-        .map(([id, x, y, _]) => ({id, x, y}));
+        .map(([id, x, y, _]) => ({id, x, y: height - y}));
     return objects;
 }
 
-drawField();
-drawObjects();
+const listenToKeys = () => {
+    const relevantKeys = ['ArrowUp', 'ArrowDown']
+    document.addEventListener('keydown', (e) => {
+        if (!relevantKeys.includes(e.code)) {
+            return;
+        }
+        keysDown.add(e.code)
+    })
+    document.addEventListener('keyup', (e) => {
+        if (!relevantKeys.includes(e.code)) {
+            return;
+        }
+        keysDown.delete(e.code);
+    })
+}
+
+const getInputActions = () => {
+    return [...keysDown].map(key => {
+        switch(key) {
+            case 'ArrowUp':
+                return {input: 'UP', obj_id: 0}
+            case 'ArrowDown':
+                return {input: 'DOWN', obj_id: 0}
+            default:
+                return null
+        }
+    }).filter(it => !!it);
+}
+
+listenToKeys();
+render();
 requestAnimationFrame(renderLoop);

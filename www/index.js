@@ -45,8 +45,18 @@ const drawObjects = () => {
 
     objects.forEach(obj => {
         ctx.strokeStyle = GRID_COLOR;
-        ctx.moveTo(obj.x - 10, obj.y)
-        ctx.lineTo(obj.x, obj.y)
+
+        // rect
+        if (obj.shape_2) {
+            ctx.moveTo(obj.x, obj.y)
+            ctx.arc(obj.x, obj.y, 10, 0, 2 * Math.PI);
+            ctx.rect(obj.x - obj.shape_1 / 2, obj.y - obj.shape_2 / 2, obj.shape_1, obj.shape_2);
+        }
+        // circle
+        else {
+            ctx.moveTo(obj.x, obj.y);
+            ctx.arc(obj.x, obj.y, obj.shape_1, 0, 2 * Math.PI);
+        }
     })
 
     ctx.stroke();
@@ -65,7 +75,11 @@ const getObjects = () => {
             }
             return [...acc.slice(0, -1), [...last, val]]
         }, [])
-        .map(([id, x, y, _]) => ({id, x, y: height - y}));
+        .map(([id, x, y, shape]) => {
+            const shape_1 = shape >> 8;
+            const shape_2 = shape & (2**8 - 1);
+            return {id, x, y: height - y, shape_1, shape_2};
+        });
     return objects;
 }
 

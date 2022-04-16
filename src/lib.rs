@@ -29,13 +29,20 @@ pub struct Field {
 }
 
 #[wasm_bindgen]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Shape {
+    Rect = 0, Circle = 1
+}
+
+#[wasm_bindgen]
 #[repr(packed)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct GameObject {
     pub id: u16,
     pub x: u16,
     pub y: u16,
-    pub padding: u16
+    pub shape: u16,
 }
 
 #[wasm_bindgen]
@@ -74,15 +81,15 @@ impl Field {
             height,
             players: vec![
                 Player {
-                    obj: GameObject { id: 0, x: 0 + width / 20, y: height / 2, padding: 0 },
+                    obj: GameObject { id: 0, x: 0 + width / 20, y: height / 2, shape: (width / 25) << 8 | (height / 5) },
                 },
                 Player {
-                    obj: GameObject { id: 1, x: width - width / 20, y: height / 2, padding: 0 },
+                    obj: GameObject { id: 1, x: width - width / 20, y: height / 2, shape: (width / 25) << 8 | (height / 5)},
                 }
             ],
             balls: vec![
                 Ball {
-                    obj: GameObject {id: 2, x: width / 2, y: height / 2, padding: 0 }
+                    obj: GameObject {id: 2, x: width / 2, y: height / 2, shape: (width / 50) << 8}
                 }
             ],
         }
@@ -98,8 +105,12 @@ impl Field {
             let player = obj_opt.unwrap();
             let mut player_obj = &mut player.obj;
             match input.input {
-                InputType::UP => player_obj.y += 1,
-                InputType::DOWN => player_obj.y -= 1,
+                InputType::UP => {
+                    player_obj.y += 5
+                },
+                InputType::DOWN => {
+                    player_obj.y -= 5
+                },
             };
         }
     }

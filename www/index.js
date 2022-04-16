@@ -75,7 +75,7 @@ const getObjects = () => {
 }
 
 const listenToKeys = () => {
-    const relevantKeys = ['ArrowUp', 'ArrowDown']
+    const relevantKeys = ['ArrowUp', 'ArrowDown', 'KeyW', 'KeyS']
     document.addEventListener('keydown', (e) => {
         if (!relevantKeys.includes(e.code)) {
             return;
@@ -93,10 +93,14 @@ const listenToKeys = () => {
 const getInputActions = () => {
     return [...keysDown].map(key => {
         switch(key) {
-            case 'ArrowUp':
+            case 'KeyW':
                 return {input: 'UP', obj_id: 0}
-            case 'ArrowDown':
+            case 'KeyS':
                 return {input: 'DOWN', obj_id: 0}
+            case 'ArrowUp':
+                return {input: 'UP', obj_id: 1}
+            case 'ArrowDown':
+                return {input: 'DOWN', obj_id: 1}
             default:
                 return null
         }

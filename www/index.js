@@ -16,6 +16,8 @@ const ctx = canvas.getContext('2d');
 
 let keysDown = new Set();
 
+console.log(field.get_state())
+
 const renderLoop = () => {
     let actions = getInputActions();
     field.tick(actions);

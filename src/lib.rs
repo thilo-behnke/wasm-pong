@@ -3,6 +3,7 @@ mod utils;
 use std::fmt;
 use wasm_bindgen::prelude::*;
 use serde::{Serialize, Deserialize};
+use serde_json::json;
 
 extern crate serde_json;
 extern crate web_sys;
@@ -37,7 +38,7 @@ pub enum Shape {
 
 #[wasm_bindgen]
 #[repr(packed)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub struct GameObject {
     pub id: u16,
     pub x: u16,
@@ -116,7 +117,7 @@ impl Field {
                     if !out_of_bounds {
                         player_obj.y -= 5
                     } else {
-                        log!("out of bounds: {:?}", player_obj)
+                        log!("out of bounds: {:?}", player_obj);
                     }
                 },
             };
@@ -140,5 +141,10 @@ impl Field {
                 .collect::<Vec<GameObject>>(),
         );
         objs.as_ptr()
+    }
+
+    pub fn get_state(&self) -> String {
+        let json = json!(GameObject {shape: 0, x: 10, y: 10, id: 1});
+        serde_json::to_string(&json).unwrap()
     }
 }

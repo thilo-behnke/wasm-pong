@@ -106,10 +106,18 @@ impl Field {
             let mut player_obj = &mut player.obj;
             match input.input {
                 InputType::UP => {
-                    player_obj.y += 5
+                    let out_of_bounds = player_obj.y + 5 + (player_obj.shape & 255 / 2) > self.height;
+                    if !out_of_bounds {
+                        player_obj.y += 5
+                    }
                 },
                 InputType::DOWN => {
-                    player_obj.y -= 5
+                    let out_of_bounds = player_obj.y - 5 - (player_obj.shape & 255 / 2) < 0;
+                    if !out_of_bounds {
+                        player_obj.y -= 5
+                    } else {
+                        log!("out of bounds: {:?}", player_obj)
+                    }
                 },
             };
         }

@@ -22,8 +22,8 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
 pub struct Field {
-    width: u32,
-    height: u32,
+    pub width: u16,
+    pub height: u16,
     players: Vec<Player>,
     balls: Vec<Ball>,
 }
@@ -32,9 +32,10 @@ pub struct Field {
 #[repr(packed)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct GameObject {
-    pub id: u8,
+    pub id: u16,
     pub x: u16,
     pub y: u16,
+    pub padding: u16
 }
 
 #[wasm_bindgen]
@@ -60,24 +61,35 @@ pub enum InputType {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Input {
     pub input: InputType,
-    pub obj_id: u8,
+    pub obj_id: u16,
 }
 
 #[wasm_bindgen]
 impl Field {
     pub fn new() -> Field {
+        let width = 800;
+        let height = 600;
         Field {
-            width: 0,
-            height: 0,
-            players: vec![Player {
-                obj: GameObject { id: 1, x: 0, y: 0 },
-            }],
-            balls: vec![],
+            width,
+            height,
+            players: vec![
+                Player {
+                    obj: GameObject { id: 1, x: 0 + width / 20, y: height / 2, padding: 0 },
+                },
+                Player {
+                    obj: GameObject { id: 2, x: width - width / 20, y: height / 2, padding: 0 },
+                }
+            ],
+            balls: vec![
+                Ball {
+                    obj: GameObject {id: 3, x: width / 2, y: width / 2, padding: 0 }
+                }
+            ],
         }
     }
     pub fn tick(&self, inputs_js: &JsValue) {
         let inputs: Vec<Input> = inputs_js.into_serde().unwrap();
-        log!("### tick start ###");
+        // log!("### tick start ###");
         for input in inputs.iter() {
             let mut obj_opt = self.players.iter().find(|p| p.obj.id == input.obj_id);
             if let None = obj_opt {
@@ -90,7 +102,7 @@ impl Field {
                 InputType::DOWN => obj.obj.y - 1,
             };
         }
-        log!("### tick end ###");
+        // log!("### tick end ###");
     }
 
     pub fn objects(&self) -> *const GameObject {

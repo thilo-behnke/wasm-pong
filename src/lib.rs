@@ -1,6 +1,5 @@
 mod utils;
 
-use std::fmt;
 use wasm_bindgen::prelude::*;
 use serde::{Serialize, Deserialize};
 use serde_json::json;
@@ -77,6 +76,7 @@ impl Field {
     pub fn new() -> Field {
         let width = 800;
         let height = 600;
+
         Field {
             width,
             height,
@@ -95,33 +95,10 @@ impl Field {
             ],
         }
     }
+
     pub fn tick(&mut self, inputs_js: &JsValue) {
         let inputs: Vec<Input> = inputs_js.into_serde().unwrap();
-        for input in inputs.iter() {
-            let obj_opt = self.players.iter_mut().find(|p| p.obj.id == input.obj_id);
-            if let None = obj_opt {
-                log!("Could not find player with id {} with players: {:?}", input.obj_id, self.players);
-                continue;
-            }
-            let player = obj_opt.unwrap();
-            let mut player_obj = &mut player.obj;
-            match input.input {
-                InputType::UP => {
-                    let out_of_bounds = player_obj.y + 5 + (player_obj.shape & 255 / 2) > self.height;
-                    if !out_of_bounds {
-                        player_obj.y += 5
-                    }
-                },
-                InputType::DOWN => {
-                    let out_of_bounds = player_obj.y - 5 - (player_obj.shape & 255 / 2) < 0;
-                    if !out_of_bounds {
-                        player_obj.y -= 5
-                    } else {
-                        log!("out of bounds: {:?}", player_obj);
-                    }
-                },
-            };
-        }
+        self.tick_inner(inputs);
     }
 
     pub fn objects(&self) -> *const GameObject {
@@ -148,3 +125,50 @@ impl Field {
         serde_json::to_string(&json).unwrap()
     }
 }
+
+impl Field {
+    pub fn mock(width: u16, height: u16, players: Vec<Player>, balls: Vec<Ball>) -> Field {
+        Field {
+            width, height, players, balls
+        }
+    }
+
+    pub fn tick_inner(&mut self, inputs: Vec<Input>) {
+        for input in inputs.iter() {
+            let obj_opt = self.players.iter_mut().find(|p| p.obj.id == input.obj_id);
+            if let None = obj_opt {
+                log!("Could not find player with id {} with players: {:?}", input.obj_id, self.players);
+                continue;
+            }
+            let player = obj_opt.unwrap();
+            let mut player_obj = &mut player.obj;
+            let half_box = (player_obj.shape & 255) / 2;
+            match input.input {
+                InputType::UP => {
+                    let shape_vert_bound = player_obj.y + half_box;
+                    let out_of_bounds = shape_vert_bound + 5 > self.height;
+                    if out_of_bounds {
+                        player_obj.y = self.height - half_box
+                    } else {
+                        player_obj.y = player_obj.y + 5
+                    }
+                },
+                InputType::DOWN => {
+                    let shape_vert_bound = player_obj.y - half_box;
+                    let next_iter = shape_vert_bound.checked_sub(5);
+                    if let Some(res) = next_iter {
+                        player_obj.y = res + half_box;
+                    } else {
+                        player_obj.y = half_box;
+                    }
+                },
+            };
+        }
+    }
+
+    pub fn players(&self) -> &Vec<Player> {
+        &self.players
+    }
+}
+
+

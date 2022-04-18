@@ -1,6 +1,7 @@
 mod utils;
 mod geom;
 mod game_object;
+mod collision;
 
 use std::borrow::BorrowMut;
 use std::cmp::{max, min};
@@ -193,9 +194,9 @@ impl Field {
     }
 
     fn detect_collisions(&mut self) -> Vec<Collision> {
-        // let balls = self.balls();
-        // let players = self.players();
-        //
+        let balls = self.balls();
+        let players = self.players();
+
         let mut collisions = vec![];
         // for ball in balls.into_iter() {
         //     let collision_opt = players.into_iter().find(|p| p.obj.bounding_box().overlaps(&ball.obj.bounding_box()));

@@ -346,6 +346,9 @@ impl Field {
 
         let mut collisions = self.detect_collisions();
         for mut collision in collisions.iter_mut() {
+            let players = &self.players;
+            let balls = &self.balls;
+            // TODO: Find obj by id.
             if !collision.obj_a.is_static {
                 collision.obj_a.vel.invert();
             }
@@ -357,32 +360,32 @@ impl Field {
 
     fn detect_collisions(&mut self) -> Vec<Collision> {
         let balls = self.balls();
+        let players = self.players();
 
         let mut collisions = vec![];
         for ball in balls.into_iter() {
-            let players = self.players();
             let collision_opt = players.into_iter().find(|p| p.obj.bounding_box().overlaps(&ball.obj.bounding_box()));
             if let None = collision_opt {
                 continue;
             }
             let player = collision_opt.unwrap();
             // TODO: This can cause multiple mutable refs of the same player/ball object and therefore does not compile.
-            collisions.push(Collision {obj_a: &mut player.obj, obj_b: &mut ball.obj});
+            collisions.push(Collision {obj_a: player.obj.id, obj_b: ball.obj.id});
         }
         collisions
     }
 
-    pub fn players(&mut self) -> Vec<&mut Player> {
-        self.players.iter_mut().collect()
+    pub fn players(&self) -> Vec<&Player> {
+        self.players().iter().collect()
     }
 
-    pub fn balls(&mut self) -> Vec<&mut Ball> {
-        self.balls.iter_mut().collect()
+    pub fn balls(&self) -> Vec<&Ball> {
+        self.balls.iter().collect()
     }
 }
 
 #[derive(Debug)]
-pub struct Collision<'a> {
-    obj_a: &'a mut GameObject,
-    obj_b: &'a mut GameObject
+pub struct Collision {
+    obj_a: u16,
+    obj_b: u16
 }

@@ -1,5 +1,6 @@
 mod utils;
 
+use std::borrow::BorrowMut;
 use std::cmp::{max, min};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -355,22 +356,24 @@ impl Field {
     }
 
     fn detect_collisions(&mut self) -> Vec<Collision> {
-        let players = self.players.iter_mut().collect::<Vec<&mut Player>>();
-        let mut balls = self.balls.iter_mut().collect::<Vec<&mut Ball>>();
+        let balls = self.balls();
 
         let mut collisions = vec![];
-        for ball in balls.iter_mut() {
-            let collision_opt = players.iter().find(|p| p.obj.bounding_box().overlaps(&ball.obj.bounding_box()));
+        for ball in balls.into_iter() {
+            let players = self.players();
+            let collision_opt = players.into_iter().find(|p| p.obj.bounding_box().overlaps(&ball.obj.bounding_box()));
             if let None = collision_opt {
                 continue;
             }
-            collisions.push(Collision {obj_a: &mut collision_opt.unwrap().obj, obj_b: &mut ball.obj});
+            let player = collision_opt.unwrap();
+            // TODO: This can cause multiple mutable refs of the same player/ball object and therefore does not compile.
+            collisions.push(Collision {obj_a: &mut player.obj, obj_b: &mut ball.obj});
         }
         collisions
     }
 
-    pub fn players(&self) -> Vec<&Player> {
-        self.players.iter().collect()
+    pub fn players(&mut self) -> Vec<&mut Player> {
+        self.players.iter_mut().collect()
     }
 
     pub fn balls(&mut self) -> Vec<&mut Ball> {

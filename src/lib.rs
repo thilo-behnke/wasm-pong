@@ -28,21 +28,45 @@ pub struct Field {
     balls: Vec<Ball>,
 }
 
+#[derive(Debug, PartialEq)]
+pub struct Vector {
+    pub x: i32,
+    pub y: i32
+}
+
+impl Vector {
+    pub fn zero() -> Vector {
+        Vector {x: 0, y: 0}
+    }
+
+    pub fn normalize(&mut self) {
+        let length = self.len();
+        self.x /= length;
+        self.y /= length;
+    }
+
+    pub fn len(&self) -> i32 {
+        let distance = self.x.pow(2) + self.y.pow(2);
+        return (distance as f32).sqrt() as i32;
+    }
+}
+
 #[wasm_bindgen]
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Shape {
     Rect = 0,
     Circle = 1,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub struct GameObject {
     pub id: u16,
     pub x: u16,
     pub y: u16,
     pub shape: Shape,
     pub shape_params: Vec<u16>,
+    pub vel: Vector
 }
 
 #[wasm_bindgen]
@@ -70,7 +94,7 @@ impl GameObjectDTO {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub struct Player {
     pub obj: GameObject,
 }
@@ -84,12 +108,13 @@ impl Player {
                 y,
                 shape: Shape::Rect,
                 shape_params: vec![field.width / 25, field.height / 5],
+                vel: Vector::zero()
             },
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub struct Ball {
     pub obj: GameObject,
 }
@@ -103,8 +128,22 @@ impl Ball {
                 y,
                 shape: Shape::Circle,
                 shape_params: vec![field.width / 50],
+                vel: Vector::zero()
             },
         }
+    }
+
+    pub fn update_pos(&mut self) {
+        self.obj.x = self.obj.x.wrapping_add(self.obj.vel.x as u16);
+        self.obj.y = self.obj.y.wrapping_add(self.obj.vel.y as u16);
+    }
+
+    pub fn set_vel_x(&mut self, x: i32) {
+        self.obj.vel.x = x
+    }
+
+    pub fn set_vel_y(&mut self, y: i32) {
+        self.obj.vel.y = y
     }
 }
 
@@ -192,10 +231,18 @@ impl Field {
     }
 
     pub fn add_ball(&mut self, id: u16, x: u16, y: u16) {
-        self.balls.push(Ball::new(id, x, y, &self));
+        let ball = Ball::new(id, x, y, &self);
+        self.balls.push(ball);
     }
 
     pub fn tick_inner(&mut self, inputs: Vec<Input>) {
+        for ball in self.balls.iter_mut() {
+            if ball.obj.vel == Vector::zero() {
+                ball.set_vel_x(-1)
+            }
+            ball.update_pos();
+        }
+
         for input in inputs.iter() {
             let obj_opt = self.players.iter_mut().find(|p| p.obj.id == input.obj_id);
             if let None = obj_opt {

@@ -10,23 +10,41 @@ pub mod collision {
             CollisionDetector {}
         }
 
-        pub fn detect_collisions(objs: Vec<GameObject>) -> Box<dyn CollisionRegistry> {
-            let registry = Collisions::new(HashMap::new());
+        pub fn detect_collisions(&self, objs: Vec<&GameObject>) -> Box<dyn CollisionRegistry> {
+            let mut collisions: Vec<Collision> = vec![];
+            let mut i = 0;
+            loop {
+                let obj = objs[i];
+                i += 1;
+
+                let rest = &objs[i..];
+                for other in rest.iter() {
+                    let has_collision = obj.bounding_box().overlaps(&other.bounding_box());
+                    if !has_collision {
+                        continue;
+                    }
+                    collisions.push(Collision(obj.id, other.id))
+                }
+                if i >= objs.len() {
+                    break;
+                }
+            }
+            let registry = Collisions::new(collisions);
             return Box::new(registry);
         }
     }
 
-    trait CollisionRegistry {
+    pub trait CollisionRegistry {
         fn get_collisions(&self) -> Vec<&Collision>;
         // fn get_collisions_by_id() -> Vec<Collision>;
     }
 
     pub struct Collisions {
-        state: HashMap<String, Vec<Collision>>
+        pub state: Vec<Collision>
     }
 
     impl Collisions {
-        pub fn new(collisions: HashMap<String, Vec<Collision>>) -> Collisions {
+        pub fn new(collisions: Vec<Collision>) -> Collisions {
             Collisions {
                 state: collisions
             }
@@ -35,9 +53,10 @@ pub mod collision {
 
     impl CollisionRegistry for Collisions {
         fn get_collisions(&self) -> Vec<&Collision> {
-            self.state.values().flatten().collect()
+            self.state.iter().collect()
         }
     }
 
-    pub struct Collision(GameObject, GameObject);
+    #[derive(Debug)]
+    pub struct Collision(u16, u16);
 }

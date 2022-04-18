@@ -8,7 +8,8 @@ use std::cmp::{max, min};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use wasm_bindgen::prelude::*;
-use crate::game_object::{GameObject, Shape};
+use crate::collision::collision::{CollisionDetector};
+use crate::game_object::game_object::{GameObject, Shape};
 use crate::geom::geom::{BoundingBox, Vector};
 
 extern crate serde_json;
@@ -179,35 +180,12 @@ impl Field {
             ball.obj.update_pos(self.width, self.height)
         }
 
-        let mut collisions = self.detect_collisions();
-        for mut collision in collisions.iter_mut() {
-            let players = &self.players;
-            let balls = &self.balls;
-            // TODO: Find obj by id.
-            // if !collision.obj_a.is_static {
-            //     collision.obj_a.vel.invert();
-            // }
-            // if !collision.obj_b.is_static {
-            //     collision.obj_b.vel.invert();
-            // }
-        }
-    }
-
-    fn detect_collisions(&mut self) -> Vec<Collision> {
-        let balls = self.balls();
-        let players = self.players();
-
-        let mut collisions = vec![];
-        // for ball in balls.into_iter() {
-        //     let collision_opt = players.into_iter().find(|p| p.obj.bounding_box().overlaps(&ball.obj.bounding_box()));
-        //     if let None = collision_opt {
-        //         continue;
-        //     }
-        //     let player = collision_opt.unwrap();
-        //     // TODO: This can cause multiple mutable refs of the same player/ball object and therefore does not compile.
-        //     collisions.push(Collision {obj_a: player.obj.id, obj_b: ball.obj.id});
-        // }
-        collisions
+        let mut objs: Vec<&GameObject> = vec![];
+        objs.extend(self.players().iter().map(|p| &p.obj).collect::<Vec<&GameObject>>());
+        objs.extend(self.balls().iter().map(|p| &p.obj).collect::<Vec<&GameObject>>());
+        let collision_detector = CollisionDetector::new();
+        let collision = collision_detector.detect_collisions(objs);
+        log!("{:?}", collision.get_collisions());
     }
 
     pub fn players(&self) -> Vec<&Player> {
@@ -261,7 +239,7 @@ impl Ball {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Collision {
     obj_a: u16,
     obj_b: u16

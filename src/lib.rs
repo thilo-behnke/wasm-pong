@@ -1,5 +1,6 @@
 mod utils;
 
+use std::cmp::{max, min};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use wasm_bindgen::prelude::*;
@@ -28,7 +29,7 @@ pub struct Field {
     balls: Vec<Ball>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Vector {
     pub x: i32,
     pub y: i32
@@ -53,13 +54,13 @@ impl Vector {
 
 #[wasm_bindgen]
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Shape {
     Rect = 0,
     Circle = 1,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct GameObject {
     pub id: u16,
     pub x: u16,
@@ -67,6 +68,62 @@ pub struct GameObject {
     pub shape: Shape,
     pub shape_params: Vec<u16>,
     pub vel: Vector
+}
+
+impl GameObject {
+    pub fn update_pos(&mut self, field_width: u16, field_height: u16) {
+        let updated_x = self.x.wrapping_add(self.vel.x as u16);
+        let updated_y = self.y.wrapping_add(self.vel.y as u16);
+
+        let updated_bounding_box = self.bounding_box(updated_x, updated_y);
+        if updated_bounding_box.points.iter().any(|p| p.x < 0 || p.x > field_width as i16 || p.y < 0 || p.y > field_height as i16) {
+            return;
+        }
+        self.x = updated_x;
+        self.y = updated_y;
+    }
+
+    pub fn set_vel_x(&mut self, x: i32) {
+        self.vel.x = x
+    }
+
+    pub fn set_vel_y(&mut self, y: i32) {
+        self.vel.y = y
+    }
+
+    fn bounding_box(&self, x: u16, y: u16) -> BoundingBox {
+        match self.shape {
+            Shape::Rect => {
+                BoundingBox::create(x, y, self.shape_params[0], self.shape_params[1])
+            },
+            Shape::Circle => {
+                BoundingBox::create(x, y, self.shape_params[0] * 2, self.shape_params[0] * 2)
+            }
+        }
+    }
+}
+
+struct BoundingBox {
+    pub points: Vec<Pos>
+}
+
+impl BoundingBox {
+    pub fn create(center_x: u16, center_y: u16, width: u16, height: u16) -> BoundingBox {
+        let points = vec![
+            Pos {x: center_x as i16 - (width / 2) as i16, y: center_y as i16 + (height / 2) as i16}, // top left
+            Pos {x: center_x as i16 + (width / 2) as i16, y: center_y as i16 + (height / 2) as i16}, // top right
+            Pos {x: center_x as i16 - (width / 2) as i16, y: center_y as i16 - (height / 2) as i16}, // bottom left
+            Pos {x: center_x as i16 + (width / 2) as i16, y: center_y as i16 - (height / 2) as i16}, // bottom right
+        ];
+        BoundingBox {
+            points
+        }
+    }
+}
+
+struct Pos {
+    x: i16,
+    y: i16
 }
 
 #[wasm_bindgen]
@@ -94,7 +151,7 @@ impl GameObjectDTO {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Player {
     pub obj: GameObject,
 }
@@ -114,7 +171,7 @@ impl Player {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Ball {
     pub obj: GameObject,
 }
@@ -127,23 +184,10 @@ impl Ball {
                 x,
                 y,
                 shape: Shape::Circle,
-                shape_params: vec![field.width / 50],
+                shape_params: vec![field.width / 80],
                 vel: Vector::zero()
             },
         }
-    }
-
-    pub fn update_pos(&mut self) {
-        self.obj.x = self.obj.x.wrapping_add(self.obj.vel.x as u16);
-        self.obj.y = self.obj.y.wrapping_add(self.obj.vel.y as u16);
-    }
-
-    pub fn set_vel_x(&mut self, x: i32) {
-        self.obj.vel.x = x
-    }
-
-    pub fn set_vel_y(&mut self, y: i32) {
-        self.obj.vel.y = y
     }
 }
 
@@ -238,44 +282,32 @@ impl Field {
     pub fn tick_inner(&mut self, inputs: Vec<Input>) {
         for ball in self.balls.iter_mut() {
             if ball.obj.vel == Vector::zero() {
-                ball.set_vel_x(-1)
+                ball.obj.set_vel_x(-1)
             }
-            ball.update_pos();
         }
 
-        for input in inputs.iter() {
-            let obj_opt = self.players.iter_mut().find(|p| p.obj.id == input.obj_id);
-            if let None = obj_opt {
-                log!(
-                    "Could not find player with id {} with players: {:?}",
-                    input.obj_id,
-                    self.players
-                );
+        for player in self.players.iter_mut() {
+            let input_opt = inputs.iter().find(|input| player.obj.id == input.obj_id);
+            if let None = input_opt {
+                player.obj.set_vel_y(0);
                 continue;
             }
-            let player = obj_opt.unwrap();
-            let mut player_obj = &mut player.obj;
-            let half_box = player_obj.shape_params[1] / 2;
+            let input = input_opt.unwrap();
             match input.input {
                 InputType::UP => {
-                    let shape_vert_bound = player_obj.y + half_box;
-                    let out_of_bounds = shape_vert_bound + 5 > self.height;
-                    if out_of_bounds {
-                        player_obj.y = self.height - half_box
-                    } else {
-                        player_obj.y = player_obj.y + 5
-                    }
+                    player.obj.vel.y = min(player.obj.vel.y + 1, 5);
                 }
                 InputType::DOWN => {
-                    let shape_vert_bound = player_obj.y.checked_sub(half_box).map_or(0, |val| val);
-                    let next_iter = shape_vert_bound.checked_sub(5);
-                    if let Some(res) = next_iter {
-                        player_obj.y = res + half_box;
-                    } else {
-                        player_obj.y = half_box;
-                    }
+                    player.obj.vel.y = max(player.obj.vel.y - 1, -5);
                 }
             };
+        }
+
+        for player in self.players.iter_mut() {
+            player.obj.update_pos(self.width, self.height)
+        }
+        for ball in self.balls.iter_mut() {
+            ball.obj.update_pos(self.width, self.height)
         }
     }
 

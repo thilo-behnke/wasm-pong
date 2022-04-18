@@ -46,6 +46,11 @@ impl Vector {
         self.y /= length;
     }
 
+    pub fn invert(&mut self) {
+        self.x = self.x * -1;
+        self.y = self.y * -1;
+    }
+
     pub fn len(&self) -> i32 {
         let distance = self.x.pow(2) + self.y.pow(2);
         return (distance as f32).sqrt() as i32;
@@ -67,7 +72,8 @@ pub struct GameObject {
     pub y: u16,
     pub shape: Shape,
     pub shape_params: Vec<u16>,
-    pub vel: Vector
+    pub vel: Vector,
+    pub is_static: bool
 }
 
 impl GameObject {
@@ -75,8 +81,8 @@ impl GameObject {
         let updated_x = self.x.wrapping_add(self.vel.x as u16);
         let updated_y = self.y.wrapping_add(self.vel.y as u16);
 
-        let updated_bounding_box = self.bounding_box(updated_x, updated_y);
-        if updated_bounding_box.points.iter().any(|p| p.x < 0 || p.x > field_width as i16 || p.y < 0 || p.y > field_height as i16) {
+        let updated_bounding_box = self.bounding_box_from(updated_x, updated_y);
+        if updated_bounding_box.points().iter().any(|p| p.x < 0 || p.x > field_width as i16 || p.y < 0 || p.y > field_height as i16) {
             return;
         }
         self.x = updated_x;
@@ -91,7 +97,11 @@ impl GameObject {
         self.vel.y = y
     }
 
-    fn bounding_box(&self, x: u16, y: u16) -> BoundingBox {
+    pub fn bounding_box(&self) -> BoundingBox {
+        self.bounding_box_from(self.x, self.y)
+    }
+
+    fn bounding_box_from(&self, x: u16, y: u16) -> BoundingBox {
         match self.shape {
             Shape::Rect => {
                 BoundingBox::create(x, y, self.shape_params[0], self.shape_params[1])
@@ -103,27 +113,48 @@ impl GameObject {
     }
 }
 
-struct BoundingBox {
-    pub points: Vec<Pos>
+pub struct BoundingBox {
+    top_left: Point,
+    top_right: Point,
+    bottom_left: Point,
+    bottom_right: Point
 }
 
 impl BoundingBox {
     pub fn create(center_x: u16, center_y: u16, width: u16, height: u16) -> BoundingBox {
-        let points = vec![
-            Pos {x: center_x as i16 - (width / 2) as i16, y: center_y as i16 + (height / 2) as i16}, // top left
-            Pos {x: center_x as i16 + (width / 2) as i16, y: center_y as i16 + (height / 2) as i16}, // top right
-            Pos {x: center_x as i16 - (width / 2) as i16, y: center_y as i16 - (height / 2) as i16}, // bottom left
-            Pos {x: center_x as i16 + (width / 2) as i16, y: center_y as i16 - (height / 2) as i16}, // bottom right
-        ];
+        let top_left = Point {x: center_x as i16 - (width / 2) as i16, y: center_y as i16 + (height / 2) as i16};
+        let top_right = Point {x: center_x as i16 + (width / 2) as i16, y: center_y as i16 + (height / 2) as i16};
+        let bottom_left = Point {x: center_x as i16 - (width / 2) as i16, y: center_y as i16 - (height / 2) as i16};
+        let bottom_right = Point {x: center_x as i16 + (width / 2) as i16, y: center_y as i16 - (height / 2) as i16};
         BoundingBox {
-            points
+            top_left, top_right, bottom_left, bottom_right
         }
+    }
+
+    pub fn points(&self) -> Vec<&Point> {
+        return vec![
+            &self.top_left, &self.top_right, &self.bottom_left, &self.bottom_right
+        ]
+    }
+
+    pub fn overlaps(&self, other: &BoundingBox) -> bool {
+        return other.points().iter().any(|p| self.is_point_within(p))
+    }
+
+    pub fn is_point_within(&self, point: &Point) -> bool {
+        return point.x >= self.top_left.x && point.y <= self.top_left.y && point.y >= self.bottom_left.y
     }
 }
 
-struct Pos {
+pub struct Point {
     x: i16,
     y: i16
+}
+
+impl Point {
+    pub fn create(x: i16, y: i16) -> Point {
+        Point { x, y }
+    }
 }
 
 #[wasm_bindgen]
@@ -165,7 +196,8 @@ impl Player {
                 y,
                 shape: Shape::Rect,
                 shape_params: vec![field.width / 25, field.height / 5],
-                vel: Vector::zero()
+                vel: Vector::zero(),
+                is_static: true
             },
         }
     }
@@ -185,7 +217,8 @@ impl Ball {
                 y,
                 shape: Shape::Circle,
                 shape_params: vec![field.width / 80],
-                vel: Vector::zero()
+                vel: Vector::zero(),
+                is_static: false
             },
         }
     }
@@ -309,9 +342,44 @@ impl Field {
         for ball in self.balls.iter_mut() {
             ball.obj.update_pos(self.width, self.height)
         }
+
+        let mut collisions = self.detect_collisions();
+        for mut collision in collisions.iter_mut() {
+            if !collision.obj_a.is_static {
+                collision.obj_a.vel.invert();
+            }
+            if !collision.obj_b.is_static {
+                collision.obj_b.vel.invert();
+            }
+        }
     }
 
-    pub fn players(&self) -> &Vec<Player> {
-        &self.players
+    fn detect_collisions(&mut self) -> Vec<Collision> {
+        let players = self.players.iter_mut().collect::<Vec<&mut Player>>();
+        let mut balls = self.balls.iter_mut().collect::<Vec<&mut Ball>>();
+
+        let mut collisions = vec![];
+        for ball in balls.iter_mut() {
+            let collision_opt = players.iter().find(|p| p.obj.bounding_box().overlaps(&ball.obj.bounding_box()));
+            if let None = collision_opt {
+                continue;
+            }
+            collisions.push(Collision {obj_a: &mut collision_opt.unwrap().obj, obj_b: &mut ball.obj});
+        }
+        collisions
     }
+
+    pub fn players(&self) -> Vec<&Player> {
+        self.players.iter().collect()
+    }
+
+    pub fn balls(&mut self) -> Vec<&mut Ball> {
+        self.balls.iter_mut().collect()
+    }
+}
+
+#[derive(Debug)]
+pub struct Collision<'a> {
+    obj_a: &'a mut GameObject,
+    obj_b: &'a mut GameObject
 }

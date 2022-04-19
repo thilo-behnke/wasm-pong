@@ -28,7 +28,7 @@ const renderLoop = () => {
 
 const render = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawField();
+    // drawField();
     drawObjects();
 }
 
@@ -66,20 +66,18 @@ const drawObjects = () => {
 
 const getObjects = () => {
     const objectsPtr = field.objects();
-    const objects = new Uint16Array(memory.buffer, objectsPtr, 3 * 4) // player1, player2, ball
+    const objects = new Uint16Array(memory.buffer, objectsPtr, 3 * 5 + 4 * 5) // player1, player2, ball + 4x bounds
         .reduce((acc, val) => {
             if (!acc.length) {
                 return [[val]]
             }
             const last = acc[acc.length - 1]
-            if (last.length === 4) {
+            if (last.length === 5) {
                 return [...acc, [val]]
             }
             return [...acc.slice(0, -1), [...last, val]]
         }, [])
-        .map(([id, x, y, shape]) => {
-            const shape_1 = shape >> 8;
-            const shape_2 = shape & (2**8 - 1);
+        .map(([id, x, y, shape_1, shape_2]) => {
             return {id, x, y: height - y, shape_1, shape_2};
         });
     return objects;

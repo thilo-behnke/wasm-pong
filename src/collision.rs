@@ -55,7 +55,10 @@ pub mod collision {
             self.state.iter().collect()
         }
         fn get_collisions_by_id(&self, id: u16) -> Vec<&Collision> {
-             self.state.iter().filter(|c| c.0 == id || c.1 == id).collect()
+            self.state
+                .iter()
+                .filter(|c| c.0 == id || c.1 == id)
+                .collect()
         }
     }
 

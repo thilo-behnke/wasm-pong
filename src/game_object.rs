@@ -23,12 +23,12 @@ pub mod game_object {
             let updated_x = self.x.wrapping_add(self.vel.x as u16);
             let updated_y = self.y.wrapping_add(self.vel.y as u16);
 
-            let updated_bounding_box = self.bounding_box_from(updated_x, updated_y);
-            if updated_bounding_box.points().iter().any(|p| {
-                p.x < 0 || p.x > field_width as i16 || p.y < 0 || p.y > field_height as i16
-            }) {
-                return;
-            }
+            // let updated_bounding_box = self.bounding_box_from(updated_x, updated_y);
+            // if updated_bounding_box.points().iter().any(|p| {
+            //     p.x < 0 || p.x > field_width as i16 || p.y < 0 || p.y > field_height as i16
+            // }) {
+            //     return;
+            // }
             self.x = updated_x;
             self.y = updated_y;
         }

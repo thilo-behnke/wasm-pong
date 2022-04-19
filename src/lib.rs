@@ -3,7 +3,7 @@ pub mod game_object;
 pub mod geom;
 mod utils;
 
-use crate::collision::collision::CollisionDetector;
+use crate::collision::collision::{Collision, CollisionDetector};
 use crate::game_object::game_object::{GameObject, Shape};
 use crate::geom::geom::{BoundingBox, Vector};
 use serde::{Deserialize, Serialize};
@@ -34,7 +34,8 @@ pub struct GameObjectDTO {
     pub id: u16,
     pub x: u16,
     pub y: u16,
-    pub shape: u16,
+    pub shape_param_1: u16,
+    pub shape_param_2: u16,
 }
 
 impl GameObjectDTO {
@@ -43,9 +44,13 @@ impl GameObjectDTO {
             id: obj.id,
             x: obj.x,
             y: obj.y,
-            shape: match obj.shape_params[..] {
-                [p1] => p1 << 8,
-                [p1, p2] | [p1, p2, ..] => p1 << 8 | p2,
+            shape_param_1: match obj.shape_params[..] {
+                [p1, _] => p1,
+                [p1] => p1,
+                _ => 0,
+            },
+            shape_param_2: match obj.shape_params[..] {
+                [_, p2] => p2,
                 _ => 0,
             },
         };
@@ -72,6 +77,7 @@ pub struct Field {
     pub height: u16,
     players: Vec<Player>,
     balls: Vec<Ball>,
+    bounds: Bounds
 }
 
 #[wasm_bindgen]
@@ -85,6 +91,7 @@ impl Field {
             height,
             players: vec![],
             balls: vec![],
+            bounds: Bounds::new(width, height)
         };
 
         field.add_player(0, 0 + width / 20, height / 2);
@@ -115,12 +122,20 @@ impl Field {
                 .map(|player| GameObjectDTO::from(&player.obj))
                 .collect::<Vec<GameObjectDTO>>(),
         );
+        objs.append(
+            &mut self
+                .bounds.objs
+                .iter()
+                .map(|bound| GameObjectDTO::from(&bound))
+                .collect::<Vec<GameObjectDTO>>()
+        );
         objs.as_ptr()
     }
 
     pub fn get_state(&self) -> String {
         let json = json!(GameObjectDTO {
-            shape: 0,
+            shape_param_1: 0,
+            shape_param_2: 0,
             x: 10,
             y: 10,
             id: 1
@@ -136,6 +151,7 @@ impl Field {
             height,
             players: vec![],
             balls: vec![],
+            bounds: Bounds::new(width, height)
         }
     }
 
@@ -179,21 +195,29 @@ impl Field {
             ball.obj.update_pos(self.width, self.height)
         }
 
-        let mut objs: Vec<&GameObject> = vec![];
+        let mut objs: Vec<GameObject> = vec![];
         objs.extend(
-            self.players()
-                .iter()
-                .map(|p| &p.obj)
-                .collect::<Vec<&GameObject>>(),
+            self.players
+                .clone()
+                .into_iter()
+                .map(|p| p.obj)
+                .collect::<Vec<GameObject>>(),
         );
         objs.extend(
-            self.balls()
-                .iter()
-                .map(|b| &b.obj)
-                .collect::<Vec<&GameObject>>(),
+            self.balls
+                .clone()
+                .into_iter()
+                .map(|b| b.obj)
+                .collect::<Vec<GameObject>>(),
+        );
+        objs.extend(
+            self.bounds.objs
+                .clone()
+                .into_iter()
+                .collect::<Vec<GameObject>>()
         );
         let collision_detector = CollisionDetector::new();
-        let registry = collision_detector.detect_collisions(objs);
+        let registry = collision_detector.detect_collisions(objs.iter().collect());
         log!("{:?}", registry.get_collisions());
 
         for ball in self.balls.iter_mut() {
@@ -201,7 +225,14 @@ impl Field {
             if collisions.is_empty() {
                 continue;
             }
+            let other = match collisions[0] {
+                Collision(obj_a_id, obj_b_id) if *obj_a_id == ball.obj.id => {
+                    objs.iter().find(|o| o.id == *obj_b_id).unwrap()
+                }
+                collision => objs.iter().find(|o| o.id == collision.0).unwrap(),
+            };
             ball.obj.vel.invert();
+            ball.obj.vel.add(&other.vel);
         }
     }
 
@@ -256,8 +287,55 @@ impl Ball {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct Collision {
-    obj_a: u16,
-    obj_b: u16,
+#[derive(Debug)]
+pub struct Bounds {
+    pub objs: Vec<GameObject>,
+}
+
+impl Bounds {
+    pub fn new(width: u16, height: u16) -> Bounds {
+        Bounds {
+            objs: vec![
+                GameObject {
+                    id: 90,
+                    x: width / 2,
+                    y: 0,
+                    shape: Shape::Rect,
+                    shape_params: vec![width, 2],
+                    is_static: true,
+                    vel: Vector::zero(),
+                },
+                // bottom
+                GameObject {
+                    id: 91,
+                    x: width / 2,
+                    y: height,
+                    shape: Shape::Rect,
+                    shape_params: vec![width, 2],
+                    is_static: true,
+                    vel: Vector::zero(),
+                },
+                // left
+                GameObject {
+                    id: 92,
+                    x: 0,
+                    y: height / 2,
+                    shape: Shape::Rect,
+                    shape_params: vec![2, height],
+                    is_static: true,
+                    vel: Vector::zero(),
+                },
+                // right
+                GameObject {
+                    id: 93,
+                    x: width,
+                    y: height / 2,
+                    shape: Shape::Rect,
+                    shape_params: vec![2, height],
+                    is_static: true,
+                    vel: Vector::zero(),
+                },
+            ],
+        }
+    }
 }

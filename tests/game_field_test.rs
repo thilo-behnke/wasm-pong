@@ -12,7 +12,8 @@ mod game_field_tests {
             obj_id: 1,
         }];
         field.tick_inner(inputs);
-        let player = field.players().clone().first().unwrap();
+        let players = field.players();
+        let player = players.first().unwrap();
         assert_eq!(player.obj.y, height / 2 + 1);
     }
 
@@ -26,7 +27,8 @@ mod game_field_tests {
             obj_id: 1,
         }];
         field.tick_inner(inputs);
-        let player = field.players().first().unwrap();
+        let players = field.players();
+        let player = players.first().unwrap();
         assert_eq!(player.obj.y, height / 2 - 1);
     }
 
@@ -40,7 +42,8 @@ mod game_field_tests {
             obj_id: 1,
         }];
         field.tick_inner(inputs);
-        let player = field.players().first().unwrap();
+        let players = field.players();
+        let player = players.first().unwrap();
         assert_eq!(player.obj.y, height - 6);
     }
 
@@ -54,7 +57,8 @@ mod game_field_tests {
             obj_id: 1,
         }];
         field.tick_inner(inputs);
-        let player = field.players().first().unwrap();
+        let players = field.players();
+        let player = players.first().unwrap();
         assert_eq!(player.obj.y, 6);
     }
 }

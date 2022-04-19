@@ -1,5 +1,5 @@
 use rstest::rstest;
-use rust_wasm::{BoundingBox, Point};
+use rust_wasm::geom::geom::{BoundingBox, Point};
 
 #[rstest]
 #[case(BoundingBox::create(10, 10, 5, 5), Point::create(10, 10), true)]

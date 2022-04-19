@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod game_field_tests {
-    use rust_wasm::{Field, GameObject, Input, InputType, Player};
+    use rust_wasm::{Field, Input, InputType};
 
     #[test]
     fn player_input_update_pos__up() {
@@ -12,7 +12,7 @@ mod game_field_tests {
             obj_id: 1,
         }];
         field.tick_inner(inputs);
-        let player = field.players().first().unwrap();
+        let player = field.players().clone().first().unwrap();
         assert_eq!(player.obj.y, height / 2 + 1);
     }
 

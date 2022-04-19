@@ -37,7 +37,7 @@ pub mod collision {
 
     pub trait CollisionRegistry {
         fn get_collisions(&self) -> Vec<&Collision>;
-        // fn get_collisions_by_id() -> Vec<Collision>;
+        fn get_collisions_by_id(&self, id: u16) -> Vec<&Collision>;
     }
 
     pub struct Collisions {
@@ -53,6 +53,9 @@ pub mod collision {
     impl CollisionRegistry for Collisions {
         fn get_collisions(&self) -> Vec<&Collision> {
             self.state.iter().collect()
+        }
+        fn get_collisions_by_id(&self, id: u16) -> Vec<&Collision> {
+             self.state.iter().filter(|c| c.0 == id || c.1 == id).collect()
         }
     }
 

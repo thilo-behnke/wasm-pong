@@ -189,12 +189,20 @@ impl Field {
         objs.extend(
             self.balls()
                 .iter()
-                .map(|p| &p.obj)
+                .map(|b| &b.obj)
                 .collect::<Vec<&GameObject>>(),
         );
         let collision_detector = CollisionDetector::new();
-        let collision = collision_detector.detect_collisions(objs);
-        log!("{:?}", collision.get_collisions());
+        let registry = collision_detector.detect_collisions(objs);
+        log!("{:?}", registry.get_collisions());
+
+        for ball in self.balls.iter_mut() {
+            let collisions = registry.get_collisions_by_id(ball.obj.id);
+            if collisions.is_empty() {
+                continue;
+            }
+            ball.obj.vel.invert();
+        }
     }
 
     pub fn players(&self) -> Vec<&Player> {

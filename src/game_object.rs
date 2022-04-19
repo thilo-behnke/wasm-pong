@@ -1,4 +1,3 @@
-
 pub mod game_object {
     use crate::{BoundingBox, Vector};
 
@@ -16,7 +15,7 @@ pub mod game_object {
         pub shape: Shape,
         pub shape_params: Vec<u16>,
         pub vel: Vector,
-        pub is_static: bool
+        pub is_static: bool,
     }
 
     impl GameObject {
@@ -25,7 +24,9 @@ pub mod game_object {
             let updated_y = self.y.wrapping_add(self.vel.y as u16);
 
             let updated_bounding_box = self.bounding_box_from(updated_x, updated_y);
-            if updated_bounding_box.points().iter().any(|p| p.x < 0 || p.x > field_width as i16 || p.y < 0 || p.y > field_height as i16) {
+            if updated_bounding_box.points().iter().any(|p| {
+                p.x < 0 || p.x > field_width as i16 || p.y < 0 || p.y > field_height as i16
+            }) {
                 return;
             }
             self.x = updated_x;
@@ -48,13 +49,11 @@ pub mod game_object {
             match self.shape {
                 Shape::Rect => {
                     BoundingBox::create(x, y, self.shape_params[0], self.shape_params[1])
-                },
+                }
                 Shape::Circle => {
                     BoundingBox::create(x, y, self.shape_params[0] * 2, self.shape_params[0] * 2)
                 }
             }
         }
     }
-
 }
-

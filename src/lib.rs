@@ -1,15 +1,15 @@
-mod utils;
-pub mod geom;
-pub mod game_object;
 pub mod collision;
+pub mod game_object;
+pub mod geom;
+mod utils;
 
-use std::cmp::{max, min};
-use serde::{Deserialize, Serialize};
-use serde_json::json;
-use wasm_bindgen::prelude::*;
-use crate::collision::collision::{CollisionDetector};
+use crate::collision::collision::CollisionDetector;
 use crate::game_object::game_object::{GameObject, Shape};
 use crate::geom::geom::{BoundingBox, Vector};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+use std::cmp::{max, min};
+use wasm_bindgen::prelude::*;
 
 extern crate serde_json;
 extern crate web_sys;
@@ -46,7 +46,7 @@ impl GameObjectDTO {
             shape: match obj.shape_params[..] {
                 [p1] => p1 << 8,
                 [p1, p2] | [p1, p2, ..] => p1 << 8 | p2,
-                _ => 0
+                _ => 0,
             },
         };
     }
@@ -84,7 +84,7 @@ impl Field {
             width,
             height,
             players: vec![],
-            balls: vec![]
+            balls: vec![],
         };
 
         field.add_player(0, 0 + width / 20, height / 2);
@@ -135,7 +135,7 @@ impl Field {
             width,
             height,
             players: vec![],
-            balls: vec![]
+            balls: vec![],
         }
     }
 
@@ -180,8 +180,18 @@ impl Field {
         }
 
         let mut objs: Vec<&GameObject> = vec![];
-        objs.extend(self.players().iter().map(|p| &p.obj).collect::<Vec<&GameObject>>());
-        objs.extend(self.balls().iter().map(|p| &p.obj).collect::<Vec<&GameObject>>());
+        objs.extend(
+            self.players()
+                .iter()
+                .map(|p| &p.obj)
+                .collect::<Vec<&GameObject>>(),
+        );
+        objs.extend(
+            self.balls()
+                .iter()
+                .map(|p| &p.obj)
+                .collect::<Vec<&GameObject>>(),
+        );
         let collision_detector = CollisionDetector::new();
         let collision = collision_detector.detect_collisions(objs);
         log!("{:?}", collision.get_collisions());
@@ -211,7 +221,7 @@ impl Player {
                 shape: Shape::Rect,
                 shape_params: vec![field.width / 25, field.height / 5],
                 vel: Vector::zero(),
-                is_static: true
+                is_static: true,
             },
         }
     }
@@ -232,7 +242,7 @@ impl Ball {
                 shape: Shape::Circle,
                 shape_params: vec![field.width / 80],
                 vel: Vector::zero(),
-                is_static: false
+                is_static: false,
             },
         }
     }
@@ -241,5 +251,5 @@ impl Ball {
 #[derive(Debug, PartialEq, Eq)]
 pub struct Collision {
     obj_a: u16,
-    obj_b: u16
+    obj_b: u16,
 }

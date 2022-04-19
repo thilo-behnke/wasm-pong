@@ -1,7 +1,7 @@
 use rstest::rstest;
-use rust_wasm::geom::geom::{Vector};
-use rust_wasm::collision::collision::{CollisionDetector, Collision};
+use rust_wasm::collision::collision::{Collision, CollisionDetector};
 use rust_wasm::game_object::game_object::{GameObject, Shape};
+use rust_wasm::geom::geom::Vector;
 
 #[rstest]
 #[case(vec![], vec![])]
@@ -33,8 +33,14 @@ use rust_wasm::game_object::game_object::{GameObject, Shape};
     ],
     vec![]
 )]
-pub fn should_detect_collisions(#[case] objs: Vec<GameObject>, #[case] expected_collisions: Vec<Collision>) {
+pub fn should_detect_collisions(
+    #[case] objs: Vec<GameObject>,
+    #[case] expected_collisions: Vec<Collision>,
+) {
     let detector = CollisionDetector::new();
     let res = detector.detect_collisions(objs.iter().collect());
-    assert_eq!(res.get_collisions(), expected_collisions.iter().collect::<Vec<&Collision>>());
+    assert_eq!(
+        res.get_collisions(),
+        expected_collisions.iter().collect::<Vec<&Collision>>()
+    );
 }

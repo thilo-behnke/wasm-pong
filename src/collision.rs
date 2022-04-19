@@ -1,4 +1,3 @@
-
 pub mod collision {
     use crate::GameObject;
 
@@ -11,7 +10,7 @@ pub mod collision {
 
         pub fn detect_collisions(&self, objs: Vec<&GameObject>) -> Box<dyn CollisionRegistry> {
             if objs.is_empty() {
-                return Box::new(Collisions::new(vec![]))
+                return Box::new(Collisions::new(vec![]));
             }
             let mut collisions: Vec<Collision> = vec![];
             let mut i = 0;
@@ -42,14 +41,12 @@ pub mod collision {
     }
 
     pub struct Collisions {
-        pub state: Vec<Collision>
+        pub state: Vec<Collision>,
     }
 
     impl Collisions {
         pub fn new(collisions: Vec<Collision>) -> Collisions {
-            Collisions {
-                state: collisions
-            }
+            Collisions { state: collisions }
         }
     }
 

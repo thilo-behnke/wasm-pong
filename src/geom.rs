@@ -60,7 +60,7 @@ pub mod geom {
         }
 
         pub fn is_point_within(&self, point: &Point) -> bool {
-            return point.x >= self.top_left.x && point.y <= self.top_left.y && point.y >= self.bottom_left.y
+            return point.x >= self.top_left.x && point.x <= self.top_right.x && point.y <= self.top_left.y && point.y >= self.bottom_left.y
         }
     }
 

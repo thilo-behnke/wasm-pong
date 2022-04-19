@@ -1,6 +1,5 @@
 
 pub mod collision {
-    use std::collections::HashMap;
     use crate::GameObject;
 
     pub struct CollisionDetector {}
@@ -11,6 +10,9 @@ pub mod collision {
         }
 
         pub fn detect_collisions(&self, objs: Vec<&GameObject>) -> Box<dyn CollisionRegistry> {
+            if objs.is_empty() {
+                return Box::new(Collisions::new(vec![]))
+            }
             let mut collisions: Vec<Collision> = vec![];
             let mut i = 0;
             loop {
@@ -57,6 +59,6 @@ pub mod collision {
         }
     }
 
-    #[derive(Debug)]
-    pub struct Collision(u16, u16);
+    #[derive(Debug, Eq, PartialEq)]
+    pub struct Collision(pub u16, pub u16);
 }

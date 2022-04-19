@@ -1,9 +1,8 @@
 mod utils;
-mod geom;
-mod game_object;
-mod collision;
+pub mod geom;
+pub mod game_object;
+pub mod collision;
 
-use std::borrow::BorrowMut;
 use std::cmp::{max, min};
 use serde::{Deserialize, Serialize};
 use serde_json::json;

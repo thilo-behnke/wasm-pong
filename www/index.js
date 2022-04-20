@@ -1,12 +1,12 @@
 import * as wasm from "wasm-app";
-import { Field, GameObject } from "wasm-app";
+import { FieldWrapper, GameObject } from "wasm-app";
 import { memory } from "wasm-app/rust_wasm_bg";
 
 const GRID_COLOR = "#CCCCCC";
 
-const field = Field.new();
-const width = field.width;
-const height = field.height;
+const field = FieldWrapper.new();
+const width = field.width();
+const height = field.height();
 
 const canvas = document.getElementById('wasm-app-canvas');
 canvas.height = height

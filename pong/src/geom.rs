@@ -79,7 +79,7 @@ pub mod geom {
         }
 
         pub fn overlaps(&self, other: &BoundingBox) -> bool {
-            return other.points().iter().any(|p| self.is_point_within(p));
+            return self.points().iter().any(|p| other.is_point_within(p)) || other.points().iter().any(|p| self.is_point_within(p));
         }
 
         pub fn is_point_within(&self, point: &Point) -> bool {

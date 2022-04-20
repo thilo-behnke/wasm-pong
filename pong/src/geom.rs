@@ -1,17 +1,23 @@
 pub mod geom {
     #[derive(Debug, Clone, PartialEq)]
     pub struct Vector {
-        pub x: i32,
-        pub y: i32,
+        pub x: f64,
+        pub y: f64,
     }
 
     impl Vector {
         pub fn zero() -> Vector {
-            Vector { x: 0, y: 0 }
+            Vector { x: 0., y: 0. }
         }
 
         pub fn unit() -> Vector {
-            Vector { x: 1, y: 1 }
+            Vector { x: 1., y: 1. }
+        }
+
+        pub fn new(x: f64, y: f64) -> Vector {
+            Vector {
+                x, y
+            }
         }
 
         pub fn normalize(&mut self) {
@@ -26,13 +32,29 @@ pub mod geom {
         }
 
         pub fn invert(&mut self) {
-            self.x = self.x * -1;
-            self.y = self.y * -1;
+            self.x = self.x * -1.;
+            self.y = self.y * -1.;
         }
 
-        pub fn len(&self) -> i32 {
-            let distance = self.x.pow(2) + self.y.pow(2);
-            return (distance as f32).sqrt() as i32;
+        pub fn dot(&self, other: &Vector) -> f64 {
+            return self.x * other.x + self.y * other.y
+        }
+
+        pub fn angle(&self, other: &Vector) -> f64 {
+            let mut self_clone = self.clone();
+            self_clone.normalize();
+            let mut other_clone = other.clone();
+            other_clone.normalize();
+
+            let dot = self_clone.dot(&other_clone);
+            let dot_float = dot as f64;
+            let acos_res = dot_float.acos();
+            (acos_res * 100.0).round() / 100.0
+        }
+
+        pub fn len(&self) -> f64 {
+            let distance = self.x.powi(2) + self.y.powi(2);
+            return (distance as f64).sqrt();
         }
     }
 

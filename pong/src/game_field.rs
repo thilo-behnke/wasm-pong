@@ -68,23 +68,23 @@ impl Field {
     pub fn tick(&mut self, inputs: Vec<Input>) {
         for ball in self.balls.iter_mut() {
             if ball.obj.vel == Vector::zero() {
-                ball.obj.set_vel_x(-1)
+                ball.obj.set_vel_x(-1.)
             }
         }
 
         for player in self.players.iter_mut() {
             let input_opt = inputs.iter().find(|input| player.obj.id == input.obj_id);
             if let None = input_opt {
-                player.obj.set_vel_y(0);
+                player.obj.set_vel_y(0.);
                 continue;
             }
             let input = input_opt.unwrap();
             match input.input {
                 InputType::UP => {
-                    player.obj.vel.y = min(player.obj.vel.y + 1, 5);
+                    player.obj.vel.y = (player.obj.vel.y + 1.).min(5.);
                 }
                 InputType::DOWN => {
-                    player.obj.vel.y = max(player.obj.vel.y - 1, -5);
+                    player.obj.vel.y = (player.obj.vel.y - 1.).max(-5.);
                 }
             };
         }

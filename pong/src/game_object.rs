@@ -22,22 +22,15 @@ pub mod game_object {
         pub fn update_pos(&mut self, field_width: u16, field_height: u16) {
             let updated_x = self.x.wrapping_add(self.vel.x as u16);
             let updated_y = self.y.wrapping_add(self.vel.y as u16);
-
-            // let updated_bounding_box = self.bounding_box_from(updated_x, updated_y);
-            // if updated_bounding_box.points().iter().any(|p| {
-            //     p.x < 0 || p.x > field_width as i16 || p.y < 0 || p.y > field_height as i16
-            // }) {
-            //     return;
-            // }
             self.x = updated_x;
             self.y = updated_y;
         }
 
-        pub fn set_vel_x(&mut self, x: i32) {
+        pub fn set_vel_x(&mut self, x: f64) {
             self.vel.x = x
         }
 
-        pub fn set_vel_y(&mut self, y: i32) {
+        pub fn set_vel_y(&mut self, y: f64) {
             self.vel.y = y
         }
 

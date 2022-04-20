@@ -36,7 +36,7 @@ mod game_field_tests {
     fn player_input_update_out_of_bounds__up() {
         let height = 1000;
         let mut field = Field::mock(1000, height);
-        field.add_player(1, 50, height - 6);
+        field.add_player(1, 50, height - height / 5 / 2);
         let inputs = vec![Input {
             input: InputType::UP,
             obj_id: 1,
@@ -44,7 +44,7 @@ mod game_field_tests {
         field.tick(inputs);
         let players = field.players();
         let player = players.first().unwrap();
-        assert_eq!(player.obj.y, height - 6);
+        assert_eq!(player.obj.y, height - height / 5 / 2);
     }
 
     #[test]
@@ -59,6 +59,6 @@ mod game_field_tests {
         field.tick(inputs);
         let players = field.players();
         let player = players.first().unwrap();
-        assert_eq!(player.obj.y, height / 5);
+        assert_eq!(player.obj.y, height / 5 / 2);
     }
 }

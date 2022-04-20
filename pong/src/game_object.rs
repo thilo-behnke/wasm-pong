@@ -1,5 +1,5 @@
 pub mod game_object {
-    use crate::{BoundingBox, Vector};
+    use crate::geom::geom::{BoundingBox, Vector};
 
     #[derive(Clone, Debug, PartialEq)]
     pub enum Shape {

@@ -1,15 +1,12 @@
-pub mod collision;
-pub mod game_object;
-pub mod geom;
 mod utils;
 
-use crate::collision::collision::{Collision, CollisionDetector};
-use crate::game_object::game_object::{GameObject, Shape};
-use crate::geom::geom::{BoundingBox, Vector};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::cmp::{max, min};
 use wasm_bindgen::prelude::*;
+use pong::collision::collision::{Collision, CollisionDetector};
+use pong::game_object::game_object::{GameObject, Shape};
+use pong::geom::geom::Vector;
 
 extern crate serde_json;
 extern crate web_sys;

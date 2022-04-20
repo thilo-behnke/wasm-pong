@@ -1,7 +1,7 @@
 use rstest::rstest;
-use rust_wasm::collision::collision::{Collision, CollisionDetector};
-use rust_wasm::game_object::game_object::{GameObject, Shape};
-use rust_wasm::geom::geom::Vector;
+use pong::collision::collision::{Collision, CollisionDetector};
+use pong::game_object::game_object::{GameObject, Shape};
+use pong::geom::geom::{Vector};
 
 #[rstest]
 #[case(vec![], vec![])]

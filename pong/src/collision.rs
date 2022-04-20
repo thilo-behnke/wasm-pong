@@ -1,5 +1,5 @@
 pub mod collision {
-    use crate::GameObject;
+    use crate::game_object::game_object::GameObject;
 
     pub struct CollisionDetector {}
 

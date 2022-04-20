@@ -1,5 +1,5 @@
 use rstest::rstest;
-use rust_wasm::geom::geom::Vector;
+use pong::geom::geom::Vector;
 
 #[rstest]
 #[case(1, 0, 1)]

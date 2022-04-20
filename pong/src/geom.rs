@@ -68,20 +68,20 @@ pub mod geom {
     impl BoundingBox {
         pub fn create(center_x: u16, center_y: u16, width: u16, height: u16) -> BoundingBox {
             let top_left = Point {
-                x: center_x as i16 - (width / 2) as i16,
-                y: center_y as i16 + (height / 2) as i16,
+                x: center_x as i32 - (width / 2) as i32,
+                y: center_y as i32 + (height / 2) as i32,
             };
             let top_right = Point {
-                x: center_x as i16 + (width / 2) as i16,
-                y: center_y as i16 + (height / 2) as i16,
+                x: center_x as i32 + (width / 2) as i32,
+                y: center_y as i32 + (height / 2) as i32,
             };
             let bottom_left = Point {
-                x: center_x as i16 - (width / 2) as i16,
-                y: center_y as i16 - (height / 2) as i16,
+                x: center_x as i32 - (width / 2) as i32,
+                y: center_y as i32 - (height / 2) as i32,
             };
             let bottom_right = Point {
-                x: center_x as i16 + (width / 2) as i16,
-                y: center_y as i16 - (height / 2) as i16,
+                x: center_x as i32 + (width / 2) as i32,
+                y: center_y as i32 - (height / 2) as i32,
             };
             BoundingBox {
                 top_left,
@@ -113,12 +113,12 @@ pub mod geom {
     }
 
     pub struct Point {
-        pub x: i16,
-        pub y: i16,
+        pub x: i32,
+        pub y: i32,
     }
 
     impl Point {
-        pub fn create(x: i16, y: i16) -> Point {
+        pub fn create(x: i32, y: i32) -> Point {
             Point { x, y }
         }
     }

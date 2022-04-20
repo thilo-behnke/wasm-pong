@@ -19,9 +19,18 @@ pub mod game_object {
     }
 
     impl GameObject {
+        // TODO: Migrate pos to f64
         pub fn update_pos(&mut self, field_width: u16, field_height: u16) {
-            let updated_x = self.x.wrapping_add(self.vel.x as u16);
-            let updated_y = self.y.wrapping_add(self.vel.y as u16);
+            let abs_x = self.vel.x.abs() as u16;
+            let updated_x = match self.vel.x {
+                n if n >= 0. => self.x.wrapping_add(abs_x),
+                _ => self.x.wrapping_sub(abs_x)
+            };
+            let abs_y = self.vel.y.abs() as u16;
+            let updated_y = match self.vel.y {
+                n if n >= 0. => self.y.wrapping_add(abs_y),
+                _ => self.y.wrapping_sub(abs_y)
+            };
             self.x = updated_x;
             self.y = updated_y;
         }

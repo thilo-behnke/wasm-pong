@@ -21,7 +21,7 @@ pub struct Field {
     pub players: Vec<Player>,
     pub balls: Vec<Ball>,
     pub bounds: Bounds,
-    collisions: Box<dyn CollisionRegistry>
+    pub collisions: Box<dyn CollisionRegistry>
 }
 
 impl Field {

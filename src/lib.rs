@@ -113,6 +113,7 @@ impl FieldWrapper {
         let input_dtos: Vec<InputDTO> = inputs_js.into_serde().unwrap();
         let inputs = input_dtos.into_iter().map(|i| i.to_input()).collect::<Vec<Input>>();
         self.field.tick(inputs);
+        log!("{:?}", self.field.collisions);
     }
 
     pub fn objects(&self) -> *const GameObjectDTO {

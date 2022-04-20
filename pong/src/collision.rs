@@ -1,4 +1,5 @@
 pub mod collision {
+    use std::fmt::Debug;
     use crate::game_object::game_object::GameObject;
 
     pub struct CollisionDetector {}
@@ -35,11 +36,12 @@ pub mod collision {
         }
     }
 
-    pub trait CollisionRegistry {
+    pub trait CollisionRegistry : Debug {
         fn get_collisions(&self) -> Vec<&Collision>;
         fn get_collisions_by_id(&self, id: u16) -> Vec<&Collision>;
     }
 
+    #[derive(Debug)]
     pub struct Collisions {
         pub state: Vec<Collision>,
     }

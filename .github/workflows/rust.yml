@@ -10,13 +10,29 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  build-pong-lib:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
     - name: Build
-      run: cargo build --verbose
+      run: |
+        cd pong
+        cargo build --verbose
     - name: Run tests
-      run: cargo test --verbose
+      run: |
+        cd pong
+        cargo test --verbose
+  build-wasm-wrapper:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Prepare
+        run: |
+          (test -x $HOME/.cargo/bin/cargo-install-update || cargo install cargo-update)
+          (test -x $HOME/.cargo/bin/cargo-generate || cargo install --vers "^0.2" cargo-generate)
+          cargo install-update -a
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh -s -- -f
+      - name: Build
+        run: wasm-pack build
+      - name: Run tests
+        run: wasm-pack test

@@ -11,7 +11,9 @@ pub mod geom {
         }
 
         pub fn unit() -> Vector {
-            Vector { x: 1., y: 1. }
+            let mut vector = Vector { x: 1., y: 1. };
+            vector.normalize();
+            vector
         }
 
         pub fn new(x: f64, y: f64) -> Vector {
@@ -24,6 +26,18 @@ pub mod geom {
             let length = self.len();
             self.x /= length;
             self.y /= length;
+        }
+
+        pub fn perpendicular_clockwise(&self) -> Vector {
+            let mut vector = Vector::new(self.y, -self.x);
+            vector.normalize();
+            vector
+        }
+
+        pub fn perpendicular_counter_clockwise(&self) -> Vector {
+            let mut vector = Vector::new(-self.y, self.x);
+            vector.normalize();
+            vector
         }
 
         pub fn add(&mut self, other: &Vector) {

@@ -41,3 +41,27 @@ pub fn should_calculate_angle_correctly(
     let res = vector_a.angle(&vector_b);
     assert_eq!(res, expected_angle);
 }
+
+#[rstest]
+#[case(Vector::new(1., 0.), Vector::new(0., -1.))]
+#[case(Vector::new(0., 1.), Vector::new(1., 0.))]
+#[case(Vector::new(7., 7.), Vector::new(0.7071067811865476, -0.7071067811865476))]
+pub fn should_get_perpendicular_clockwise(
+    #[case] vector: Vector,
+    #[case] expected: Vector
+) {
+    let res = vector.perpendicular_clockwise();
+    assert_eq!(res, expected);
+}
+
+#[rstest]
+#[case(Vector::new(0., -1.), Vector::new(1., 0.))]
+#[case(Vector::new(1., 0.), Vector::new(0., 1.))]
+#[case(Vector::new(7., 7.), Vector::new(-0.7071067811865476, 0.7071067811865476))]
+pub fn should_get_perpendicular_counter_clockwise(
+    #[case] vector: Vector,
+    #[case] expected: Vector
+) {
+    let res = vector.perpendicular_counter_clockwise();
+    assert_eq!(res, expected);
+}

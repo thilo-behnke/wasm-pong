@@ -48,7 +48,7 @@ pub fn should_calculate_angle_correctly(
 #[rstest]
 #[case(Vector::new(1., 0.), Vector::new(0., -1.))]
 #[case(Vector::new(0., 1.), Vector::new(1., 0.))]
-#[case(Vector::new(7., 7.), Vector::new(0.7071067811865476, -0.7071067811865476))]
+#[case(Vector::new(7., 7.), Vector::new(7., -7.))]
 pub fn should_get_perpendicular_clockwise(
     #[case] mut vector: Vector,
     #[case] expected: Vector
@@ -60,7 +60,7 @@ pub fn should_get_perpendicular_clockwise(
 #[rstest]
 #[case(Vector::new(0., -1.), Vector::new(1., 0.))]
 #[case(Vector::new(1., 0.), Vector::new(0., 1.))]
-#[case(Vector::new(7., 7.), Vector::new(-0.7071067811865476, 0.7071067811865476))]
+#[case(Vector::new(7., 7.), Vector::new(-7., 7.))]
 pub fn should_get_perpendicular_counter_clockwise(
     #[case] mut vector: Vector,
     #[case] expected: Vector
@@ -69,13 +69,13 @@ pub fn should_get_perpendicular_counter_clockwise(
     assert_eq!(vector, expected);
 }
 
-// #[rstest]
-// #[case(Vector::new(1., 0.), FRAC_PI_4, Vector::new(1., 1.))]
-// pub fn should_correctly_rotate(
-//     #[case] mut vector: Vector,
-//     #[case] radians: f64,
-//     #[case] expected: Vector
-// ) {
-//     vector.rotate(radians);
-//     assert_eq!(vector, expected);
-// }
+#[rstest]
+#[case(Vector::new(1., 0.), FRAC_PI_4, Vector::unit())]
+pub fn should_correctly_rotate(
+    #[case] mut vector: Vector,
+    #[case] radians: f64,
+    #[case] expected: Vector
+) {
+    vector.rotate(radians);
+    assert_eq!(vector, expected);
+}

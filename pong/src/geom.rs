@@ -29,13 +29,17 @@ pub mod geom {
         }
 
         pub fn perpendicular_clockwise(&mut self) {
-            self.x = self.y;
-            self.y = -self.x;
+            let updated_x = self.y;
+            let updated_y = -self.x;
+            self.x = updated_x;
+            self.y = updated_y;
         }
 
         pub fn perpendicular_counter_clockwise(&mut self) {
-            self.x = -self.y;
-            self.y = self.x;
+            let updated_x = -self.y;
+            let updated_y = self.x;
+            self.x = updated_x;
+            self.y = updated_y;
         }
 
         pub fn rotate(&mut self, radians: f64) {

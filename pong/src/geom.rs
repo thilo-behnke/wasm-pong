@@ -28,16 +28,14 @@ pub mod geom {
             self.y /= length;
         }
 
-        pub fn perpendicular_clockwise(&self) -> Vector {
-            let mut vector = Vector::new(self.y, -self.x);
-            vector.normalize();
-            vector
+        pub fn perpendicular_clockwise(&mut self) {
+            self.x = self.y;
+            self.y = -self.x;
         }
 
-        pub fn perpendicular_counter_clockwise(&self) -> Vector {
-            let mut vector = Vector::new(-self.y, self.x);
-            vector.normalize();
-            vector
+        pub fn perpendicular_counter_clockwise(&mut self) {
+            self.x = -self.y;
+            self.y = self.x;
         }
 
         pub fn add(&mut self, other: &Vector) {

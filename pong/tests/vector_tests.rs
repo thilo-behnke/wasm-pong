@@ -1,5 +1,8 @@
 use rstest::rstest;
 use pong::geom::geom::Vector;
+use std::f64::consts::PI;
+use std::f64::consts::FRAC_PI_2;
+use std::f64::consts::FRAC_PI_4;
 
 #[rstest]
 #[case(1., 0., 1.)]
@@ -65,3 +68,14 @@ pub fn should_get_perpendicular_counter_clockwise(
     vector.perpendicular_counter_clockwise();
     assert_eq!(vector, expected);
 }
+
+// #[rstest]
+// #[case(Vector::new(1., 0.), FRAC_PI_4, Vector::new(1., 1.))]
+// pub fn should_correctly_rotate(
+//     #[case] mut vector: Vector,
+//     #[case] radians: f64,
+//     #[case] expected: Vector
+// ) {
+//     vector.rotate(radians);
+//     assert_eq!(vector, expected);
+// }

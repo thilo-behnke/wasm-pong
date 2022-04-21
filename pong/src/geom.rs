@@ -38,6 +38,13 @@ pub mod geom {
             self.y = self.x;
         }
 
+        pub fn rotate(&mut self, radians: f64) {
+            let updated_x = self.x * radians.cos() - self.y * radians.sin();
+            let updated_y = self.x * radians.sin() + self.y * radians.cos();
+            self.x = updated_x;
+            self.y = updated_y;
+        }
+
         pub fn add(&mut self, other: &Vector) {
             self.x += other.x;
             self.y += other.y;

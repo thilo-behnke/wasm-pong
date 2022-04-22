@@ -1,4 +1,4 @@
-use std::cmp::{max, min};
+use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
 use crate::collision::collision::{Collision, CollisionDetector, CollisionRegistry, Collisions};
 use crate::game_object::game_object::{GameObject, Shape};
 use crate::geom::geom::Vector;
@@ -68,7 +68,7 @@ impl Field {
     pub fn tick(&mut self, inputs: Vec<Input>) {
         for ball in self.balls.iter_mut() {
             if ball.obj.vel == Vector::zero() {
-                ball.obj.set_vel_x(-1.)
+                ball.obj.set_vel_x(-2.)
             }
         }
 
@@ -131,8 +131,17 @@ impl Field {
                 }
                 collision => objs.iter().find(|o| o.id == collision.0).unwrap(),
             };
-            ball.obj.vel.invert();
             ball.obj.vel.add(&other.vel);
+            ball.obj.vel.invert();
+
+            // let dot = ball.obj.vel.dot(&other.vel);
+            // if dot == 0. {
+            //     ball.obj.vel.invert();
+            // } else {
+            //     let angle = ball.obj.vel.angle(&other.vel);
+            //     ball.obj.vel.rotate(FRAC_PI_2 - angle);
+            //     ball.obj.vel.invert();
+            // }
         }
     }
 

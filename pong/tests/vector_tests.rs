@@ -79,3 +79,17 @@ pub fn should_correctly_rotate(
     vector.rotate(radians);
     assert_eq!(vector, expected);
 }
+
+#[rstest]
+#[case(Vector::new(1., 0.), Vector::new(1., 0.), 1.)]
+#[case(Vector::new(1., 0.), Vector::new(0., 1.), 0.)]
+#[case(Vector::new(1., 0.), Vector::new(-1., 0.), -1.)]
+pub fn should_calculate_dot_product(
+    #[case] mut vector: Vector,
+    #[case] mut other: Vector,
+    #[case] expected: f64
+
+) {
+    let dot = vector.dot(&other);
+    assert_eq!(dot, expected);
+}

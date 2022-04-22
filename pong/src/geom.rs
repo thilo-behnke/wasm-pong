@@ -1,5 +1,5 @@
 pub mod geom {
-    #[derive(Debug, Clone, PartialEq)]
+    #[derive(Debug, Clone)]
     pub struct Vector {
         pub x: f64,
         pub y: f64,
@@ -54,6 +54,11 @@ pub mod geom {
             self.y += other.y;
         }
 
+        pub fn sub(&mut self, other: &Vector) {
+            self.x -= other.x;
+            self.y -= other.y;
+        }
+
         pub fn invert(&mut self) {
             self.x = self.x * -1.;
             self.y = self.y * -1.;
@@ -81,30 +86,44 @@ pub mod geom {
         }
     }
 
+    impl PartialEq for Vector {
+        fn eq(&self, other: &Self) -> bool {
+            (self.x * 1000.).round() == (other.x * 1000.).round() &&
+                (self.y * 1000.).round() == (other.y * 1000.).round()
+        }
+    }
+
     pub struct BoundingBox {
-        top_left: Point,
-        top_right: Point,
-        bottom_left: Point,
-        bottom_right: Point,
+        top_left: Vector,
+        top_right: Vector,
+        bottom_left: Vector,
+        bottom_right: Vector,
     }
 
     impl BoundingBox {
-        pub fn create(center_x: u16, center_y: u16, width: u16, height: u16) -> BoundingBox {
-            let top_left = Point {
-                x: center_x as i32 - (width / 2) as i32,
-                y: center_y as i32 + (height / 2) as i32,
+        pub fn create_from_coords(x: f64, y: f64, width: u16, height: u16) -> BoundingBox {
+            let center = Vector::new(x, y);
+            return BoundingBox::create(&center, width, height)
+        }
+
+        pub fn create(center: &Vector, width: u16, height: u16) -> BoundingBox {
+            let center_x = center.x;
+            let center_y = center.y;
+            let top_left = Vector {
+                x: center_x - (width as f64 / 2.),
+                y: center_y + (height as f64 / 2.),
             };
-            let top_right = Point {
-                x: center_x as i32 + (width / 2) as i32,
-                y: center_y as i32 + (height / 2) as i32,
+            let top_right = Vector {
+                x: center_x + (width as f64 / 2.),
+                y: center_y + (height as f64 / 2.),
             };
-            let bottom_left = Point {
-                x: center_x as i32 - (width / 2) as i32,
-                y: center_y as i32 - (height / 2) as i32,
+            let bottom_left = Vector {
+                x: center_x - (width as f64 / 2.),
+                y: center_y - (height as f64 / 2.),
             };
-            let bottom_right = Point {
-                x: center_x as i32 + (width / 2) as i32,
-                y: center_y as i32 - (height / 2) as i32,
+            let bottom_right = Vector {
+                x: center_x + (width as f64 / 2.),
+                y: center_y - (height as f64 / 2.),
             };
             BoundingBox {
                 top_left,
@@ -114,7 +133,7 @@ pub mod geom {
             }
         }
 
-        pub fn points(&self) -> Vec<&Point> {
+        pub fn points(&self) -> Vec<&Vector> {
             return vec![
                 &self.top_left,
                 &self.top_right,
@@ -127,22 +146,11 @@ pub mod geom {
             return self.points().iter().any(|p| other.is_point_within(p)) || other.points().iter().any(|p| self.is_point_within(p));
         }
 
-        pub fn is_point_within(&self, point: &Point) -> bool {
+        pub fn is_point_within(&self, point: &Vector) -> bool {
             return point.x >= self.top_left.x
                 && point.x <= self.top_right.x
                 && point.y <= self.top_left.y
                 && point.y >= self.bottom_left.y;
-        }
-    }
-
-    pub struct Point {
-        pub x: i32,
-        pub y: i32,
-    }
-
-    impl Point {
-        pub fn create(x: i32, y: i32) -> Point {
-            Point { x, y }
         }
     }
 }

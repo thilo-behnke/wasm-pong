@@ -90,10 +90,10 @@ impl Field {
         }
 
         for player in self.players.iter_mut() {
-            player.obj.update_pos(self.width, self.height)
+            player.obj.update_pos()
         }
         for ball in self.balls.iter_mut() {
-            ball.obj.update_pos(self.width, self.height)
+            ball.obj.update_pos()
         }
 
         let mut objs: Vec<GameObject> = vec![];
@@ -155,8 +155,7 @@ impl Player {
         Player {
             obj: GameObject {
                 id,
-                x,
-                y,
+                pos: Vector {x: x as f64, y: y as f64},
                 shape: Shape::Rect,
                 shape_params: vec![field.width / 25, field.height / 5],
                 vel: Vector::zero(),
@@ -176,8 +175,7 @@ impl Ball {
         Ball {
             obj: GameObject {
                 id,
-                x,
-                y,
+                pos: Vector {x: x as f64, y: y as f64},
                 shape: Shape::Circle,
                 shape_params: vec![field.width / 80],
                 vel: Vector::zero(),
@@ -198,8 +196,7 @@ impl Bounds {
             objs: vec![
                 GameObject {
                     id: 90,
-                    x: width / 2,
-                    y: 0,
+                    pos: Vector {x: (width / 2) as f64, y: 0 as f64},
                     shape: Shape::Rect,
                     shape_params: vec![width, 2],
                     is_static: true,
@@ -208,8 +205,7 @@ impl Bounds {
                 // bottom
                 GameObject {
                     id: 91,
-                    x: width / 2,
-                    y: height,
+                    pos: Vector {x: (width / 2) as f64, y: height as f64},
                     shape: Shape::Rect,
                     shape_params: vec![width, 2],
                     is_static: true,
@@ -218,8 +214,7 @@ impl Bounds {
                 // left
                 GameObject {
                     id: 92,
-                    x: 0,
-                    y: height / 2,
+                    pos: Vector {x: 0 as f64, y: (height / 2) as f64},
                     shape: Shape::Rect,
                     shape_params: vec![2, height],
                     is_static: true,
@@ -228,8 +223,7 @@ impl Bounds {
                 // right
                 GameObject {
                     id: 93,
-                    x: width,
-                    y: height / 2,
+                    pos: Vector {x: width as f64, y: (height / 2) as f64},
                     shape: Shape::Rect,
                     shape_params: vec![2, height],
                     is_static: true,

@@ -40,8 +40,8 @@ impl GameObjectDTO {
     pub fn from(obj: &GameObject) -> GameObjectDTO {
         return GameObjectDTO {
             id: obj.id,
-            x: obj.x,
-            y: obj.y,
+            x: obj.pos.x as u16,
+            y: obj.pos.y as u16,
             shape_param_1: match obj.shape_params[..] {
                 [p1, _] => p1,
                 [p1] => p1,

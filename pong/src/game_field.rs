@@ -131,17 +131,20 @@ impl Field {
                 }
                 collision => objs.iter().find(|o| o.id == collision.0).unwrap(),
             };
-            ball.obj.vel.add(&other.vel);
-            ball.obj.vel.invert();
 
-            // let dot = ball.obj.vel.dot(&other.vel);
-            // if dot == 0. {
-            //     ball.obj.vel.invert();
-            // } else {
-            //     let angle = ball.obj.vel.angle(&other.vel);
-            //     ball.obj.vel.rotate(FRAC_PI_2 - angle);
-            //     ball.obj.vel.invert();
-            // }
+            if other.vel == Vector::zero() {
+                let dot = ball.obj.vel.dot(&other.orientation);
+                if dot >= - 0.000001 && dot <= 0.000001 {
+                    ball.obj.vel.invert();
+                } else {
+                    let angle = ball.obj.vel.angle(&other.orientation);
+                    ball.obj.vel.rotate(FRAC_PI_2 - angle);
+                    ball.obj.vel.invert();
+                }
+            } else {
+                ball.obj.vel.add(&other.vel);
+                ball.obj.vel.invert();
+            }
         }
     }
 
@@ -165,6 +168,7 @@ impl Player {
             obj: GameObject {
                 id,
                 pos: Vector {x: x as f64, y: y as f64},
+                orientation: Vector::new(0., 1.),
                 shape: Shape::Rect,
                 shape_params: vec![field.width / 25, field.height / 5],
                 vel: Vector::zero(),
@@ -185,6 +189,7 @@ impl Ball {
             obj: GameObject {
                 id,
                 pos: Vector {x: x as f64, y: y as f64},
+                orientation: Vector::zero(),
                 shape: Shape::Circle,
                 shape_params: vec![field.width / 80],
                 vel: Vector::zero(),
@@ -203,9 +208,11 @@ impl Bounds {
     pub fn new(width: u16, height: u16) -> Bounds {
         Bounds {
             objs: vec![
+                // top
                 GameObject {
                     id: 90,
                     pos: Vector {x: (width / 2) as f64, y: 0 as f64},
+                    orientation: Vector::new(1., 0.),
                     shape: Shape::Rect,
                     shape_params: vec![width, 2],
                     is_static: true,
@@ -215,6 +222,7 @@ impl Bounds {
                 GameObject {
                     id: 91,
                     pos: Vector {x: (width / 2) as f64, y: height as f64},
+                    orientation: Vector::new(-1., 0.),
                     shape: Shape::Rect,
                     shape_params: vec![width, 2],
                     is_static: true,
@@ -224,6 +232,7 @@ impl Bounds {
                 GameObject {
                     id: 92,
                     pos: Vector {x: 0 as f64, y: (height / 2) as f64},
+                    orientation: Vector::new(0., 1.),
                     shape: Shape::Rect,
                     shape_params: vec![2, height],
                     is_static: true,
@@ -233,6 +242,7 @@ impl Bounds {
                 GameObject {
                     id: 93,
                     pos: Vector {x: width as f64, y: (height / 2) as f64},
+                    orientation: Vector::new(0., -1.),
                     shape: Shape::Rect,
                     shape_params: vec![2, height],
                     is_static: true,

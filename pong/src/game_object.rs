@@ -11,6 +11,7 @@ pub mod game_object {
     pub struct GameObject {
         pub id: u16,
         pub pos: Vector,
+        pub orientation: Vector,
         pub shape: Shape,
         pub shape_params: Vec<u16>,
         pub vel: Vector,
@@ -21,6 +22,9 @@ pub mod game_object {
 
         pub fn update_pos(&mut self) {
             self.pos.add(&self.vel);
+            let mut orientation = self.pos.clone();
+            orientation.invert();
+            self.orientation = orientation;
         }
 
         pub fn set_vel_x(&mut self, x: f64) {

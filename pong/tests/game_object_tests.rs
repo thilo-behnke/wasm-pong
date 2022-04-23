@@ -12,6 +12,7 @@ pub fn should_update_pos(#[case] start_pos: Vector, #[case] vel: Vector, #[case]
         shape: Shape::Rect,
         shape_params: vec![],
         is_static: false,
+        orientation: Vector::new(1., 0.)
     };
     obj.update_pos();
     assert_eq!(obj.pos, expected_pos);

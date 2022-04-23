@@ -121,4 +121,17 @@ pub fn should_get_opposing_orthogonal(
     assert_eq!(orthogonal, expected);
 }
 
+#[rstest]
+#[case(Vector::new(1., 1.), Vector::new(1., 0.), Vector::new(1., -1.))]
+#[case(Vector::new(-1., 1.), Vector::new(1., 0.), Vector::new(-1., -1.))]
+#[case(Vector::new(1., -1.), Vector::new(0., 1.), Vector::new(-1., -1.))]
+#[case(Vector::new(-1., -1.), Vector::new(0., 1.), Vector::new(1., -1.))]
+pub fn should_reflect_vector(
+    #[case] mut vector: Vector,
+    #[case] onto: Vector,
+    #[case] expected: Vector,
+) {
+    vector.reflect(&onto);
+    assert_eq!(vector, expected);
+}
 

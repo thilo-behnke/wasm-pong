@@ -80,6 +80,12 @@ pub mod geom {
             (acos_res * 100.0).round() / 100.0
         }
 
+        pub fn reflect(&mut self, onto: &Vector) {
+            let mut orthogonal = self.get_opposing_orthogonal(onto);
+            orthogonal.scalar_multiplication(2.);
+            self.add(&orthogonal);
+        }
+
         pub fn get_projection(&self, onto: &Vector) -> Vector {
             let mut onto_normalized = onto.clone();
             onto_normalized.normalize();

@@ -66,4 +66,18 @@ pub mod collision {
 
     #[derive(Debug, Eq, PartialEq)]
     pub struct Collision(pub u16, pub u16);
+
+    pub struct CollisionHandler {}
+
+    impl CollisionHandler {
+        pub fn new() -> CollisionHandler {
+            CollisionHandler {}
+        }
+        pub fn handle(&self, obj_a: &mut GameObject, obj_b: &GameObject) {
+            if obj_a.is_static {
+                return;
+            }
+            obj_a.vel.reflect(&obj_b.orientation)
+        }
+    }
 }

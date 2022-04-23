@@ -1,5 +1,5 @@
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
-use crate::collision::collision::{Collision, CollisionDetector, CollisionRegistry, Collisions};
+use crate::collision::collision::{Collision, CollisionDetector, CollisionHandler, CollisionRegistry, Collisions};
 use crate::game_object::game_object::{GameObject, Shape};
 use crate::geom::geom::Vector;
 
@@ -118,6 +118,7 @@ impl Field {
                 .collect::<Vec<GameObject>>()
         );
         let collision_detector = CollisionDetector::new();
+        let collision_handler = CollisionHandler::new();
         self.collisions = collision_detector.detect_collisions(objs.iter().collect());
 
         for ball in self.balls.iter_mut() {
@@ -132,19 +133,20 @@ impl Field {
                 collision => objs.iter().find(|o| o.id == collision.0).unwrap(),
             };
 
-            if other.vel == Vector::zero() {
-                let dot = ball.obj.vel.dot(&other.orientation);
-                if dot >= - 0.000001 && dot <= 0.000001 {
-                    ball.obj.vel.invert();
-                } else {
-                    let angle = ball.obj.vel.angle(&other.orientation);
-                    ball.obj.vel.rotate(FRAC_PI_2 - angle);
-                    ball.obj.vel.invert();
-                }
-            } else {
-                ball.obj.vel.add(&other.vel);
-                ball.obj.vel.invert();
-            }
+            collision_handler.handle(&mut ball.obj, other);
+            // if other.vel == Vector::zero() {
+            //     let dot = ball.obj.vel.dot(&other.orientation);
+            //     if dot >= - 0.000001 && dot <= 0.000001 {
+            //         ball.obj.vel.invert();
+            //     } else {
+            //         let angle = ball.obj.vel.angle(&other.orientation);
+            //         ball.obj.vel.rotate(FRAC_PI_2 - angle);
+            //         ball.obj.vel.invert();
+            //     }
+            // } else {
+            //     ball.obj.vel.add(&other.vel);
+            //     ball.obj.vel.invert();
+            // }
         }
     }
 

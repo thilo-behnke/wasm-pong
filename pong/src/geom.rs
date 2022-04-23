@@ -184,8 +184,16 @@ pub mod geom {
             ];
         }
 
+        pub fn vert(&self) -> Range {
+            Range::new(self.bottom_left.y, self.top_left.y)
+        }
+
+        pub fn hor(&self) -> Range {
+            Range::new(self.top_left.x, self.top_right.x)
+        }
+
         pub fn overlaps(&self, other: &BoundingBox) -> bool {
-            return self.points().iter().any(|p| other.is_point_within(p)) || other.points().iter().any(|p| self.is_point_within(p));
+            self.vert().overlaps(&other.vert()) && self.hor().overlaps(&other.hor())
         }
 
         pub fn is_point_within(&self, point: &Vector) -> bool {
@@ -193,6 +201,44 @@ pub mod geom {
                 && point.x <= self.top_right.x
                 && point.y <= self.top_left.y
                 && point.y >= self.bottom_left.y;
+        }
+    }
+
+    pub struct Range {
+        min: f64,
+        max: f64,
+    }
+
+    impl Range {
+        pub fn new(a: f64, b: f64) -> Range {
+            if a <= b {
+                return Range {
+                    min: a, max: b
+                }
+            }
+            return Range {
+                min: b, max: a
+            }
+        }
+
+        pub fn overlaps(&self, other: &Range) -> bool {
+            if self.min >= other.min && self.max <= other.max {
+                return true;
+            }
+
+            if self.max >= other.min && self.max <= other.max {
+                return true;
+            }
+
+            if other.min >= self.min && other.max <= self.max {
+                return true;
+            }
+
+            if other.max >= self.min && other.max <= self.max {
+                return true;
+            }
+
+            return false;
         }
     }
 }

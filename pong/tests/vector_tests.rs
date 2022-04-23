@@ -49,11 +49,11 @@ pub fn should_calculate_angle_correctly(
 #[case(Vector::new(1., 0.), Vector::new(0., -1.))]
 #[case(Vector::new(0., 1.), Vector::new(1., 0.))]
 #[case(Vector::new(7., 7.), Vector::new(7., -7.))]
-pub fn should_get_perpendicular_clockwise(
+pub fn should_get_orthogonal_clockwise(
     #[case] mut vector: Vector,
     #[case] expected: Vector
 ) {
-    vector.perpendicular_clockwise();
+    vector.orthogonal_clockwise();
     assert_eq!(vector, expected);
 }
 
@@ -61,11 +61,11 @@ pub fn should_get_perpendicular_clockwise(
 #[case(Vector::new(0., -1.), Vector::new(1., 0.))]
 #[case(Vector::new(1., 0.), Vector::new(0., 1.))]
 #[case(Vector::new(7., 7.), Vector::new(-7., 7.))]
-pub fn should_get_perpendicular_counter_clockwise(
+pub fn should_get_orthogonal_counter_clockwise(
     #[case] mut vector: Vector,
     #[case] expected: Vector
 ) {
-    vector.perpendicular_counter_clockwise();
+    vector.orthogonal_counter_clockwise();
     assert_eq!(vector, expected);
 }
 
@@ -93,3 +93,32 @@ pub fn should_calculate_dot_product(
     let dot = vector.dot(&other);
     assert_eq!(dot, expected);
 }
+
+#[rstest]
+#[case(Vector::new(0., 1.), Vector::new(1., 0.), Vector::new(0., 0.))]
+#[case(Vector::new(1., 0.), Vector::new(1., 0.), Vector::new(1., 0.))]
+#[case(Vector::new(-1., 0.), Vector::new(1., 0.), Vector::new(-1., 0.))]
+#[case(Vector::new(1., 1.), Vector::new(1., 0.), Vector::new(1., 0.))]
+#[case(Vector::new(2., 1.), Vector::new(1., 0.), Vector::new(2., 0.))]
+pub fn should_get_projection(
+    #[case] vector: Vector,
+    #[case] other: Vector,
+    #[case] expected: Vector,
+) {
+    let projected = vector.get_projection(&other);
+    assert_eq!(projected, expected);
+}
+
+#[rstest]
+#[case(Vector::new(1., 1.), Vector::new(1., 0.), Vector::new(0., -1.))]
+#[case(Vector::new(-1., -1.), Vector::new(1., 0.), Vector::new(0., 1.))]
+pub fn should_get_opposing_orthogonal(
+    #[case] vector: Vector,
+    #[case] onto: Vector,
+    #[case] expected: Vector,
+) {
+    let orthogonal = vector.get_opposing_orthogonal(&onto);
+    assert_eq!(orthogonal, expected);
+}
+
+

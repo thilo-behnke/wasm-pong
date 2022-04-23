@@ -28,14 +28,14 @@ pub mod geom {
             self.y /= length;
         }
 
-        pub fn perpendicular_clockwise(&mut self) {
+        pub fn orthogonal_clockwise(&mut self) {
             let updated_x = self.y;
             let updated_y = -self.x;
             self.x = updated_x;
             self.y = updated_y;
         }
 
-        pub fn perpendicular_counter_clockwise(&mut self) {
+        pub fn orthogonal_counter_clockwise(&mut self) {
             let updated_x = -self.y;
             let updated_y = self.x;
             self.x = updated_x;
@@ -78,6 +78,31 @@ pub mod geom {
             let dot_float = dot as f64;
             let acos_res = dot_float.acos();
             (acos_res * 100.0).round() / 100.0
+        }
+
+        pub fn get_projection(&self, onto: &Vector) -> Vector {
+            let mut onto_normalized = onto.clone();
+            onto_normalized.normalize();
+            let dot = self.dot(&onto_normalized);
+            let mut projected = onto_normalized.clone();
+            projected.scalar_multiplication(dot);
+            projected
+        }
+
+        pub fn get_opposing_orthogonal(&self, onto: &Vector) -> Vector {
+            let mut orthogonal1 = onto.clone();
+            orthogonal1.orthogonal_clockwise();
+            if self.dot(&orthogonal1) < 0. {
+                return orthogonal1;
+            }
+            let mut orthogonal2 = onto.clone();
+            orthogonal2.orthogonal_counter_clockwise();
+            return orthogonal2;
+        }
+
+        pub fn scalar_multiplication(&mut self, n: f64) {
+            self.x *= n;
+            self.y *= n;
         }
 
         pub fn len(&self) -> f64 {

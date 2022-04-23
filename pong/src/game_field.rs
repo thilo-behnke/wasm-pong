@@ -2,6 +2,7 @@ use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
 use crate::collision::collision::{Collision, CollisionDetector, CollisionHandler, CollisionRegistry, Collisions};
 use crate::game_object::game_object::{GameObject, Shape};
 use crate::geom::geom::Vector;
+use crate::utils::utils::{Logger, NoopLogger};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum InputType {
@@ -16,6 +17,7 @@ pub struct Input {
 }
 
 pub struct Field {
+    pub logger: Box<dyn Logger>,
     pub width: u16,
     pub height: u16,
     pub players: Vec<Player>,
@@ -25,11 +27,12 @@ pub struct Field {
 }
 
 impl Field {
-    pub fn new() -> Field {
+    pub fn new(logger: Box<dyn Logger>) -> Field {
         let width = 800;
         let height = 600;
 
         let mut field = Field {
+            logger,
             width,
             height,
             players: vec![],
@@ -47,6 +50,7 @@ impl Field {
 
     pub fn mock(width: u16, height: u16) -> Field {
         Field {
+            logger: Box::new(NoopLogger {}),
             width,
             height,
             players: vec![],
@@ -133,6 +137,7 @@ impl Field {
                 collision => objs.iter().find(|o| o.id == collision.0).unwrap(),
             };
 
+            self.logger.log(&*format!("Collision between: {:?} vs. {:?}", ball.obj, other));
             collision_handler.handle(&mut ball.obj, other);
             // if other.vel == Vector::zero() {
             //     let dot = ball.obj.vel.dot(&other.orientation);

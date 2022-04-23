@@ -8,6 +8,7 @@ use pong::collision::collision::{Collision, CollisionDetector};
 use pong::game_field::{Field, Input, InputType};
 use pong::game_object::game_object::{GameObject, Shape};
 use pong::geom::geom::Vector;
+use pong::utils::utils::Logger;
 
 extern crate serde_json;
 extern crate web_sys;
@@ -95,7 +96,7 @@ pub struct FieldWrapper {
 #[wasm_bindgen]
 impl FieldWrapper {
     pub fn new() -> FieldWrapper {
-        let field = Field::new();
+        let field = Field::new(Box::new(WasmLogger {}));
         FieldWrapper {
             field
         }
@@ -113,7 +114,7 @@ impl FieldWrapper {
         let input_dtos: Vec<InputDTO> = inputs_js.into_serde().unwrap();
         let inputs = input_dtos.into_iter().map(|i| i.to_input()).collect::<Vec<Input>>();
         self.field.tick(inputs);
-        log!("{:?}", self.field.collisions);
+        // log!("{:?}", self.field.collisions);
     }
 
     pub fn objects(&self) -> *const GameObjectDTO {
@@ -151,5 +152,12 @@ impl FieldWrapper {
             id: 1
         });
         serde_json::to_string(&json).unwrap()
+    }
+}
+
+pub struct WasmLogger {}
+impl Logger for WasmLogger {
+    fn log(&self, msg: &str) {
+        log!("{}", msg)
     }
 }

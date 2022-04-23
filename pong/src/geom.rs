@@ -23,6 +23,9 @@ pub mod geom {
         }
 
         pub fn normalize(&mut self) {
+            if self == &Vector::zero() {
+                return;
+            }
             let length = self.len();
             self.x /= length;
             self.y /= length;
@@ -81,6 +84,11 @@ pub mod geom {
         }
 
         pub fn reflect(&mut self, onto: &Vector) {
+            let dot = self.dot(onto);
+            if dot == 0. {
+                self.invert();
+                return;
+            }
             let mut orthogonal = self.get_opposing_orthogonal(onto);
             orthogonal.scalar_multiplication(2.);
             self.add(&orthogonal);

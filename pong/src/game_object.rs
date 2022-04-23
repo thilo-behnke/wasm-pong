@@ -22,8 +22,12 @@ pub mod game_object {
 
         pub fn update_pos(&mut self) {
             self.pos.add(&self.vel);
-            let mut orientation = self.pos.clone();
-            orientation.invert();
+            // Keep last orientation if vel is now zero.
+            if self.vel == Vector::zero() {
+                return;
+            }
+            let mut orientation = self.vel.clone();
+            orientation.normalize();
             self.orientation = orientation;
         }
 

@@ -1,6 +1,7 @@
 pub mod collision {
     use std::fmt::Debug;
     use crate::game_object::game_object::GameObject;
+    use crate::geom::geom::Vector;
 
     pub struct CollisionDetector {}
 
@@ -77,7 +78,12 @@ pub mod collision {
             if obj_a.is_static {
                 return;
             }
-            obj_a.vel.reflect(&obj_b.orientation)
+            obj_a.vel.reflect(&obj_b.orientation);
+            if obj_b.vel != Vector::zero() {
+                let mut adjusted = obj_b.vel.clone();
+                adjusted.normalize();
+                obj_a.vel.add(&adjusted);
+            }
         }
     }
 }

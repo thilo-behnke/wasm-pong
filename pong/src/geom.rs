@@ -83,6 +83,7 @@ pub mod geom {
             (acos_res * 100.0).round() / 100.0
         }
 
+        // r = d - 2 * (d * n) * n
         pub fn reflect(&mut self, onto: &Vector) {
             let dot = self.dot(onto);
             if dot == 0. {
@@ -90,8 +91,10 @@ pub mod geom {
                 return;
             }
             let mut orthogonal = self.get_opposing_orthogonal(onto);
+            let d_dot_n = orthogonal.dot(self);
+            orthogonal.scalar_multiplication(d_dot_n);
             orthogonal.scalar_multiplication(2.);
-            self.add(&orthogonal);
+            self.sub(&orthogonal);
         }
 
         pub fn get_projection(&self, onto: &Vector) -> Vector {

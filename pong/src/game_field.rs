@@ -137,21 +137,15 @@ impl Field {
                 collision => objs.iter().find(|o| o.id == collision.0).unwrap(),
             };
 
-            self.logger.log(&*format!("Collision between: {:?} vs. {:?}", ball.obj, other));
+
+            self.logger.log("### BEFORE COLLISION ###");
+            self.logger.log(&*format!("{:?}", ball.obj));
+            self.logger.log(&*format!("{:?}", other));
             collision_handler.handle(&mut ball.obj, other);
-            // if other.vel == Vector::zero() {
-            //     let dot = ball.obj.vel.dot(&other.orientation);
-            //     if dot >= - 0.000001 && dot <= 0.000001 {
-            //         ball.obj.vel.invert();
-            //     } else {
-            //         let angle = ball.obj.vel.angle(&other.orientation);
-            //         ball.obj.vel.rotate(FRAC_PI_2 - angle);
-            //         ball.obj.vel.invert();
-            //     }
-            // } else {
-            //     ball.obj.vel.add(&other.vel);
-            //     ball.obj.vel.invert();
-            // }
+            self.logger.log("### AFTER COLLISION ###");
+            self.logger.log(&*format!("{:?}", ball.obj));
+            self.logger.log(&*format!("{:?}", other));
+            self.logger.log("### DONE ###");
         }
     }
 

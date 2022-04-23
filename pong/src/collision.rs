@@ -75,15 +75,18 @@ pub mod collision {
             CollisionHandler {}
         }
         pub fn handle(&self, obj_a: &mut GameObject, obj_b: &GameObject) {
-            if obj_a.is_static {
-                return;
+            if !obj_a.is_static {
+                obj_a.vel.reflect(&obj_b.orientation);
+                if obj_b.vel != Vector::zero() {
+                    let mut adjusted = obj_b.vel.clone();
+                    adjusted.normalize();
+                    obj_a.vel.add(&adjusted);
+                }
             }
-            obj_a.vel.reflect(&obj_b.orientation);
-            if obj_b.vel != Vector::zero() {
-                let mut adjusted = obj_b.vel.clone();
-                adjusted.normalize();
-                obj_a.vel.add(&adjusted);
-            }
+            let mut b_to_a = obj_a.pos.clone();
+            b_to_a.sub(&obj_b.pos);
+            b_to_a.normalize();
+            obj_a.pos.add(&b_to_a);
         }
     }
 }

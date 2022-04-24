@@ -14,7 +14,7 @@ mod game_field_tests {
         field.tick(inputs);
         let players = field.players();
         let player = players.first().unwrap();
-        assert_eq!(player.obj.pos.y, height as f64 / 2. + 1.);
+        assert_eq!(player.obj.pos().y, height as f64 / 2. + 1.);
     }
 
     #[test]
@@ -29,7 +29,7 @@ mod game_field_tests {
         field.tick(inputs);
         let players = field.players();
         let player = players.first().unwrap();
-        assert_eq!(player.obj.pos.y, height as f64 / 2. - 1.);
+        assert_eq!(player.obj.pos().y, height as f64 / 2. - 1.);
     }
 
     #[test]
@@ -44,7 +44,7 @@ mod game_field_tests {
         field.tick(inputs);
         let players = field.players();
         let player = players.first().unwrap();
-        assert_eq!(player.obj.pos.y, height as f64 - height as f64 / 5. / 2.);
+        assert_eq!(player.obj.pos().y, height as f64 - height as f64 / 5. / 2.);
     }
 
     #[test]
@@ -59,6 +59,6 @@ mod game_field_tests {
         field.tick(inputs);
         let players = field.players();
         let player = players.first().unwrap();
-        assert_eq!(player.obj.pos.y, height as f64 / 5. / 2.);
+        assert_eq!(player.obj.pos().y, height as f64 / 5. / 2.);
     }
 }

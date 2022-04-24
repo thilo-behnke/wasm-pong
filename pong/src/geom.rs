@@ -135,6 +135,7 @@ pub mod geom {
         }
     }
 
+    #[derive(Clone)]
     pub struct BoundingBox {
         top_left: Vector,
         top_right: Vector,

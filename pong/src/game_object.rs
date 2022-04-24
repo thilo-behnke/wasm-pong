@@ -2,10 +2,11 @@ pub mod game_object {
     use std::fmt::Debug;
     use crate::game_object::components::{GeomComp, PhysicsComp};
     use crate::geom::geom::{BoundingBox, Vector};
-    use crate::geom::shape::ShapeType;
+    use crate::geom::shape::{Shape, ShapeType};
 
     pub trait GameObject : Debug {
         fn id(&self) -> u16;
+        fn shape(&self) -> &Box<dyn Shape>;
         fn pos(&self) -> &Vector;
         fn pos_mut(&mut self) -> &mut Vector;
         fn orientation(&self) -> &Vector;
@@ -33,6 +34,10 @@ pub mod game_object {
     impl GameObject for DefaultGameObject {
         fn id(&self) -> u16 {
             self.id
+        }
+
+        fn shape(&self) -> &Box<dyn Shape> {
+            self.geom.shape()
         }
 
         fn pos(&self) -> &Vector {
@@ -86,6 +91,7 @@ pub mod components {
     use crate::geom::shape::Shape;
 
     pub trait GeomComp : Debug {
+        fn shape(&self) -> &Box<dyn Shape>;
         fn orientation(&self) -> &Vector;
         fn orientation_mut(&mut self) -> &mut Vector;
         fn center(&self) -> &Vector;
@@ -105,6 +111,10 @@ pub mod components {
     }
 
     impl GeomComp for DefaultGeomComp {
+        fn shape(&self) -> &Box<dyn Shape> {
+            &self.shape
+        }
+
         fn orientation(&self) -> &Vector {
             &self.shape.orientation()
         }

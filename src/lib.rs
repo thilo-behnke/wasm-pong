@@ -38,15 +38,16 @@ pub struct GameObjectDTO {
 }
 
 impl GameObjectDTO {
-    pub fn from(obj: &GameObject) -> GameObjectDTO {
+    pub fn from(obj: &Box<dyn GameObject>) -> GameObjectDTO {
+        let pos = obj.pos();
+        let shape = obj.shape();
         return GameObjectDTO {
-            id: obj.id,
-            x: obj.pos.x as u16,
-            y: obj.pos.y as u16,
-            shape_param_1: match obj.shape_params[..] {
-                [p1, _] => p1,
-                [p1] => p1,
-                _ => 0,
+            id: obj.id(),
+            x: pos.x as u16,
+            y: pos.y as u16,
+            shape_param_1: match shape.shape_type() {
+                ShapeType::Rect => shape.,
+                ShapeType::Circle =>
             },
             shape_param_2: match obj.shape_params[..] {
                 [_, p2] => p2,

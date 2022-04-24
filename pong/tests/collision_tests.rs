@@ -8,29 +8,29 @@ use pong::geom::geom::{BoundingBox, Vector};
 #[case(vec![], vec![])]
 #[case(
     vec![
-        MockGameObject::new(1, BoundingBox::new(Vector{x: 50., y: 50.}, 20., 20.)),
-        MockGameObject::new(2, BoundingBox::new(Vector{x: 50., y: 50.}, 20., 20.))
+        MockGameObject::new(1, BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
+        MockGameObject::new(2, BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.))
     ],
     vec![Collision(1, 2)]
 )]
 #[case(
     vec![
-        MockGameObject::new(1, BoundingBox::new(Vector{x: 60., y: 65.}, 20., 20.)),
-        MockGameObject::new(2, BoundingBox::new(Vector{x: 50., y: 50.}, 20., 20.)),
+        MockGameObject::new(1, BoundingBox::create(&Vector{x: 60., y: 65.}, 20., 20.)),
+        MockGameObject::new(2, BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
     ],
     vec![Collision(1, 2)]
 )]
 #[case(
     vec![
-        MockGameObject::new(1, BoundingBox::new(Vector{x: 50., y: 50.}, 20., 20.)),
-        MockGameObject::new(2, BoundingBox::new(Vector{x: 80., y: 80.}, 20., 20.)),
+        MockGameObject::new(1, BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
+        MockGameObject::new(2, BoundingBox::create(&Vector{x: 80., y: 80.}, 20., 20.)),
     ],
     vec![]
 )]
 #[case(
     vec![
-        MockGameObject::new(1, BoundingBox::new(Vector{x: 50., y: 50.}, 50., 50.)),
-        MockGameObject::new(2, BoundingBox::new(Vector{x: 500., y: 50.}, 50., 50.)),
+        MockGameObject::new(1, BoundingBox::create(&Vector{x: 50., y: 50.}, 50., 50.)),
+        MockGameObject::new(2, BoundingBox::create(&Vector{x: 500., y: 50.}, 50., 50.)),
     ],
     vec![]
 )]
@@ -39,7 +39,7 @@ pub fn should_detect_collisions(
     #[case] expected_collisions: Vec<Collision>,
 ) {
     let detector = CollisionDetector::new();
-    let res = detector.detect_collisions(objs.iter().collect());
+    let res = detector.detect_collisions(&objs.iter().collect());
     assert_eq!(
         res.get_collisions(),
         expected_collisions.iter().collect::<Vec<&Collision>>()
@@ -49,14 +49,15 @@ pub fn should_detect_collisions(
 #[derive(Debug)]
 pub struct MockGameObject {
     id: u16,
-    bounding_box: BoundingBox
+    bounding_box: BoundingBox,
+    zero_vec: Vector
 }
 
 impl MockGameObject {
     pub fn new(id: u16, bounding_box: BoundingBox) -> Box<dyn GameObject> {
         Box::new(
             MockGameObject {
-                id, bounding_box
+                id, bounding_box, zero_vec: Vector::zero()
             }
         )
     }
@@ -68,15 +69,15 @@ impl GameObject for MockGameObject {
     }
 
     fn pos(&self) -> &Vector {
-        &Vector::zero()
+        &self.zero_vec
     }
 
     fn pos_mut(&mut self) -> &mut Vector {
-        &mut Vector::zero()
+        &mut self.zero_vec
     }
 
     fn orientation(&self) -> &Vector {
-        &Vector::zero()
+        &self.zero_vec
     }
 
     fn update_pos(&mut self) {
@@ -87,11 +88,11 @@ impl GameObject for MockGameObject {
     }
 
     fn vel(&self) -> &Vector {
-        &Vector::zero()
+        &self.zero_vec
     }
 
     fn vel_mut(&mut self) -> &mut Vector {
-        &mut Vector::zero()
+        &mut self.zero_vec
     }
 
     fn is_static(&self) -> bool {

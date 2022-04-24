@@ -122,7 +122,7 @@ pub mod components {
         }
 
         fn bounding_box(&self) -> BoundingBox {
-            self.bounding_box()
+            self.shape.bounding_box()
         }
     }
 

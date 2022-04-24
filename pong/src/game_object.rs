@@ -5,14 +5,18 @@ pub mod game_object {
     use crate::geom::shape::ShapeType;
 
     pub trait GameObject {
+        fn id(&self) -> u16;
+        fn pos(&self) -> &Vector;
+        fn pos_mut(&mut self) -> &mut Vector;
+        fn orientation(&self) -> &Vector;
         fn update_pos(&mut self);
-        fn vel(&self) -> &Vector;
-        fn set_vel_x(&mut self, x: f64);
-        fn set_vel_y(&mut self, y: f64);
         fn bounding_box(&self) -> BoundingBox;
+        fn vel(&self) -> &Vector;
+        fn vel_mut(&mut self) -> &mut Vector;
+        fn is_static(&self) -> bool;
     }
 
-    #[derive(Clone, Debug, PartialEq)]
+    // #[derive(Clone, Debug, PartialEq)]
     pub struct DefaultGameObject {
         pub id: u16,
         geom: Box<dyn GeomComp>,
@@ -26,6 +30,22 @@ pub mod game_object {
     }
 
     impl GameObject for DefaultGameObject {
+        fn id(&self) -> u16 {
+            self.id
+        }
+
+        fn pos(&self) -> &Vector {
+            self.geom.center()
+        }
+
+        fn pos_mut(&mut self) -> &mut Vector {
+            self.geom.center_mut()
+        }
+
+        fn orientation(&self) -> &Vector {
+            self.geom.orientation()
+        }
+
         fn update_pos(&mut self) {
             let vel = self.vel();
             let center = self.geom.center_mut();
@@ -41,22 +61,20 @@ pub mod game_object {
             orientation.y = updated_orientation.y;
         }
 
+        fn bounding_box(&self) -> BoundingBox {
+            self.geom.bounding_box()
+        }
+
         fn vel(&self) -> &Vector {
             &self.physics.vel()
         }
 
-        fn set_vel_x(&mut self, x: f64) {
-            let vel = self.physics.vel_mut();
-            vel.x = x;
+        fn vel_mut(&mut self) -> &mut Vector {
+            self.physics.vel_mut()
         }
 
-        fn set_vel_y(&mut self, y: f64) {
-            let vel = self.physics.vel_mut();
-            vel.y = y;
-        }
-
-        fn bounding_box(&self) -> BoundingBox {
-            self.geom.bounding_box()
+        fn is_static(&self) -> bool {
+            self.physics.is_static()
         }
     }
 }

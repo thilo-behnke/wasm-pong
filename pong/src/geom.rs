@@ -315,7 +315,7 @@ pub mod shape {
         }
 
         fn bounding_box(&self) -> BoundingBox {
-            BoundingBox::create(&self.center(), self.radius * 2, self.radius * 2)
+            BoundingBox::create(&self.center(), self.radius * 2., self.radius * 2.)
         }
     }
 }

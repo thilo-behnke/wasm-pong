@@ -103,7 +103,7 @@ impl Field {
             ball.obj.update_pos()
         }
 
-        let mut objs: Vec<GameObject> = vec![];
+        let mut objs: Vec<Box<dyn GameObject>> = vec![];
         objs.extend(
             self.players
                 .clone()

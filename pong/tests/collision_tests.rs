@@ -1,6 +1,6 @@
 use rstest::rstest;
 use pong::collision::collision::{Collision, CollisionDetector};
-use pong::game_object::game_object::{GameObject, Shape};
+use pong::game_object::game_object::{GameObject, ShapeType};
 use pong::geom::geom::{Vector};
 
 #[rstest]

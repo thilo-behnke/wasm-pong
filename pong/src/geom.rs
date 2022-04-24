@@ -143,29 +143,24 @@ pub mod geom {
     }
 
     impl BoundingBox {
-        pub fn create_from_coords(x: f64, y: f64, width: u16, height: u16) -> BoundingBox {
-            let center = Vector::new(x, y);
-            return BoundingBox::create(&center, width, height)
-        }
-
-        pub fn create(center: &Vector, width: u16, height: u16) -> BoundingBox {
+        pub fn create(center: &Vector, width: f64, height: f64) -> BoundingBox {
             let center_x = center.x;
             let center_y = center.y;
             let top_left = Vector {
-                x: center_x - (width as f64 / 2.),
-                y: center_y + (height as f64 / 2.),
+                x: center_x - width / 2.,
+                y: center_y + height / 2.,
             };
             let top_right = Vector {
-                x: center_x + (width as f64 / 2.),
-                y: center_y + (height as f64 / 2.),
+                x: center_x + width / 2.,
+                y: center_y + height / 2.,
             };
             let bottom_left = Vector {
-                x: center_x - (width as f64 / 2.),
-                y: center_y - (height as f64 / 2.),
+                x: center_x - width / 2.,
+                y: center_y - height / 2.,
             };
             let bottom_right = Vector {
-                x: center_x + (width as f64 / 2.),
-                y: center_y - (height as f64 / 2.),
+                x: center_x + width / 2.,
+                y: center_y - height / 2.,
             };
             BoundingBox {
                 top_left,
@@ -239,6 +234,88 @@ pub mod geom {
             }
 
             return false;
+        }
+    }
+}
+
+pub mod shape {
+    use crate::geom::geom::{BoundingBox, Vector};
+
+    #[derive(Clone, Debug, PartialEq)]
+    pub enum ShapeType {
+        Rect = 0,
+        Circle = 1,
+    }
+
+    pub trait Shape {
+        fn center(&self) -> &Vector;
+        fn orientation(&self) -> &Vector;
+        fn shape_type(&self) -> ShapeType;
+        fn bounding_box(&self) -> BoundingBox;
+    }
+
+    pub struct Rect {
+        pub width: f64,
+        pub height: f64,
+        center: Vector,
+        orientation: Vector
+    }
+
+    impl Rect {
+        pub fn new(center: Vector, orientation: Vector, width: f64, height: f64) -> Rect {
+            Rect {
+                center, orientation, width, height
+            }
+        }
+    }
+
+    impl Shape for Rect {
+        fn center(&self) -> &Vector {
+            &self.center
+        }
+
+        fn orientation(&self) -> &Vector {
+            &self.orientation
+        }
+
+        fn shape_type(&self) -> ShapeType {
+            ShapeType::Rect
+        }
+
+        fn bounding_box(&self) -> BoundingBox {
+            BoundingBox::create(self.center(), self.width, self.height)
+        }
+    }
+
+    pub struct Circle {
+        pub radius: f64,
+        center: Vector,
+        orientation: Vector,
+    }
+
+    impl Circle {
+        pub fn new(center: Vector, orientation: Vector, radius: f64) -> Circle {
+            Circle {
+                center, orientation, radius
+            }
+        }
+    }
+
+    impl Shape for Circle {
+        fn center(&self) -> &Vector {
+            &self.center
+        }
+
+        fn orientation(&self) -> &Vector {
+            &self.orientation
+        }
+
+        fn shape_type(&self) -> ShapeType {
+            ShapeType::Circle
+        }
+
+        fn bounding_box(&self) -> BoundingBox {
+            BoundingBox::create(&self.center(), self.radius * 2, self.radius * 2)
         }
     }
 }

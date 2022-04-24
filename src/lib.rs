@@ -6,7 +6,7 @@ use std::cmp::{max, min};
 use wasm_bindgen::prelude::*;
 use pong::collision::collision::{Collision, CollisionDetector};
 use pong::game_field::{Field, Input, InputType};
-use pong::game_object::game_object::{GameObject, Shape};
+use pong::game_object::game_object::{GameObject, ShapeType};
 use pong::geom::geom::Vector;
 use pong::utils::utils::Logger;
 

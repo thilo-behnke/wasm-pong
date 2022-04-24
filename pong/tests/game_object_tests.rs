@@ -1,5 +1,5 @@
 use rstest::rstest;
-use pong::game_object::game_object::{GameObject, Shape};
+use pong::game_object::game_object::{GameObject, ShapeType};
 use pong::geom::geom::{Vector};
 
 #[rstest]
@@ -9,7 +9,7 @@ pub fn should_update_pos(#[case] start_pos: Vector, #[case] vel: Vector, #[case]
         id: 1,
         pos: Vector::new(start_pos.x as f64, start_pos.y as f64),
         vel,
-        shape: Shape::Rect,
+        shape: ShapeType::Rect,
         shape_params: vec![],
         is_static: false,
         orientation: Vector::new(1., 0.)

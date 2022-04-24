@@ -1,6 +1,5 @@
-use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
 use crate::collision::collision::{Collision, CollisionDetector, CollisionHandler, CollisionRegistry, Collisions};
-use crate::game_object::game_object::{GameObject, Shape};
+use crate::game_object::game_object::{GameObject, ShapeType};
 use crate::geom::geom::Vector;
 use crate::utils::utils::{Logger, NoopLogger};
 
@@ -71,7 +70,7 @@ impl Field {
 
     pub fn tick(&mut self, inputs: Vec<Input>) {
         for ball in self.balls.iter_mut() {
-            if ball.obj.vel == Vector::zero() {
+            if ball.obj.physics.vel() == Vector::zero() {
                 ball.obj.set_vel_x(-2.)
             }
         }
@@ -85,10 +84,12 @@ impl Field {
             let input = input_opt.unwrap();
             match input.input {
                 InputType::UP => {
-                    player.obj.vel.y = (player.obj.vel.y + 1.).min(5.);
+                    let updated_vel_y = (player.obj.vel.y + 1.).min(5.);
+                    player.obj.set_vel_y(updated_vel_y);
                 }
                 InputType::DOWN => {
-                    player.obj.vel.y = (player.obj.vel.y - 1.).max(-5.);
+                    let updated_vel_y = (player.obj.vel.y - 1.).max(-5.);
+                    player.obj.set_vel_y(updated_vel_y);
                 }
             };
         }
@@ -170,7 +171,7 @@ impl Player {
                 id,
                 pos: Vector {x: x as f64, y: y as f64},
                 orientation: Vector::new(0., 1.),
-                shape: Shape::Rect,
+                shape: ShapeType::Rect,
                 shape_params: vec![field.width / 25, field.height / 5],
                 vel: Vector::zero(),
                 is_static: true,
@@ -191,7 +192,7 @@ impl Ball {
                 id,
                 pos: Vector {x: x as f64, y: y as f64},
                 orientation: Vector::zero(),
-                shape: Shape::Circle,
+                shape: ShapeType::Circle,
                 shape_params: vec![field.width / 80],
                 vel: Vector::zero(),
                 is_static: false,
@@ -214,7 +215,7 @@ impl Bounds {
                     id: 90,
                     pos: Vector {x: (width / 2) as f64, y: 0 as f64},
                     orientation: Vector::new(1., 0.),
-                    shape: Shape::Rect,
+                    shape: ShapeType::Rect,
                     shape_params: vec![width, 2],
                     is_static: true,
                     vel: Vector::zero(),
@@ -224,7 +225,7 @@ impl Bounds {
                     id: 91,
                     pos: Vector {x: (width / 2) as f64, y: height as f64},
                     orientation: Vector::new(-1., 0.),
-                    shape: Shape::Rect,
+                    shape: ShapeType::Rect,
                     shape_params: vec![width, 2],
                     is_static: true,
                     vel: Vector::zero(),
@@ -234,7 +235,7 @@ impl Bounds {
                     id: 92,
                     pos: Vector {x: 0 as f64, y: (height / 2) as f64},
                     orientation: Vector::new(0., 1.),
-                    shape: Shape::Rect,
+                    shape: ShapeType::Rect,
                     shape_params: vec![2, height],
                     is_static: true,
                     vel: Vector::zero(),
@@ -244,7 +245,7 @@ impl Bounds {
                     id: 93,
                     pos: Vector {x: width as f64, y: (height / 2) as f64},
                     orientation: Vector::new(0., -1.),
-                    shape: Shape::Rect,
+                    shape: ShapeType::Rect,
                     shape_params: vec![2, height],
                     is_static: true,
                     vel: Vector::zero(),

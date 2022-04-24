@@ -72,26 +72,26 @@ impl Field {
 
     pub fn tick(&mut self, inputs: Vec<Input>) {
         for ball in self.balls.iter_mut() {
-            if ball.obj.physics.vel() == Vector::zero() {
-                ball.obj.set_vel_x(-2.)
+            if *ball.obj.vel() == Vector::zero() {
+                ball.obj.vel_mut().add(&Vector::new(-2.0, 0.))
             }
         }
 
         for player in self.players.iter_mut() {
-            let input_opt = inputs.iter().find(|input| player.obj.id == input.obj_id);
+            let input_opt = inputs.iter().find(|input| player.obj.id() == input.obj_id);
             if let None = input_opt {
-                player.obj.set_vel_y(0.);
+                player.obj.vel_mut().y = 0.;
                 continue;
             }
             let input = input_opt.unwrap();
             match input.input {
                 InputType::UP => {
-                    let updated_vel_y = (player.obj.vel.y + 1.).min(5.);
-                    player.obj.set_vel_y(updated_vel_y);
+                    let updated_vel_y = (player.obj.vel().y + 1.).min(5.);
+                    player.obj.vel_mut().y = updated_vel_y;
                 }
                 InputType::DOWN => {
-                    let updated_vel_y = (player.obj.vel.y - 1.).max(-5.);
-                    player.obj.set_vel_y(updated_vel_y);
+                    let updated_vel_y = (player.obj.vel().y - 1.).max(-5.);
+                    player.obj.vel_mut().y = updated_vel_y;
                 }
             };
         }
@@ -109,20 +109,20 @@ impl Field {
                 .clone()
                 .into_iter()
                 .map(|p| p.obj)
-                .collect::<Vec<GameObject>>(),
+                .collect::<Vec<Box<dyn GameObject>>>(),
         );
         objs.extend(
             self.balls
                 .clone()
                 .into_iter()
                 .map(|b| b.obj)
-                .collect::<Vec<GameObject>>(),
+                .collect::<Vec<Box<dyn GameObject>>>(),
         );
         objs.extend(
             self.bounds.objs
                 .clone()
                 .into_iter()
-                .collect::<Vec<GameObject>>()
+                .collect::<Vec<Box<dyn GameObject>>>()
         );
         let collision_detector = CollisionDetector::new();
         let collision_handler = CollisionHandler::new();

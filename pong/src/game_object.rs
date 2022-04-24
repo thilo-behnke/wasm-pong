@@ -4,7 +4,7 @@ pub mod game_object {
     use crate::geom::geom::{BoundingBox, Vector};
     use crate::geom::shape::ShapeType;
 
-    pub trait GameObject {
+    pub trait GameObject : Debug {
         fn id(&self) -> u16;
         fn pos(&self) -> &Vector;
         fn pos_mut(&mut self) -> &mut Vector;
@@ -17,6 +17,7 @@ pub mod game_object {
     }
 
     // #[derive(Clone, Debug, PartialEq)]
+    #[derive(Debug)]
     pub struct DefaultGameObject {
         pub id: u16,
         geom: Box<dyn GeomComp>,
@@ -80,10 +81,11 @@ pub mod game_object {
 }
 
 pub mod components {
+    use std::fmt::Debug;
     use crate::geom::geom::{BoundingBox, Vector};
     use crate::geom::shape::Shape;
 
-    pub trait GeomComp {
+    pub trait GeomComp : Debug {
         fn orientation(&self) -> &Vector;
         fn orientation_mut(&mut self) -> &mut Vector;
         fn center(&self) -> &Vector;
@@ -91,6 +93,7 @@ pub mod components {
         fn bounding_box(&self) -> BoundingBox;
     }
 
+    #[derive(Debug)]
     pub struct DefaultGeomComp {
         shape: Box<dyn Shape>
     }
@@ -123,12 +126,13 @@ pub mod components {
         }
     }
 
-    pub trait PhysicsComp {
+    pub trait PhysicsComp : Debug {
         fn vel(&self) -> &Vector;
         fn vel_mut(&mut self) -> &mut Vector;
         fn is_static(&self) -> bool;
     }
 
+    #[derive(Debug)]
     pub struct DefaultPhysicsComp {
         vel: Vector,
         is_static: bool

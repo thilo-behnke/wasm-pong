@@ -239,6 +239,7 @@ pub mod geom {
 }
 
 pub mod shape {
+    use std::fmt::Debug;
     use crate::geom::geom::{BoundingBox, Vector};
 
     #[derive(Clone, Debug, PartialEq)]
@@ -247,13 +248,14 @@ pub mod shape {
         Circle = 1,
     }
 
-    pub trait Shape {
+    pub trait Shape : Debug {
         fn center(&self) -> &Vector;
         fn orientation(&self) -> &Vector;
         fn shape_type(&self) -> ShapeType;
         fn bounding_box(&self) -> BoundingBox;
     }
 
+    #[derive(Debug)]
     pub struct Rect {
         pub width: f64,
         pub height: f64,
@@ -287,6 +289,7 @@ pub mod shape {
         }
     }
 
+    #[derive(Debug)]
     pub struct Circle {
         pub radius: f64,
         center: Vector,

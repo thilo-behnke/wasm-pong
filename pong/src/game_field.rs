@@ -1,6 +1,8 @@
 use crate::collision::collision::{Collision, CollisionDetector, CollisionHandler, CollisionRegistry, Collisions};
-use crate::game_object::game_object::{GameObject, ShapeType};
+use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
+use crate::game_object::game_object::GameObject;
 use crate::geom::geom::Vector;
+use crate::geom::shape::{Circle, Rect};
 use crate::utils::utils::{Logger, NoopLogger};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -161,49 +163,51 @@ impl Field {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Player {
-    pub obj: GameObject,
+    pub obj: Box<dyn GameObject>,
 }
 
 impl Player {
     pub fn new(id: u16, x: u16, y: u16, field: &Field) -> Player {
         Player {
-            obj: GameObject {
+            obj: GameObject::new(
                 id,
-                pos: Vector {x: x as f64, y: y as f64},
-                orientation: Vector::new(0., 1.),
-                shape: ShapeType::Rect,
-                shape_params: vec![field.width / 25, field.height / 5],
-                vel: Vector::zero(),
-                is_static: true,
-            },
+                Box::new(DefaultGeomComp::new(
+                    Box::new(Rect::new(Vector { x: x as f64, y: y as f64 }, Vector::new(0., 1.), (field.width as f64) / 25, (field.height as f64) / 5))
+                )),
+                Box::new(DefaultPhysicsComp::new(
+                    Vector::zero(),
+                    true
+                ))
+            )
         }
     }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Ball {
-    pub obj: GameObject,
+    pub obj: Box<dyn GameObject>,
 }
 
 impl Ball {
     pub fn new(id: u16, x: u16, y: u16, field: &Field) -> Ball {
         Ball {
-            obj: GameObject {
+            obj: GameObject::new(
                 id,
-                pos: Vector {x: x as f64, y: y as f64},
-                orientation: Vector::zero(),
-                shape: ShapeType::Circle,
-                shape_params: vec![field.width / 80],
-                vel: Vector::zero(),
-                is_static: false,
-            },
+                Box::new(DefaultGeomComp::new(
+                    Box::new(Circle::new(Vector { x: x as f64, y: y as f64 }, Vector::zero(), (field.width as f64) / 80)
+                ))),
+                Box::new(DefaultPhysicsComp::new(
+                    Vector::zero(),
+                    false
+                ))
+            )
         }
     }
 }
 
 #[derive(Debug)]
 pub struct Bounds {
-    pub objs: Vec<GameObject>,
+    pub objs: Vec<Box<dyn GameObject>>,
 }
 
 impl Bounds {
@@ -211,45 +215,37 @@ impl Bounds {
         Bounds {
             objs: vec![
                 // top
-                GameObject {
-                    id: 90,
-                    pos: Vector {x: (width / 2) as f64, y: 0 as f64},
-                    orientation: Vector::new(1., 0.),
-                    shape: ShapeType::Rect,
-                    shape_params: vec![width, 2],
-                    is_static: true,
-                    vel: Vector::zero(),
-                },
+                GameObject::new(
+                    90,
+                    Box::new(DefaultGeomComp::new(
+                        Box::new(Rect::new(Vector {x: (width / 2) as f64, y: 0 as f64}, Vector::new(1., 0.), width as f64, 2.)
+                    ))),
+                    Box::new(DefaultPhysicsComp::new_static())
+                ),
                 // bottom
-                GameObject {
-                    id: 91,
-                    pos: Vector {x: (width / 2) as f64, y: height as f64},
-                    orientation: Vector::new(-1., 0.),
-                    shape: ShapeType::Rect,
-                    shape_params: vec![width, 2],
-                    is_static: true,
-                    vel: Vector::zero(),
-                },
+                GameObject::new(
+                    91,
+                    Box::new(DefaultGeomComp::new(
+                        Box::new(Rect::new(Vector {x: (width / 2) as f64, y: height as f64}, Vector::new(-1., 0.), width as f64, 2.)
+                        ))),
+                    Box::new(DefaultPhysicsComp::new_static())
+                ),
                 // left
-                GameObject {
-                    id: 92,
-                    pos: Vector {x: 0 as f64, y: (height / 2) as f64},
-                    orientation: Vector::new(0., 1.),
-                    shape: ShapeType::Rect,
-                    shape_params: vec![2, height],
-                    is_static: true,
-                    vel: Vector::zero(),
-                },
+                GameObject::new(
+                    92,
+                    Box::new(DefaultGeomComp::new(
+                        Box::new(Rect::new(Vector {x: 0 as f64, y: (height / 2) as f64}, Vector::new(0., 1.), 2., height as f64)
+                        ))),
+                    Box::new(DefaultPhysicsComp::new_static())
+                ),
                 // right
-                GameObject {
-                    id: 93,
-                    pos: Vector {x: width as f64, y: (height / 2) as f64},
-                    orientation: Vector::new(0., -1.),
-                    shape: ShapeType::Rect,
-                    shape_params: vec![2, height],
-                    is_static: true,
-                    vel: Vector::zero(),
-                },
+                GameObject::new(
+                    93,
+                    Box::new(DefaultGeomComp::new(
+                        Box::new(Rect::new(Vector {x: width as f64, y: (height / 2) as f64}, Vector::new(0., -1.), 2., height as f64)
+                        ))),
+                    Box::new(DefaultPhysicsComp::new_static())
+                )
             ],
         }
     }

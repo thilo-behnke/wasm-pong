@@ -6,8 +6,9 @@ use std::cmp::{max, min};
 use wasm_bindgen::prelude::*;
 use pong::collision::collision::{Collision, CollisionDetector};
 use pong::game_field::{Field, Input, InputType};
-use pong::game_object::game_object::{GameObject, ShapeType};
+use pong::game_object::game_object::{GameObject};
 use pong::geom::geom::Vector;
+use pong::geom::shape::ShapeType;
 use pong::utils::utils::Logger;
 
 extern crate serde_json;
@@ -45,13 +46,13 @@ impl GameObjectDTO {
             id: obj.id(),
             x: pos.x as u16,
             y: pos.y as u16,
-            shape_param_1: match shape.shape_type() {
-                ShapeType::Rect => shape.,
-                ShapeType::Circle =>
+            shape_param_1: match shape {
+                ShapeType::Rect(_, width, _) => *width as u16,
+                ShapeType::Circle(_, radius) => *radius as u16
             },
-            shape_param_2: match obj.shape_params[..] {
-                [_, p2] => p2,
-                _ => 0,
+            shape_param_2: match shape {
+                ShapeType::Rect(_, _, height) => *height as u16,
+                ShapeType::Circle(_, _) => 0
             },
         };
     }
@@ -115,7 +116,7 @@ impl FieldWrapper {
         let input_dtos: Vec<InputDTO> = inputs_js.into_serde().unwrap();
         let inputs = input_dtos.into_iter().map(|i| i.to_input()).collect::<Vec<Input>>();
         self.field.tick(inputs);
-        // log!("{:?}", self.field.collisions);
+        log!("{:?}", self.field.collisions);
     }
 
     pub fn objects(&self) -> *const GameObjectDTO {

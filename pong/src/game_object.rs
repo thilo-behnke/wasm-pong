@@ -4,7 +4,7 @@ pub mod game_object {
     use crate::geom::geom::{BoundingBox, Vector};
     use crate::geom::shape::{Shape, ShapeType};
 
-    pub trait GameObject : Debug {
+    pub trait GameObject : Debug + Clone {
         fn id(&self) -> u16;
         fn shape(&self) -> &ShapeType;
         fn pos(&self) -> &Vector;
@@ -18,7 +18,7 @@ pub mod game_object {
     }
 
     // #[derive(Clone, Debug, PartialEq)]
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub struct DefaultGameObject {
         pub id: u16,
         geom: Box<dyn GeomComp>,

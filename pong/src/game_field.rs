@@ -106,19 +106,22 @@ impl Field {
         let mut objs: Vec<&Box<dyn GameObject>> = vec![];
         objs.extend(
             self.players
-                .iter()
+                .clone()
+                .into_iter()
                 .map(|p| &p.obj)
                 .collect::<Vec<&Box<dyn GameObject>>>(),
         );
-        // objs.extend(
-        //     self.balls
-        //         .iter()
-        //         .map(|b| &b.obj)
-        //         .collect::<Vec<&Box<dyn GameObject>>>(),
-        // );
+        objs.extend(
+            self.balls
+                .clone()
+                .into_iter()
+                .map(|b| &b.obj)
+                .collect::<Vec<&Box<dyn GameObject>>>(),
+        );
         objs.extend(
             self.bounds.objs
-                .iter()
+                .clone()
+                .into_iter()
                 .collect::<Vec<&Box<dyn GameObject>>>()
         );
         let collision_detector = CollisionDetector::new();
@@ -136,7 +139,6 @@ impl Field {
                 }
                 collision => objs.iter().find(|o| o.id() == collision.0).unwrap(),
             };
-
 
             self.logger.log("### BEFORE COLLISION ###");
             self.logger.log(&*format!("{:?}", ball.obj));

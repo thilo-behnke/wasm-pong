@@ -10,7 +10,7 @@ pub mod collision {
             CollisionDetector {}
         }
 
-        pub fn detect_collisions(&self, objs: Vec<&Box<dyn GameObject>>) -> Box<dyn CollisionRegistry> {
+        pub fn detect_collisions(&self, objs: &Vec<&Box<dyn GameObject>>) -> Box<dyn CollisionRegistry> {
             if objs.is_empty() {
                 return Box::new(Collisions::new(vec![]));
             }

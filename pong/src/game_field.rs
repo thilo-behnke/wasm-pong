@@ -103,30 +103,27 @@ impl Field {
             ball.obj.update_pos()
         }
 
-        let mut objs: Vec<Box<dyn GameObject>> = vec![];
+        let mut objs: Vec<&Box<dyn GameObject>> = vec![];
         objs.extend(
             self.players
-                .clone()
-                .into_iter()
-                .map(|p| p.obj)
-                .collect::<Vec<Box<dyn GameObject>>>(),
+                .iter()
+                .map(|p| &p.obj)
+                .collect::<Vec<&Box<dyn GameObject>>>(),
         );
-        objs.extend(
-            self.balls
-                .clone()
-                .into_iter()
-                .map(|b| b.obj)
-                .collect::<Vec<Box<dyn GameObject>>>(),
-        );
+        // objs.extend(
+        //     self.balls
+        //         .iter()
+        //         .map(|b| &b.obj)
+        //         .collect::<Vec<&Box<dyn GameObject>>>(),
+        // );
         objs.extend(
             self.bounds.objs
-                .clone()
-                .into_iter()
-                .collect::<Vec<Box<dyn GameObject>>>()
+                .iter()
+                .collect::<Vec<&Box<dyn GameObject>>>()
         );
         let collision_detector = CollisionDetector::new();
         let collision_handler = CollisionHandler::new();
-        self.collisions = collision_detector.detect_collisions(objs.iter().collect());
+        self.collisions = collision_detector.detect_collisions(&objs);
 
         for ball in self.balls.iter_mut() {
             let collisions = self.collisions.get_collisions_by_id(ball.obj.id());

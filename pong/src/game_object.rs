@@ -48,11 +48,11 @@ pub mod game_object {
         }
 
         fn update_pos(&mut self) {
-            let vel = self.vel();
+            let vel = self.vel().clone();
             let center = self.geom.center_mut();
-            center.add(vel);
+            center.add(&vel);
             // Keep last orientation if vel is now zero.
-            if *vel == Vector::zero() {
+            if vel == Vector::zero() {
                 return;
             }
             let mut updated_orientation = vel.clone();
@@ -110,7 +110,7 @@ pub mod components {
         }
 
         fn orientation_mut(&mut self) -> &mut Vector {
-            &mut self.shape.orientation()
+            self.shape.orientation_mut()
         }
 
         fn center(&self) -> &Vector {
@@ -118,7 +118,7 @@ pub mod components {
         }
 
         fn center_mut(&mut self) -> &mut Vector {
-            &mut self.shape.center()
+            self.shape.center_mut()
         }
 
         fn bounding_box(&self) -> BoundingBox {

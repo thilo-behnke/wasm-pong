@@ -250,7 +250,9 @@ pub mod shape {
 
     pub trait Shape : Debug {
         fn center(&self) -> &Vector;
+        fn center_mut(&mut self) -> &mut Vector;
         fn orientation(&self) -> &Vector;
+        fn orientation_mut(&mut self) -> &mut Vector;
         fn shape_type(&self) -> ShapeType;
         fn bounding_box(&self) -> BoundingBox;
     }
@@ -276,8 +278,16 @@ pub mod shape {
             &self.center
         }
 
+        fn center_mut(&mut self) -> &mut Vector {
+            &mut self.center
+        }
+
         fn orientation(&self) -> &Vector {
             &self.orientation
+        }
+
+        fn orientation_mut(&mut self) -> &mut Vector {
+            &mut self.orientation
         }
 
         fn shape_type(&self) -> ShapeType {
@@ -309,8 +319,16 @@ pub mod shape {
             &self.center
         }
 
+        fn center_mut(&mut self) -> &mut Vector {
+            &mut self.center
+        }
+
         fn orientation(&self) -> &Vector {
             &self.orientation
+        }
+
+        fn orientation_mut(&mut self) -> &mut Vector {
+            &mut self.orientation
         }
 
         fn shape_type(&self) -> ShapeType {

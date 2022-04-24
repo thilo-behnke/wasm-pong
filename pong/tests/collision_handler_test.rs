@@ -51,7 +51,7 @@ use pong::geom::shape::Rect;
     create_game_obj(1, Vector::new(1., 0.), Vector::new(1., 0.), false),
     create_game_obj(2, Vector::new(0., 1.), Vector::new(0., 1.), true),
     // expected
-    create_game_obj(1, Vector::new(-1., 0.), Vector::new(1., 0.), false),
+    create_game_obj(1, Vector::new(-1., 1.), Vector::new(1., 0.), false),
     create_game_obj(2, Vector::new(0., 1.), Vector::new(0., 1.), true),
 )]
 #[case(

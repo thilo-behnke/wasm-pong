@@ -6,7 +6,7 @@ pub mod game_object {
 
     pub trait GameObject : Debug {
         fn id(&self) -> u16;
-        fn shape(&self) -> &Box<dyn Shape>;
+        fn shape(&self) -> &ShapeType;
         fn pos(&self) -> &Vector;
         fn pos_mut(&mut self) -> &mut Vector;
         fn orientation(&self) -> &Vector;
@@ -36,7 +36,7 @@ pub mod game_object {
             self.id
         }
 
-        fn shape(&self) -> &Box<dyn Shape> {
+        fn shape(&self) -> &ShapeType {
             self.geom.shape()
         }
 
@@ -88,10 +88,10 @@ pub mod game_object {
 pub mod components {
     use std::fmt::Debug;
     use crate::geom::geom::{BoundingBox, Vector};
-    use crate::geom::shape::Shape;
+    use crate::geom::shape::{get_bounding_box, get_center, get_center_mut, get_orientation, get_orientation_mut, Shape, ShapeType};
 
     pub trait GeomComp : Debug {
-        fn shape(&self) -> &Box<dyn Shape>;
+        fn shape(&self) -> &ShapeType;
         fn orientation(&self) -> &Vector;
         fn orientation_mut(&mut self) -> &mut Vector;
         fn center(&self) -> &Vector;
@@ -101,38 +101,38 @@ pub mod components {
 
     #[derive(Debug)]
     pub struct DefaultGeomComp {
-        shape: Box<dyn Shape>
+        shape: ShapeType
     }
 
     impl DefaultGeomComp {
-        pub fn new(shape: Box<dyn Shape>) -> DefaultGeomComp {
+        pub fn new(shape: ShapeType) -> DefaultGeomComp {
             DefaultGeomComp {shape}
         }
     }
 
     impl GeomComp for DefaultGeomComp {
-        fn shape(&self) -> &Box<dyn Shape> {
+        fn shape(&self) -> &ShapeType {
             &self.shape
         }
 
         fn orientation(&self) -> &Vector {
-            &self.shape.orientation()
+            get_orientation(&self.shape)
         }
 
         fn orientation_mut(&mut self) -> &mut Vector {
-            self.shape.orientation_mut()
+            get_orientation_mut(&mut self.shape)
         }
 
         fn center(&self) -> &Vector {
-            &self.shape.center()
+            get_center(&self.shape)
         }
 
         fn center_mut(&mut self) -> &mut Vector {
-            self.shape.center_mut()
+            get_center_mut(&mut self.shape)
         }
 
         fn bounding_box(&self) -> BoundingBox {
-            self.shape.bounding_box()
+            get_bounding_box(&self.shape)
         }
     }
 

@@ -2,6 +2,7 @@ use rstest::rstest;
 use pong::collision::collision::{Collision, CollisionDetector};
 use pong::game_object::game_object::GameObject;
 use pong::geom::geom::{BoundingBox, Vector};
+use pong::geom::shape::ShapeType;
 
 
 #[rstest]
@@ -68,19 +69,24 @@ impl GameObject for MockGameObject {
         self.id
     }
 
+    fn shape(&self) -> &ShapeType {
+        todo!()
+    }
+
     fn pos(&self) -> &Vector {
-        &self.zero_vec
+        todo!()
     }
 
     fn pos_mut(&mut self) -> &mut Vector {
-        &mut self.zero_vec
+        todo!()
     }
 
     fn orientation(&self) -> &Vector {
-        &self.zero_vec
+        todo!()
     }
 
     fn update_pos(&mut self) {
+        todo!()
     }
 
     fn bounding_box(&self) -> BoundingBox {
@@ -88,14 +94,14 @@ impl GameObject for MockGameObject {
     }
 
     fn vel(&self) -> &Vector {
-        &self.zero_vec
+        todo!()
     }
 
     fn vel_mut(&mut self) -> &mut Vector {
-        &mut self.zero_vec
+        todo!()
     }
 
     fn is_static(&self) -> bool {
-        return false;
+        todo!()
     }
 }

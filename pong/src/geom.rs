@@ -245,36 +245,29 @@ pub mod shape {
 
     #[derive(Clone, Debug, PartialEq)]
     pub enum ShapeType {
-        Rect = 0,
-        Circle = 1,
+        Rect(Shape, f64, f64),
+        Circle(Shape, f64),
     }
 
-    pub trait Shape : Debug {
-        fn center(&self) -> &Vector;
-        fn center_mut(&mut self) -> &mut Vector;
-        fn orientation(&self) -> &Vector;
-        fn orientation_mut(&mut self) -> &mut Vector;
-        fn shape_type(&self) -> ShapeType;
-        fn bounding_box(&self) -> BoundingBox;
-    }
-
-    #[derive(Debug)]
-    pub struct Rect {
-        pub width: f64,
-        pub height: f64,
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct Shape {
         center: Vector,
         orientation: Vector
     }
 
-    impl Rect {
-        pub fn new(center: Vector, orientation: Vector, width: f64, height: f64) -> Rect {
-            Rect {
-                center, orientation, width, height
-            }
+    impl Shape {
+        pub fn rect(center: Vector, orientation: Vector, width: f64, height: f64) -> ShapeType {
+            ShapeType::Rect(Shape {
+                center, orientation
+            }, width, height)
         }
-    }
 
-    impl Shape for Rect {
+        pub fn circle(center: Vector, orientation: Vector, radius: f64) -> ShapeType {
+            ShapeType::Circle(Shape {
+                center, orientation
+            }, radius)
+        }
+
         fn center(&self) -> &Vector {
             &self.center
         }
@@ -290,54 +283,40 @@ pub mod shape {
         fn orientation_mut(&mut self) -> &mut Vector {
             &mut self.orientation
         }
+    }
 
-        fn shape_type(&self) -> ShapeType {
-            ShapeType::Rect
-        }
-
-        fn bounding_box(&self) -> BoundingBox {
-            BoundingBox::create(self.center(), self.width, self.height)
+    pub fn get_center(shape: &ShapeType) -> &Vector {
+        match shape {
+            ShapeType::Rect(ref s, _, _) => &s.center,
+            ShapeType::Circle(ref s, _) => &s.center
         }
     }
 
-    #[derive(Debug)]
-    pub struct Circle {
-        pub radius: f64,
-        center: Vector,
-        orientation: Vector,
-    }
-
-    impl Circle {
-        pub fn new(center: Vector, orientation: Vector, radius: f64) -> Circle {
-            Circle {
-                center, orientation, radius
-            }
+    pub fn get_center_mut(shape: &mut ShapeType) -> &mut Vector {
+        match shape {
+            ShapeType::Rect(ref mut s, _, _) => &mut s.center,
+            ShapeType::Circle(ref mut s, _) => &mut s.center
         }
     }
 
-    impl Shape for Circle {
-        fn center(&self) -> &Vector {
-            &self.center
+    pub fn get_orientation(shape: &ShapeType) -> &Vector {
+        match shape {
+            ShapeType::Rect(s, _, _) => &s.orientation,
+            ShapeType::Circle(s, _) => &s.orientation
         }
+    }
 
-        fn center_mut(&mut self) -> &mut Vector {
-            &mut self.center
+    pub fn get_orientation_mut(shape: &mut ShapeType) -> &mut Vector {
+        match shape {
+            ShapeType::Rect(ref mut s, _, _) => &mut s.orientation,
+            ShapeType::Circle(ref mut s, _) => &mut s.orientation
         }
+    }
 
-        fn orientation(&self) -> &Vector {
-            &self.orientation
-        }
-
-        fn orientation_mut(&mut self) -> &mut Vector {
-            &mut self.orientation
-        }
-
-        fn shape_type(&self) -> ShapeType {
-            ShapeType::Circle
-        }
-
-        fn bounding_box(&self) -> BoundingBox {
-            BoundingBox::create(&self.center(), self.radius * 2., self.radius * 2.)
+    pub fn get_bounding_box(shape: &ShapeType) -> BoundingBox {
+        match shape {
+            ShapeType::Rect(s, width, height) => BoundingBox::create(&s.center, *width, *height),
+            ShapeType::Circle(s, radius) => BoundingBox::create(&s.center, *radius * 2., *radius * 2.)
         }
     }
 }

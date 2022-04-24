@@ -2,7 +2,7 @@ use crate::collision::collision::{Collision, CollisionDetector, CollisionHandler
 use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
 use crate::game_object::game_object::{DefaultGameObject, GameObject};
 use crate::geom::geom::Vector;
-use crate::geom::shape::{Circle, Rect};
+use crate::geom::shape::{Shape, ShapeType};
 use crate::utils::utils::{Logger, NoopLogger};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -170,7 +170,7 @@ impl Player {
             obj: Box::new(DefaultGameObject::new(
                 id,
                 Box::new(DefaultGeomComp::new(
-                    Box::new(Rect::new(Vector { x: x as f64, y: y as f64 }, Vector::new(0., 1.), (field.width as f64) / 25., (field.height as f64) / 5.))
+                    Shape::rect(Vector { x: x as f64, y: y as f64 }, Vector::new(0., 1.), (field.width as f64) / 25., (field.height as f64) / 5.)
                 )),
                 Box::new(DefaultPhysicsComp::new(
                     Vector::zero(),
@@ -193,8 +193,8 @@ impl Ball {
             obj: Box::new(DefaultGameObject::new(
                 id,
                 Box::new(DefaultGeomComp::new(
-                    Box::new(Circle::new(Vector { x: x as f64, y: y as f64 }, Vector::zero(), (field.width as f64) / 80.)
-                ))),
+                    Shape::circle(Vector { x: x as f64, y: y as f64 }, Vector::zero(), (field.width as f64) / 80.)
+                )),
                 Box::new(DefaultPhysicsComp::new(
                     Vector::zero(),
                     false
@@ -217,32 +217,32 @@ impl Bounds {
                 Box::new(DefaultGameObject::new(
                     90,
                     Box::new(DefaultGeomComp::new(
-                        Box::new(Rect::new(Vector {x: (width / 2) as f64, y: 0 as f64}, Vector::new(1., 0.), width as f64, 2.)
-                    ))),
+                        Shape::rect(Vector {x: (width / 2) as f64, y: 0 as f64}, Vector::new(1., 0.), width as f64, 2.)
+                    )),
                     Box::new(DefaultPhysicsComp::new_static())
                 )),
                 // bottom
                 Box::new(DefaultGameObject::new(
                     91,
                     Box::new(DefaultGeomComp::new(
-                        Box::new(Rect::new(Vector {x: (width / 2) as f64, y: height as f64}, Vector::new(-1., 0.), width as f64, 2.)
-                        ))),
+                        Shape::rect(Vector {x: (width / 2) as f64, y: height as f64}, Vector::new(-1., 0.), width as f64, 2.)
+                        )),
                     Box::new(DefaultPhysicsComp::new_static())
                 )),
                 // left
                 Box::new(DefaultGameObject::new(
                     92,
                     Box::new(DefaultGeomComp::new(
-                        Box::new(Rect::new(Vector {x: 0 as f64, y: (height / 2) as f64}, Vector::new(0., 1.), 2., height as f64)
-                        ))),
+                        Shape::rect(Vector {x: 0 as f64, y: (height / 2) as f64}, Vector::new(0., 1.), 2., height as f64)
+                        )),
                     Box::new(DefaultPhysicsComp::new_static())
                 )),
                 // right
                 Box::new(DefaultGameObject::new(
                     93,
                     Box::new(DefaultGeomComp::new(
-                        Box::new(Rect::new(Vector {x: width as f64, y: (height / 2) as f64}, Vector::new(0., -1.), 2., height as f64)
-                        ))),
+                        Shape::rect(Vector {x: width as f64, y: (height / 2) as f64}, Vector::new(0., -1.), 2., height as f64)
+                        )),
                     Box::new(DefaultPhysicsComp::new_static())
                 ))
             ],

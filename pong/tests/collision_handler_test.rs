@@ -3,7 +3,7 @@ use pong::collision::collision::CollisionHandler;
 use pong::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
 use pong::game_object::game_object::{DefaultGameObject, GameObject};
 use pong::geom::geom::Vector;
-use pong::geom::shape::Rect;
+use pong::geom::shape::Shape;
 
 #[rstest]
 #[case(
@@ -80,9 +80,8 @@ fn create_game_obj(id: u16, vel: Vector, orientation: Vector, is_static: bool) -
     Box::new(DefaultGameObject::new(
         id,
     Box::new(DefaultGeomComp::new(
-        Box::new(
-            Rect::new(Vector::zero(), orientation, 20., 20.)
-        ))),
+            Shape::rect(Vector::zero(), orientation, 20., 20.)
+        )),
         Box::new(DefaultPhysicsComp::new(
             vel, is_static
         ))

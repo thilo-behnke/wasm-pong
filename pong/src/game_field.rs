@@ -1,6 +1,6 @@
 use crate::collision::collision::{Collision, CollisionDetector, CollisionHandler, CollisionRegistry, Collisions};
 use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
-use crate::game_object::game_object::GameObject;
+use crate::game_object::game_object::{DefaultGameObject, GameObject};
 use crate::geom::geom::Vector;
 use crate::geom::shape::{Circle, Rect};
 use crate::utils::utils::{Logger, NoopLogger};
@@ -129,15 +129,15 @@ impl Field {
         self.collisions = collision_detector.detect_collisions(objs.iter().collect());
 
         for ball in self.balls.iter_mut() {
-            let collisions = self.collisions.get_collisions_by_id(ball.obj.id);
+            let collisions = self.collisions.get_collisions_by_id(ball.obj.id());
             if collisions.is_empty() {
                 continue;
             }
             let other = match collisions[0] {
-                Collision(obj_a_id, obj_b_id) if *obj_a_id == ball.obj.id => {
-                    objs.iter().find(|o| o.id == *obj_b_id).unwrap()
+                Collision(obj_a_id, obj_b_id) if *obj_a_id == ball.obj.id() => {
+                    objs.iter().find(|o| o.id() == *obj_b_id).unwrap()
                 }
-                collision => objs.iter().find(|o| o.id == collision.0).unwrap(),
+                collision => objs.iter().find(|o| o.id() == collision.0).unwrap(),
             };
 
 
@@ -161,7 +161,8 @@ impl Field {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+// #[derive(Clone, Debug, PartialEq)]
+#[derive(Debug)]
 pub struct Player {
     pub obj: Box<dyn GameObject>,
 }
@@ -169,21 +170,22 @@ pub struct Player {
 impl Player {
     pub fn new(id: u16, x: u16, y: u16, field: &Field) -> Player {
         Player {
-            obj: GameObject::new(
+            obj: Box::new(DefaultGameObject::new(
                 id,
                 Box::new(DefaultGeomComp::new(
-                    Box::new(Rect::new(Vector { x: x as f64, y: y as f64 }, Vector::new(0., 1.), (field.width as f64) / 25, (field.height as f64) / 5))
+                    Box::new(Rect::new(Vector { x: x as f64, y: y as f64 }, Vector::new(0., 1.), (field.width as f64) / 25., (field.height as f64) / 5.))
                 )),
                 Box::new(DefaultPhysicsComp::new(
                     Vector::zero(),
                     true
                 ))
-            )
+            ))
         }
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+// #[derive(Clone, Debug, PartialEq)]
+#[derive(Debug)]
 pub struct Ball {
     pub obj: Box<dyn GameObject>,
 }
@@ -191,16 +193,16 @@ pub struct Ball {
 impl Ball {
     pub fn new(id: u16, x: u16, y: u16, field: &Field) -> Ball {
         Ball {
-            obj: GameObject::new(
+            obj: Box::new(DefaultGameObject::new(
                 id,
                 Box::new(DefaultGeomComp::new(
-                    Box::new(Circle::new(Vector { x: x as f64, y: y as f64 }, Vector::zero(), (field.width as f64) / 80)
+                    Box::new(Circle::new(Vector { x: x as f64, y: y as f64 }, Vector::zero(), (field.width as f64) / 80.)
                 ))),
                 Box::new(DefaultPhysicsComp::new(
                     Vector::zero(),
                     false
                 ))
-            )
+            ))
         }
     }
 }
@@ -215,37 +217,37 @@ impl Bounds {
         Bounds {
             objs: vec![
                 // top
-                GameObject::new(
+                Box::new(DefaultGameObject::new(
                     90,
                     Box::new(DefaultGeomComp::new(
                         Box::new(Rect::new(Vector {x: (width / 2) as f64, y: 0 as f64}, Vector::new(1., 0.), width as f64, 2.)
                     ))),
                     Box::new(DefaultPhysicsComp::new_static())
-                ),
+                )),
                 // bottom
-                GameObject::new(
+                Box::new(DefaultGameObject::new(
                     91,
                     Box::new(DefaultGeomComp::new(
                         Box::new(Rect::new(Vector {x: (width / 2) as f64, y: height as f64}, Vector::new(-1., 0.), width as f64, 2.)
                         ))),
                     Box::new(DefaultPhysicsComp::new_static())
-                ),
+                )),
                 // left
-                GameObject::new(
+                Box::new(DefaultGameObject::new(
                     92,
                     Box::new(DefaultGeomComp::new(
                         Box::new(Rect::new(Vector {x: 0 as f64, y: (height / 2) as f64}, Vector::new(0., 1.), 2., height as f64)
                         ))),
                     Box::new(DefaultPhysicsComp::new_static())
-                ),
+                )),
                 // right
-                GameObject::new(
+                Box::new(DefaultGameObject::new(
                     93,
                     Box::new(DefaultGeomComp::new(
                         Box::new(Rect::new(Vector {x: width as f64, y: (height / 2) as f64}, Vector::new(0., -1.), 2., height as f64)
                         ))),
                     Box::new(DefaultPhysicsComp::new_static())
-                )
+                ))
             ],
         }
     }

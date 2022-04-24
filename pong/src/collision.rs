@@ -10,7 +10,7 @@ pub mod collision {
             CollisionDetector {}
         }
 
-        pub fn detect_collisions(&self, objs: Vec<&dyn GameObject>) -> Box<dyn CollisionRegistry> {
+        pub fn detect_collisions(&self, objs: Vec<&Box<dyn GameObject>>) -> Box<dyn CollisionRegistry> {
             if objs.is_empty() {
                 return Box::new(Collisions::new(vec![]));
             }
@@ -74,7 +74,7 @@ pub mod collision {
         pub fn new() -> CollisionHandler {
             CollisionHandler {}
         }
-        pub fn handle(&self, obj_a: &mut dyn GameObject, obj_b: &dyn GameObject) {
+        pub fn handle(&self, obj_a: &mut Box<dyn GameObject>, obj_b: &Box<dyn GameObject>) {
             if !obj_a.is_static() {
                 obj_a.vel_mut().reflect(&obj_b.orientation());
                 if *obj_b.vel() != Vector::zero() {

@@ -9,6 +9,7 @@ use pong::geom::shape::Shape;
 pub fn should_update_pos(#[case] start_pos: Vector, #[case] vel: Vector, #[case] expected_pos: Vector) {
     let mut obj = DefaultGameObject::new(
         1,
+        "obj".to_string(),
         Box::new(DefaultGeomComp::new(
             Shape::rect(Vector::new(start_pos.x as f64, start_pos.y as f64), Vector::new(1., 0.), 0., 0.)
         )),

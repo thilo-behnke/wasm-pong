@@ -69,6 +69,11 @@ impl GameObject for MockGameObject {
         self.id
     }
 
+    fn obj_type(&self) -> &str {
+        todo!()
+    }
+
+
     fn shape(&self) -> &ShapeType {
         todo!()
     }

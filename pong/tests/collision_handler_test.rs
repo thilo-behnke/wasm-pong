@@ -64,12 +64,12 @@ use pong::geom::shape::Shape;
 )]
 pub fn should_handle_collision(
     #[case] mut obj_a: Box<dyn GameObject>,
-    #[case] obj_b: Box<dyn GameObject>,
+    #[case] mut obj_b: Box<dyn GameObject>,
     #[case] expected_a: Box<dyn GameObject>,
     #[case] expected_b: Box<dyn GameObject>,
 ) {
-    let handler = CollisionHandler {};
-    handler.handle(&mut obj_a, &obj_b);
+    let handler = CollisionHandler::new();
+    handler.handle(&mut obj_a, &mut obj_b);
     assert_eq!(obj_a.pos(), expected_a.pos());
     assert_eq!(obj_a.vel(), expected_a.vel());
     assert_eq!(obj_b.pos(), expected_b.pos());
@@ -79,6 +79,7 @@ pub fn should_handle_collision(
 fn create_game_obj(id: u16, vel: Vector, orientation: Vector, is_static: bool) -> Box<dyn GameObject> {
     Box::new(DefaultGameObject::new(
         id,
+    "obj".to_string(),
     Box::new(DefaultGeomComp::new(
             Shape::rect(Vector::zero(), orientation, 20., 20.)
         )),

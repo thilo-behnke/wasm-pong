@@ -103,52 +103,52 @@ impl Field {
             ball.obj.update_pos()
         }
 
-        let mut objs: Vec<&Box<dyn GameObject>> = vec![];
-        objs.extend(
-            self.players
-                .clone()
-                .into_iter()
-                .map(|p| &p.obj)
-                .collect::<Vec<&Box<dyn GameObject>>>(),
-        );
-        objs.extend(
-            self.balls
-                .clone()
-                .into_iter()
-                .map(|b| &b.obj)
-                .collect::<Vec<&Box<dyn GameObject>>>(),
-        );
-        objs.extend(
-            self.bounds.objs
-                .clone()
-                .into_iter()
-                .collect::<Vec<&Box<dyn GameObject>>>()
-        );
-        let collision_detector = CollisionDetector::new();
-        let collision_handler = CollisionHandler::new();
-        self.collisions = collision_detector.detect_collisions(&objs);
-
-        for ball in self.balls.iter_mut() {
-            let collisions = self.collisions.get_collisions_by_id(ball.obj.id());
-            if collisions.is_empty() {
-                continue;
-            }
-            let other = match collisions[0] {
-                Collision(obj_a_id, obj_b_id) if *obj_a_id == ball.obj.id() => {
-                    objs.iter().find(|o| o.id() == *obj_b_id).unwrap()
-                }
-                collision => objs.iter().find(|o| o.id() == collision.0).unwrap(),
-            };
-
-            self.logger.log("### BEFORE COLLISION ###");
-            self.logger.log(&*format!("{:?}", ball.obj));
-            self.logger.log(&*format!("{:?}", other));
-            collision_handler.handle(&mut ball.obj, other);
-            self.logger.log("### AFTER COLLISION ###");
-            self.logger.log(&*format!("{:?}", ball.obj));
-            self.logger.log(&*format!("{:?}", other));
-            self.logger.log("### DONE ###");
-        }
+        // let mut objs: Vec<&Box<dyn GameObject>> = vec![];
+        // objs.extend(
+        //     self.players
+        //         .clone()
+        //         .into_iter()
+        //         .map(|p| &p.obj)
+        //         .collect::<Vec<&Box<dyn GameObject>>>(),
+        // );
+        // objs.extend(
+        //     self.balls
+        //         .clone()
+        //         .into_iter()
+        //         .map(|b| &b.obj)
+        //         .collect::<Vec<&Box<dyn GameObject>>>(),
+        // );
+        // objs.extend(
+        //     self.bounds.objs
+        //         .clone()
+        //         .into_iter()
+        //         .collect::<Vec<&Box<dyn GameObject>>>()
+        // );
+        // let collision_detector = CollisionDetector::new();
+        // let collision_handler = CollisionHandler::new();
+        // self.collisions = collision_detector.detect_collisions(&objs);
+        //
+        // for ball in self.balls.iter_mut() {
+        //     let collisions = self.collisions.get_collisions_by_id(ball.obj.id());
+        //     if collisions.is_empty() {
+        //         continue;
+        //     }
+        //     let other = match collisions[0] {
+        //         Collision(obj_a_id, obj_b_id) if *obj_a_id == ball.obj.id() => {
+        //             objs.iter().find(|o| o.id() == *obj_b_id).unwrap()
+        //         }
+        //         collision => objs.iter().find(|o| o.id() == collision.0).unwrap(),
+        //     };
+        //
+        //     self.logger.log("### BEFORE COLLISION ###");
+        //     self.logger.log(&*format!("{:?}", ball.obj));
+        //     self.logger.log(&*format!("{:?}", other));
+        //     collision_handler.handle(&mut ball.obj, other);
+        //     self.logger.log("### AFTER COLLISION ###");
+        //     self.logger.log(&*format!("{:?}", ball.obj));
+        //     self.logger.log(&*format!("{:?}", other));
+        //     self.logger.log("### DONE ###");
+        // }
     }
 
     pub fn players(&self) -> Vec<&Player> {
@@ -171,6 +171,7 @@ impl Player {
         Player {
             obj: Box::new(DefaultGameObject::new(
                 id,
+                "player".to_string(),
                 Box::new(DefaultGeomComp::new(
                     Shape::rect(Vector { x: x as f64, y: y as f64 }, Vector::new(0., 1.), (field.width as f64) / 25., (field.height as f64) / 5.)
                 )),
@@ -194,6 +195,7 @@ impl Ball {
         Ball {
             obj: Box::new(DefaultGameObject::new(
                 id,
+                "ball".to_string(),
                 Box::new(DefaultGeomComp::new(
                     Shape::circle(Vector { x: x as f64, y: y as f64 }, Vector::zero(), (field.width as f64) / 80.)
                 )),
@@ -218,6 +220,7 @@ impl Bounds {
                 // top
                 Box::new(DefaultGameObject::new(
                     90,
+                    "bound".to_string(),
                     Box::new(DefaultGeomComp::new(
                         Shape::rect(Vector {x: (width / 2) as f64, y: 0 as f64}, Vector::new(1., 0.), width as f64, 2.)
                     )),
@@ -226,6 +229,7 @@ impl Bounds {
                 // bottom
                 Box::new(DefaultGameObject::new(
                     91,
+                    "bound".to_string(),
                     Box::new(DefaultGeomComp::new(
                         Shape::rect(Vector {x: (width / 2) as f64, y: height as f64}, Vector::new(-1., 0.), width as f64, 2.)
                         )),
@@ -234,6 +238,7 @@ impl Bounds {
                 // left
                 Box::new(DefaultGameObject::new(
                     92,
+                    "bound".to_string(),
                     Box::new(DefaultGeomComp::new(
                         Shape::rect(Vector {x: 0 as f64, y: (height / 2) as f64}, Vector::new(0., 1.), 2., height as f64)
                         )),
@@ -242,6 +247,7 @@ impl Bounds {
                 // right
                 Box::new(DefaultGameObject::new(
                     93,
+                    "bound".to_string(),
                     Box::new(DefaultGeomComp::new(
                         Shape::rect(Vector {x: width as f64, y: (height / 2) as f64}, Vector::new(0., -1.), 2., height as f64)
                         )),

@@ -4,8 +4,9 @@ pub mod game_object {
     use crate::geom::geom::{BoundingBox, Vector};
     use crate::geom::shape::{Shape, ShapeType};
 
-    pub trait GameObject : Debug + Clone {
+    pub trait GameObject : Debug {
         fn id(&self) -> u16;
+        fn obj_type(&self) -> &str;
         fn shape(&self) -> &ShapeType;
         fn pos(&self) -> &Vector;
         fn pos_mut(&mut self) -> &mut Vector;
@@ -18,22 +19,27 @@ pub mod game_object {
     }
 
     // #[derive(Clone, Debug, PartialEq)]
-    #[derive(Debug, Clone)]
+    #[derive(Debug)]
     pub struct DefaultGameObject {
         pub id: u16,
+        pub obj_type: String,
         geom: Box<dyn GeomComp>,
         physics: Box<dyn PhysicsComp>
     }
 
     impl DefaultGameObject {
-        pub fn new(id: u16, geom: Box<dyn GeomComp>, physics: Box<dyn PhysicsComp>) -> DefaultGameObject {
-            DefaultGameObject {id, geom, physics}
+        pub fn new(id: u16, obj_type: String, geom: Box<dyn GeomComp>, physics: Box<dyn PhysicsComp>) -> DefaultGameObject {
+            DefaultGameObject {id, obj_type, geom, physics}
         }
     }
 
     impl GameObject for DefaultGameObject {
         fn id(&self) -> u16 {
             self.id
+        }
+
+        fn obj_type(&self) -> &str {
+            &self.obj_type
         }
 
         fn shape(&self) -> &ShapeType {

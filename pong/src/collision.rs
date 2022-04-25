@@ -1,4 +1,6 @@
 pub mod collision {
+    use std::alloc::handle_alloc_error;
+    use std::collections::HashMap;
     use std::fmt::Debug;
     use crate::game_object::game_object::GameObject;
     use crate::geom::geom::Vector;
@@ -68,25 +70,46 @@ pub mod collision {
     #[derive(Debug, Eq, PartialEq)]
     pub struct Collision(pub u16, pub u16);
 
-    pub struct CollisionHandler {}
+    pub struct CollisionHandler {
+        handlers: HashMap<(String, String), fn(&mut Box<dyn GameObject>, &mut Box<dyn GameObject>)>
+    }
 
     impl CollisionHandler {
         pub fn new() -> CollisionHandler {
-            CollisionHandler {}
-        }
-        pub fn handle(&self, obj_a: &mut Box<dyn GameObject>, obj_b: &Box<dyn GameObject>) {
-            if !obj_a.is_static() {
-                obj_a.vel_mut().reflect(&obj_b.orientation());
-                if *obj_b.vel() != Vector::zero() {
-                    let mut adjusted = obj_b.vel().clone();
-                    adjusted.normalize();
-                    obj_a.vel_mut().add(&adjusted);
-                }
+            CollisionHandler {
+                handlers: HashMap::new()
             }
-            let mut b_to_a = obj_a.pos().clone();
-            b_to_a.sub(&obj_b.pos());
-            b_to_a.normalize();
-            obj_a.pos_mut().add(&b_to_a);
         }
+
+        pub fn register(&mut self, mapping: (String, String), callback: fn(&mut Box<dyn GameObject>, &mut Box<dyn GameObject>)) {
+            self.handlers.insert(mapping, callback);
+        }
+
+        pub fn handle(&self, obj_a: &mut Box<dyn GameObject>, obj_b: &mut Box<dyn GameObject>) {
+            let key = (obj_a.obj_type().to_string(), obj_b.obj_type().to_string());
+            if !self.handlers.contains_key(&key) {
+                return;
+            }
+            let handler = self.handlers[&key];
+            handler(obj_a, obj_b);
+        }
+
+        // pub fn new() -> CollisionHandler {
+        //     CollisionHandler {}
+        // }
+        // pub fn handle(&self, obj_a: &mut Box<dyn GameObject>, obj_b: &Box<dyn GameObject>) {
+        //     if !obj_a.is_static() {
+        //         obj_a.vel_mut().reflect(&obj_b.orientation());
+        //         if *obj_b.vel() != Vector::zero() {
+        //             let mut adjusted = obj_b.vel().clone();
+        //             adjusted.normalize();
+        //             obj_a.vel_mut().add(&adjusted);
+        //         }
+        //     }
+        //     let mut b_to_a = obj_a.pos().clone();
+        //     b_to_a.sub(&obj_b.pos());
+        //     b_to_a.normalize();
+        //     obj_a.pos_mut().add(&b_to_a);
+        // }
     }
 }

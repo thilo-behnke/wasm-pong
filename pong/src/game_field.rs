@@ -24,7 +24,8 @@ pub struct Field {
     pub players: Vec<Player>,
     pub balls: Vec<Ball>,
     pub bounds: Bounds,
-    pub collisions: Box<dyn CollisionRegistry>
+    pub collisions: Box<dyn CollisionRegistry>,
+    collision_handler: CollisionHandler
 }
 
 impl Field {
@@ -39,12 +40,33 @@ impl Field {
             players: vec![],
             balls: vec![],
             bounds: Bounds::new(width, height),
-            collisions: Box::new(Collisions::new(vec![]))
+            collisions: Box::new(Collisions::new(vec![])),
+            collision_handler: CollisionHandler::new()
         };
 
         field.add_player(0, 0 + width / 20, height / 2);
         field.add_player(1, width - width / 20, height / 2);
         field.add_ball(2, width / 2, height / 2);
+
+        field.collision_handler.register((String::from("ball"), String::from("player")), |ball, player| {
+            // reflect
+            ball.vel_mut().reflect(&player.orientation());
+            // use vel of player obj
+            if *player.vel() != Vector::zero() {
+                let mut adjusted = player.vel().clone();
+                adjusted.normalize();
+                ball.vel_mut().add(&adjusted);
+            }
+            // move out of collision
+            let mut b_to_a = ball.pos().clone();
+            b_to_a.sub(&player.pos());
+            b_to_a.normalize();
+            ball.pos_mut().add(&b_to_a);
+        });
+
+        field.collision_handler.register((String::from("ball"), String::from("bound")), |ball, bound| {
+            ball.vel_mut().reflect(&bound.orientation());
+        });
 
         return field;
     }
@@ -57,7 +79,8 @@ impl Field {
             players: vec![],
             balls: vec![],
             bounds: Bounds::new(width, height),
-            collisions: Box::new(Collisions::new(vec![]))
+            collisions: Box::new(Collisions::new(vec![])),
+            collision_handler: CollisionHandler::new()
         }
     }
 
@@ -103,30 +126,15 @@ impl Field {
             ball.obj.update_pos()
         }
 
-        // let mut objs: Vec<&Box<dyn GameObject>> = vec![];
-        // objs.extend(
-        //     self.players
-        //         .clone()
-        //         .into_iter()
-        //         .map(|p| &p.obj)
-        //         .collect::<Vec<&Box<dyn GameObject>>>(),
-        // );
-        // objs.extend(
-        //     self.balls
-        //         .clone()
-        //         .into_iter()
-        //         .map(|b| &b.obj)
-        //         .collect::<Vec<&Box<dyn GameObject>>>(),
-        // );
-        // objs.extend(
-        //     self.bounds.objs
-        //         .clone()
-        //         .into_iter()
-        //         .collect::<Vec<&Box<dyn GameObject>>>()
-        // );
-        // let collision_detector = CollisionDetector::new();
-        // let collision_handler = CollisionHandler::new();
-        // self.collisions = collision_detector.detect_collisions(&objs);
+        let collisions = self.get_collisions();
+
+        for collision in collisions.get_collisions().iter() {
+            // self.handle_collision(c);
+            let objs_mut = self.objs_mut();
+            let obj_a = objs_mut.iter().find(|o| o.id() == collision.0).unwrap();
+            let obj_b = objs_mut.iter().find(|o| o.id() == collision.1).unwrap();
+            self.collision_handler.handle(*obj_a, *obj_b)
+        }
         //
         // for ball in self.balls.iter_mut() {
         //     let collisions = self.collisions.get_collisions_by_id(ball.obj.id());
@@ -151,12 +159,69 @@ impl Field {
         // }
     }
 
+    fn get_collisions(&self) -> Box<dyn CollisionRegistry> {
+        let objs = self.objs();
+        let collision_detector = CollisionDetector::new();
+        collision_detector.detect_collisions(&objs)
+    }
+
+    fn handle_collision(&mut self, collision: &Collision) {
+        let objs_mut = self.objs_mut();
+        let obj_a = objs_mut.iter().find(|o| o.id() == collision.0).unwrap();
+        let obj_b = objs_mut.iter().find(|o| o.id() == collision.1).unwrap();
+        self.collision_handler.handle(*obj_a, *obj_b)
+    }
+
     pub fn players(&self) -> Vec<&Player> {
         self.players.iter().collect()
     }
 
     pub fn balls(&self) -> Vec<&Ball> {
         self.balls.iter().collect()
+    }
+
+    fn objs(&self) -> Vec<&Box<dyn GameObject>> {
+        let mut objs: Vec<&Box<dyn GameObject>> = vec![];
+        objs.extend(
+            self.players
+                .iter()
+                .map(|p| &p.obj)
+                .collect::<Vec<&Box<dyn GameObject>>>(),
+        );
+        objs.extend(
+            self.balls
+                .iter()
+                .map(|b| &b.obj)
+                .collect::<Vec<&Box<dyn GameObject>>>(),
+        );
+        objs.extend(
+            self.bounds.objs
+                .iter()
+                .collect::<Vec<&Box<dyn GameObject>>>()
+        );
+        objs
+    }
+
+    fn objs_mut(&mut self) -> Vec<&mut Box<dyn GameObject>> {
+        let mut objs: Vec<&mut Box<dyn GameObject>> = vec![];
+        objs.extend(
+            self.players
+                .iter_mut()
+                .map(|p| &mut p.obj)
+                .collect::<Vec<&mut Box<dyn GameObject>>>(),
+        );
+        objs.extend(
+            self.balls
+                .iter_mut()
+                .map(|b| &mut b.obj)
+                .collect::<Vec<&mut Box<dyn GameObject>>>(),
+        );
+        objs.extend(
+            self.bounds.objs
+                .iter_mut()
+                .collect::<Vec<&mut Box<dyn GameObject>>>()
+        );
+        objs
     }
 }
 

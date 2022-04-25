@@ -1,15 +1,15 @@
 mod utils;
 
+use pong::collision::collision::{Collision, CollisionDetector};
+use pong::game_field::{Field, Input, InputType};
+use pong::game_object::game_object::GameObject;
+use pong::geom::geom::Vector;
+use pong::geom::shape::ShapeType;
+use pong::utils::utils::Logger;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::cmp::{max, min};
 use wasm_bindgen::prelude::*;
-use pong::collision::collision::{Collision, CollisionDetector};
-use pong::game_field::{Field, Input, InputType};
-use pong::game_object::game_object::{GameObject};
-use pong::geom::geom::Vector;
-use pong::geom::shape::ShapeType;
-use pong::utils::utils::Logger;
 
 extern crate serde_json;
 extern crate web_sys;
@@ -48,11 +48,11 @@ impl GameObjectDTO {
             y: pos.y as u16,
             shape_param_1: match shape {
                 ShapeType::Rect(_, width, _) => *width as u16,
-                ShapeType::Circle(_, radius) => *radius as u16
+                ShapeType::Circle(_, radius) => *radius as u16,
             },
             shape_param_2: match shape {
                 ShapeType::Rect(_, _, height) => *height as u16,
-                ShapeType::Circle(_, _) => 0
+                ShapeType::Circle(_, _) => 0,
             },
         };
     }
@@ -69,7 +69,7 @@ impl InputTypeDTO {
     pub fn to_input_type(&self) -> InputType {
         match self {
             InputTypeDTO::UP => InputType::UP,
-            InputTypeDTO::DOWN => InputType::DOWN
+            InputTypeDTO::DOWN => InputType::DOWN,
         }
     }
 }
@@ -86,22 +86,20 @@ impl InputDTO {
         return Input {
             input: self.input.to_input_type(),
             obj_id: self.obj_id,
-        }
+        };
     }
 }
 
 #[wasm_bindgen]
 pub struct FieldWrapper {
-    field: Field
+    field: Field,
 }
 
 #[wasm_bindgen]
 impl FieldWrapper {
     pub fn new() -> FieldWrapper {
         let field = Field::new(Box::new(WasmLogger {}));
-        FieldWrapper {
-            field
-        }
+        FieldWrapper { field }
     }
 
     pub fn width(&self) -> u16 {
@@ -114,34 +112,16 @@ impl FieldWrapper {
 
     pub fn tick(&mut self, inputs_js: &JsValue) {
         let input_dtos: Vec<InputDTO> = inputs_js.into_serde().unwrap();
-        let inputs = input_dtos.into_iter().map(|i| i.to_input()).collect::<Vec<Input>>();
+        let inputs = input_dtos
+            .into_iter()
+            .map(|i| i.to_input())
+            .collect::<Vec<Input>>();
         self.field.tick(inputs);
         log!("{:?}", self.field.collisions);
     }
 
     pub fn objects(&self) -> *const GameObjectDTO {
-        let mut objs = vec![];
-        objs.append(
-            &mut self.field
-                .balls
-                .iter()
-                .map(|ball| GameObjectDTO::from(&ball.obj))
-                .collect::<Vec<GameObjectDTO>>(),
-        );
-        objs.append(
-            &mut self.field
-                .players
-                .iter()
-                .map(|player| GameObjectDTO::from(&player.obj))
-                .collect::<Vec<GameObjectDTO>>(),
-        );
-        objs.append(
-            &mut self.field
-                .bounds.objs
-                .iter()
-                .map(|bound| GameObjectDTO::from(&bound))
-                .collect::<Vec<GameObjectDTO>>()
-        );
+        let mut objs = self.field.objs.borrow().iter().map(|o| GameObjectDTO::from(o)).collect::<Vec<GameObjectDTO>>();
         objs.as_ptr()
     }
 

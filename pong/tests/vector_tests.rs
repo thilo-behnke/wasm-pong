@@ -1,8 +1,8 @@
-use rstest::rstest;
 use pong::geom::geom::Vector;
-use std::f64::consts::PI;
+use rstest::rstest;
 use std::f64::consts::FRAC_PI_2;
 use std::f64::consts::FRAC_PI_4;
+use std::f64::consts::PI;
 
 #[rstest]
 #[case(1., 0., 1.)]
@@ -39,7 +39,7 @@ pub fn should_normalize_correctly(
 pub fn should_calculate_angle_correctly(
     #[case] vector_a: Vector,
     #[case] vector_b: Vector,
-    #[case] expected_angle: f64
+    #[case] expected_angle: f64,
 ) {
     let res = vector_a.angle(&vector_b);
     assert_eq!(res, expected_angle);
@@ -49,10 +49,7 @@ pub fn should_calculate_angle_correctly(
 #[case(Vector::new(1., 0.), Vector::new(0., -1.))]
 #[case(Vector::new(0., 1.), Vector::new(1., 0.))]
 #[case(Vector::new(7., 7.), Vector::new(7., -7.))]
-pub fn should_get_orthogonal_clockwise(
-    #[case] mut vector: Vector,
-    #[case] expected: Vector
-) {
+pub fn should_get_orthogonal_clockwise(#[case] mut vector: Vector, #[case] expected: Vector) {
     vector.orthogonal_clockwise();
     assert_eq!(vector, expected);
 }
@@ -63,7 +60,7 @@ pub fn should_get_orthogonal_clockwise(
 #[case(Vector::new(7., 7.), Vector::new(-7., 7.))]
 pub fn should_get_orthogonal_counter_clockwise(
     #[case] mut vector: Vector,
-    #[case] expected: Vector
+    #[case] expected: Vector,
 ) {
     vector.orthogonal_counter_clockwise();
     assert_eq!(vector, expected);
@@ -74,7 +71,7 @@ pub fn should_get_orthogonal_counter_clockwise(
 pub fn should_correctly_rotate(
     #[case] mut vector: Vector,
     #[case] radians: f64,
-    #[case] expected: Vector
+    #[case] expected: Vector,
 ) {
     vector.rotate(radians);
     assert_eq!(vector, expected);
@@ -87,8 +84,7 @@ pub fn should_correctly_rotate(
 pub fn should_calculate_dot_product(
     #[case] mut vector: Vector,
     #[case] mut other: Vector,
-    #[case] expected: f64
-
+    #[case] expected: f64,
 ) {
     let dot = vector.dot(&other);
     assert_eq!(dot, expected);
@@ -134,4 +130,3 @@ pub fn should_reflect_vector(
     vector.reflect(&onto);
     assert_eq!(vector, expected);
 }
-

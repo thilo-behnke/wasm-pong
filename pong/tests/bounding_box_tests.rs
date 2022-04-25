@@ -1,5 +1,5 @@
-use rstest::rstest;
 use pong::geom::geom::{BoundingBox, Vector};
+use rstest::rstest;
 
 #[rstest]
 #[case(BoundingBox::create(&Vector::new(10., 10.), 5., 5.), Vector::new(10., 10.), true)]

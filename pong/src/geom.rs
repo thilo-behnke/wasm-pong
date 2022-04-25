@@ -17,9 +17,7 @@ pub mod geom {
         }
 
         pub fn new(x: f64, y: f64) -> Vector {
-            Vector {
-                x, y
-            }
+            Vector { x, y }
         }
 
         pub fn normalize(&mut self) {
@@ -68,7 +66,7 @@ pub mod geom {
         }
 
         pub fn dot(&self, other: &Vector) -> f64 {
-            return self.x * other.x + self.y * other.y
+            return self.x * other.x + self.y * other.y;
         }
 
         pub fn angle(&self, other: &Vector) -> f64 {
@@ -130,8 +128,8 @@ pub mod geom {
 
     impl PartialEq for Vector {
         fn eq(&self, other: &Self) -> bool {
-            (self.x * 1000.).round() == (other.x * 1000.).round() &&
-                (self.y * 1000.).round() == (other.y * 1000.).round()
+            (self.x * 1000.).round() == (other.x * 1000.).round()
+                && (self.y * 1000.).round() == (other.y * 1000.).round()
         }
     }
 
@@ -208,13 +206,9 @@ pub mod geom {
     impl Range {
         pub fn new(a: f64, b: f64) -> Range {
             if a <= b {
-                return Range {
-                    min: a, max: b
-                }
+                return Range { min: a, max: b };
             }
-            return Range {
-                min: b, max: a
-            }
+            return Range { min: b, max: a };
         }
 
         pub fn overlaps(&self, other: &Range) -> bool {
@@ -240,8 +234,8 @@ pub mod geom {
 }
 
 pub mod shape {
-    use std::fmt::Debug;
     use crate::geom::geom::{BoundingBox, Vector};
+    use std::fmt::Debug;
 
     #[derive(Clone, Debug, PartialEq)]
     pub enum ShapeType {
@@ -252,20 +246,29 @@ pub mod shape {
     #[derive(Clone, Debug, PartialEq)]
     pub struct Shape {
         center: Vector,
-        orientation: Vector
+        orientation: Vector,
     }
 
     impl Shape {
         pub fn rect(center: Vector, orientation: Vector, width: f64, height: f64) -> ShapeType {
-            ShapeType::Rect(Shape {
-                center, orientation
-            }, width, height)
+            ShapeType::Rect(
+                Shape {
+                    center,
+                    orientation,
+                },
+                width,
+                height,
+            )
         }
 
         pub fn circle(center: Vector, orientation: Vector, radius: f64) -> ShapeType {
-            ShapeType::Circle(Shape {
-                center, orientation
-            }, radius)
+            ShapeType::Circle(
+                Shape {
+                    center,
+                    orientation,
+                },
+                radius,
+            )
         }
 
         fn center(&self) -> &Vector {
@@ -288,35 +291,37 @@ pub mod shape {
     pub fn get_center(shape: &ShapeType) -> &Vector {
         match shape {
             ShapeType::Rect(ref s, _, _) => &s.center,
-            ShapeType::Circle(ref s, _) => &s.center
+            ShapeType::Circle(ref s, _) => &s.center,
         }
     }
 
     pub fn get_center_mut(shape: &mut ShapeType) -> &mut Vector {
         match shape {
             ShapeType::Rect(ref mut s, _, _) => &mut s.center,
-            ShapeType::Circle(ref mut s, _) => &mut s.center
+            ShapeType::Circle(ref mut s, _) => &mut s.center,
         }
     }
 
     pub fn get_orientation(shape: &ShapeType) -> &Vector {
         match shape {
             ShapeType::Rect(s, _, _) => &s.orientation,
-            ShapeType::Circle(s, _) => &s.orientation
+            ShapeType::Circle(s, _) => &s.orientation,
         }
     }
 
     pub fn get_orientation_mut(shape: &mut ShapeType) -> &mut Vector {
         match shape {
             ShapeType::Rect(ref mut s, _, _) => &mut s.orientation,
-            ShapeType::Circle(ref mut s, _) => &mut s.orientation
+            ShapeType::Circle(ref mut s, _) => &mut s.orientation,
         }
     }
 
     pub fn get_bounding_box(shape: &ShapeType) -> BoundingBox {
         match shape {
             ShapeType::Rect(s, width, height) => BoundingBox::create(&s.center, *width, *height),
-            ShapeType::Circle(s, radius) => BoundingBox::create(&s.center, *radius * 2., *radius * 2.)
+            ShapeType::Circle(s, radius) => {
+                BoundingBox::create(&s.center, *radius * 2., *radius * 2.)
+            }
         }
     }
 }

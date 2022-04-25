@@ -1,9 +1,10 @@
 pub mod collision {
-    use std::alloc::handle_alloc_error;
-    use std::collections::HashMap;
-    use std::fmt::Debug;
     use crate::game_object::game_object::GameObject;
     use crate::geom::geom::Vector;
+    use std::alloc::handle_alloc_error;
+    use std::cell::{Ref, RefCell};
+    use std::collections::HashMap;
+    use std::fmt::Debug;
 
     pub struct CollisionDetector {}
 
@@ -12,18 +13,21 @@ pub mod collision {
             CollisionDetector {}
         }
 
-        pub fn detect_collisions(&self, objs: &Vec<&Box<dyn GameObject>>) -> Box<dyn CollisionRegistry> {
+        pub fn detect_collisions(
+            &self,
+            objs: Vec<&RefCell<Box<dyn GameObject>>>,
+        ) -> Box<dyn CollisionRegistry> {
             if objs.is_empty() {
                 return Box::new(Collisions::new(vec![]));
             }
             let mut collisions: Vec<Collision> = vec![];
             let mut i = 0;
             loop {
-                let obj = objs[i];
+                let obj = objs[i].borrow();
                 i += 1;
 
                 let rest = &objs[i..];
-                for other in rest.iter() {
+                for other in rest.iter().map(|o| o.borrow()) {
                     let has_collision = obj.bounding_box().overlaps(&other.bounding_box());
                     if !has_collision {
                         continue;
@@ -39,7 +43,7 @@ pub mod collision {
         }
     }
 
-    pub trait CollisionRegistry : Debug {
+    pub trait CollisionRegistry: Debug {
         fn get_collisions(&self) -> Vec<&Collision>;
         fn get_collisions_by_id(&self, id: u16) -> Vec<&Collision>;
     }
@@ -70,18 +74,23 @@ pub mod collision {
     #[derive(Debug, Eq, PartialEq)]
     pub struct Collision(pub u16, pub u16);
 
+    #[derive(Clone)]
     pub struct CollisionHandler {
-        handlers: HashMap<(String, String), fn(&mut Box<dyn GameObject>, &mut Box<dyn GameObject>)>
+        handlers: HashMap<(String, String), fn(&mut Box<dyn GameObject>, &mut Box<dyn GameObject>)>,
     }
 
     impl CollisionHandler {
         pub fn new() -> CollisionHandler {
             CollisionHandler {
-                handlers: HashMap::new()
+                handlers: HashMap::new(),
             }
         }
 
-        pub fn register(&mut self, mapping: (String, String), callback: fn(&mut Box<dyn GameObject>, &mut Box<dyn GameObject>)) {
+        pub fn register(
+            &mut self,
+            mapping: (String, String),
+            callback: fn(&mut Box<dyn GameObject>, &mut Box<dyn GameObject>),
+        ) {
             self.handlers.insert(mapping, callback);
         }
 

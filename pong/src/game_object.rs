@@ -1,10 +1,10 @@
 pub mod game_object {
-    use std::fmt::Debug;
     use crate::game_object::components::{GeomComp, PhysicsComp};
     use crate::geom::geom::{BoundingBox, Vector};
     use crate::geom::shape::{Shape, ShapeType};
+    use std::fmt::Debug;
 
-    pub trait GameObject : Debug {
+    pub trait GameObject: Debug {
         fn id(&self) -> u16;
         fn obj_type(&self) -> &str;
         fn shape(&self) -> &ShapeType;
@@ -24,12 +24,22 @@ pub mod game_object {
         pub id: u16,
         pub obj_type: String,
         geom: Box<dyn GeomComp>,
-        physics: Box<dyn PhysicsComp>
+        physics: Box<dyn PhysicsComp>,
     }
 
     impl DefaultGameObject {
-        pub fn new(id: u16, obj_type: String, geom: Box<dyn GeomComp>, physics: Box<dyn PhysicsComp>) -> DefaultGameObject {
-            DefaultGameObject {id, obj_type, geom, physics}
+        pub fn new(
+            id: u16,
+            obj_type: String,
+            geom: Box<dyn GeomComp>,
+            physics: Box<dyn PhysicsComp>,
+        ) -> DefaultGameObject {
+            DefaultGameObject {
+                id,
+                obj_type,
+                geom,
+                physics,
+            }
         }
     }
 
@@ -92,11 +102,14 @@ pub mod game_object {
 }
 
 pub mod components {
-    use std::fmt::Debug;
     use crate::geom::geom::{BoundingBox, Vector};
-    use crate::geom::shape::{get_bounding_box, get_center, get_center_mut, get_orientation, get_orientation_mut, Shape, ShapeType};
+    use crate::geom::shape::{
+        get_bounding_box, get_center, get_center_mut, get_orientation, get_orientation_mut, Shape,
+        ShapeType,
+    };
+    use std::fmt::Debug;
 
-    pub trait GeomComp : Debug {
+    pub trait GeomComp: Debug {
         fn shape(&self) -> &ShapeType;
         fn orientation(&self) -> &Vector;
         fn orientation_mut(&mut self) -> &mut Vector;
@@ -107,12 +120,12 @@ pub mod components {
 
     #[derive(Debug)]
     pub struct DefaultGeomComp {
-        shape: ShapeType
+        shape: ShapeType,
     }
 
     impl DefaultGeomComp {
         pub fn new(shape: ShapeType) -> DefaultGeomComp {
-            DefaultGeomComp {shape}
+            DefaultGeomComp { shape }
         }
     }
 
@@ -142,7 +155,7 @@ pub mod components {
         }
     }
 
-    pub trait PhysicsComp : Debug {
+    pub trait PhysicsComp: Debug {
         fn vel(&self) -> &Vector;
         fn vel_mut(&mut self) -> &mut Vector;
         fn is_static(&self) -> bool;
@@ -151,18 +164,15 @@ pub mod components {
     #[derive(Debug)]
     pub struct DefaultPhysicsComp {
         vel: Vector,
-        is_static: bool
+        is_static: bool,
     }
     impl DefaultPhysicsComp {
         pub fn new(vel: Vector, is_static: bool) -> DefaultPhysicsComp {
-            DefaultPhysicsComp {vel, is_static}
+            DefaultPhysicsComp { vel, is_static }
         }
 
         pub fn new_static() -> DefaultPhysicsComp {
-            DefaultPhysicsComp::new(
-                Vector::zero(),
-                true
-            )
+            DefaultPhysicsComp::new(Vector::zero(), true)
         }
     }
     impl PhysicsComp for DefaultPhysicsComp {

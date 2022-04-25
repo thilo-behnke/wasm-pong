@@ -12,9 +12,9 @@ mod game_field_tests {
             obj_id: 1,
         }];
         field.tick(inputs);
-        let players = field.players();
-        let player = players.first().unwrap();
-        assert_eq!(player.obj.pos().y, height as f64 / 2. + 1.);
+        let objs = field.objs.borrow();
+        let player = objs.iter().find(|o| o.obj_type() == "player").unwrap();
+        assert_eq!(player.pos().y, height as f64 / 2. + 1.);
     }
 
     #[test]
@@ -27,9 +27,9 @@ mod game_field_tests {
             obj_id: 1,
         }];
         field.tick(inputs);
-        let players = field.players();
-        let player = players.first().unwrap();
-        assert_eq!(player.obj.pos().y, height as f64 / 2. - 1.);
+        let objs = field.objs.borrow();
+        let player = objs.iter().find(|o| o.obj_type() == "player").unwrap();
+        assert_eq!(player.pos().y, height as f64 / 2. - 1.);
     }
 
     #[test]
@@ -42,9 +42,9 @@ mod game_field_tests {
             obj_id: 1,
         }];
         field.tick(inputs);
-        let players = field.players();
-        let player = players.first().unwrap();
-        assert_eq!(player.obj.pos().y, height as f64 - height as f64 / 5. / 2.);
+        let objs = field.objs.borrow();
+        let player = objs.iter().find(|o| o.obj_type() == "player").unwrap();
+        assert_eq!(player.pos().y, height as f64 - height as f64 / 5. / 2.);
     }
 
     #[test]
@@ -57,8 +57,8 @@ mod game_field_tests {
             obj_id: 1,
         }];
         field.tick(inputs);
-        let players = field.players();
-        let player = players.first().unwrap();
-        assert_eq!(player.obj.pos().y, height as f64 / 5. / 2.);
+        let objs = field.objs.borrow();
+        let player = objs.iter().find(|o| o.obj_type() == "player").unwrap();
+        assert_eq!(player.pos().y, height as f64 / 5. / 2.);
     }
 }

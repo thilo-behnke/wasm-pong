@@ -1,9 +1,9 @@
-use rstest::rstest;
 use pong::collision::collision::CollisionHandler;
 use pong::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
 use pong::game_object::game_object::{DefaultGameObject, GameObject};
 use pong::geom::geom::Vector;
 use pong::geom::shape::Shape;
+use rstest::rstest;
 
 #[rstest]
 #[case(
@@ -76,15 +76,21 @@ pub fn should_handle_collision(
     assert_eq!(obj_b.vel(), expected_b.vel());
 }
 
-fn create_game_obj(id: u16, vel: Vector, orientation: Vector, is_static: bool) -> Box<dyn GameObject> {
+fn create_game_obj(
+    id: u16,
+    vel: Vector,
+    orientation: Vector,
+    is_static: bool,
+) -> Box<dyn GameObject> {
     Box::new(DefaultGameObject::new(
         id,
-    "obj".to_string(),
-    Box::new(DefaultGeomComp::new(
-            Shape::rect(Vector::zero(), orientation, 20., 20.)
-        )),
-        Box::new(DefaultPhysicsComp::new(
-            vel, is_static
-        ))
+        "obj".to_string(),
+        Box::new(DefaultGeomComp::new(Shape::rect(
+            Vector::zero(),
+            orientation,
+            20.,
+            20.,
+        ))),
+        Box::new(DefaultPhysicsComp::new(vel, is_static)),
     ))
 }

@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod game_field_tests {
+    use std::borrow::Borrow;
+    use std::cell::RefCell;
     use pong::game_field::{Field, Input, InputType};
 
     #[test]
@@ -12,8 +14,7 @@ mod game_field_tests {
             obj_id: 1,
         }];
         field.tick(inputs);
-        let objs = field.objs.borrow();
-        let player = objs.iter().find(|o| o.obj_type() == "player").unwrap();
+        let player = RefCell::borrow(field.objs().iter().find(|o| RefCell::borrow(o).obj_type() == "player").unwrap());
         assert_eq!(player.pos().y, height as f64 / 2. + 1.);
     }
 
@@ -27,9 +28,8 @@ mod game_field_tests {
             obj_id: 1,
         }];
         field.tick(inputs);
-        let objs = field.objs.borrow();
-        let player = objs.iter().find(|o| o.obj_type() == "player").unwrap();
-        assert_eq!(player.pos().y, height as f64 / 2. - 1.);
+        let player = field.objs().iter().find(|o| RefCell::borrow(o).obj_type() == "player").unwrap();
+        assert_eq!(RefCell::borrow(player).pos().y, height as f64 / 2. - 1.);
     }
 
     #[test]

@@ -7,9 +7,10 @@ use crate::game_object::game_object::{DefaultGameObject, GameObject};
 use crate::geom::geom::Vector;
 use crate::geom::shape::{Shape, ShapeType};
 use crate::utils::utils::{Logger, NoopLogger};
-use std::cell::{Cell, RefCell, RefMut};
+use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::ops::Deref;
+use std::rc::Rc;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum InputType {
@@ -27,8 +28,8 @@ pub struct Field {
     pub logger: Box<dyn Logger>,
     pub width: u16,
     pub height: u16,
-    pub objs: HashMap<u16, RefCell<Box<dyn GameObject>>>,
     pub collisions: Box<dyn CollisionRegistry>,
+    objs: Vec<Rc<RefCell<Box<dyn GameObject>>>>,
     collision_handler: CollisionHandler,
 }
 
@@ -92,30 +93,28 @@ impl Field {
 
     pub fn add_player(&mut self, id: u16, x: u16, y: u16) {
         let player = DefaultGameObject::player(id, x, y, &self);
-        self.objs.insert(player.id(), RefCell::new(player));
+        self.objs.push(Rc::new(RefCell::new(player)));
     }
 
     pub fn add_ball(&mut self, id: u16, x: u16, y: u16) {
         let ball = DefaultGameObject::ball(id, x, y, &self);
-        self.objs.insert(ball.id(), RefCell::new(ball));
+        self.objs.push(Rc::new(RefCell::new(ball)));
     }
 
-    pub fn tick(&mut self, inputs: Vec<Input>) {
-        {
-            for (_, obj) in self.objs.iter() {
-                let mut obj_mut = obj.borrow_mut();
-                if obj_mut.obj_type() != "ball" {
-                    continue;
-                }
-                if *obj_mut.vel() == Vector::zero() {
-                    obj_mut.vel_mut().add(&Vector::new(-2.0, 0.))
-                }
+    pub fn tick(&self, inputs: Vec<Input>) {
+        for obj in self.objs.iter() {
+            let mut obj_mut = RefCell::borrow_mut(obj);
+            if obj_mut.obj_type() != "ball" {
+                continue;
+            }
+            if *obj_mut.vel() == Vector::zero() {
+                obj_mut.vel_mut().add(&Vector::new(-2.0, 0.))
             }
         }
 
         {
-            for (_, obj) in self.objs.iter() {
-                let mut obj_mut = obj.borrow_mut();
+            for obj in self.objs.iter() {
+                let mut obj_mut = RefCell::borrow_mut(obj);
                 if obj_mut.obj_type() != "player" {
                     continue;
                 }
@@ -139,8 +138,8 @@ impl Field {
         }
 
         {
-            for (_, obj) in self.objs.iter() {
-                let mut obj_mut = obj.borrow_mut();
+            for obj in self.objs.iter() {
+                let mut obj_mut = RefCell::borrow_mut(obj);
                 obj_mut.update_pos();
             }
         }
@@ -181,13 +180,13 @@ impl Field {
     }
 
     fn get_collisions(&self) -> Box<dyn CollisionRegistry> {
-        let objs = self.objs.iter().map(|(_, o)| o).collect();
+        let objs = self.objs.iter().collect();
         let collision_detector = CollisionDetector::new();
         collision_detector.detect_collisions(objs)
     }
 
-    fn get_obj<'a>(&self, id: u16, mut objs: &'a RefMut<Vec<Box<dyn GameObject>>>) -> &'a mut Box<dyn GameObject> {
-        objs.iter_mut().find(|o| o.id() == id).unwrap()
+    pub fn objs(&self) -> Vec<&Rc<RefCell<Box<dyn GameObject>>>> {
+        self.objs.iter().collect()
     }
 }
 
@@ -229,8 +228,8 @@ impl DefaultGameObject {
 }
 
 impl DefaultGameObject {
-    pub fn bounds(width: u16, height: u16) -> HashMap<u16, RefCell<Box<dyn GameObject>>> {
-        let bounds = vec![
+    pub fn bounds(width: u16, height: u16) -> Vec<Rc<RefCell<Box<dyn GameObject>>>> {
+        let bounds: Vec<Box<dyn GameObject>> = vec![
             // top
             Box::new(DefaultGameObject::new(
                 90,
@@ -292,6 +291,6 @@ impl DefaultGameObject {
                 Box::new(DefaultPhysicsComp::new_static()),
             )),
         ];
-        bounds.iter().map(|o| (o.id, RefCell::new(o))).collect()
+        bounds.into_iter().map(|o| Rc::new(RefCell::new(o))).collect()
     }
 }

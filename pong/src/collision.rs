@@ -5,6 +5,7 @@ pub mod collision {
     use std::cell::{Ref, RefCell};
     use std::collections::HashMap;
     use std::fmt::Debug;
+    use std::rc::Rc;
 
     pub struct CollisionDetector {}
 
@@ -15,7 +16,7 @@ pub mod collision {
 
         pub fn detect_collisions(
             &self,
-            objs: Vec<&RefCell<Box<dyn GameObject>>>,
+            objs: Vec<&Rc<RefCell<Box<dyn GameObject>>>>,
         ) -> Box<dyn CollisionRegistry> {
             if objs.is_empty() {
                 return Box::new(Collisions::new(vec![]));

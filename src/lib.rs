@@ -116,8 +116,8 @@ impl FieldWrapper {
             .into_iter()
             .map(|i| i.to_input())
             .collect::<Vec<Input>>();
-        self.field.tick(inputs);
-        log!("{:?}", self.field.collisions);
+        // self.field.tick(inputs);
+        // log!("{:?}", self.field.collisions);
     }
 
     pub fn objects(&self) -> *const GameObjectDTO {

@@ -5,6 +5,8 @@ use pong::geom::geom::Vector;
 use pong::geom::shape::Shape;
 use rstest::rstest;
 use std::borrow::{Borrow, BorrowMut};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[rstest]
 #[case(
@@ -64,14 +66,14 @@ use std::borrow::{Borrow, BorrowMut};
     create_game_obj(2, Vector::new(0., 0.), Vector::new(0., 1.), true),
 )]
 pub fn should_handle_collision(
-    #[case] mut obj_a: Box<dyn GameObject>,
-    #[case] mut obj_b: Box<dyn GameObject>,
-    #[case] expected_a: Box<dyn GameObject>,
-    #[case] expected_b: Box<dyn GameObject>,
+    #[case] mut obj_a: Rc<RefCell<Box<dyn GameObject>>>,
+    #[case] mut obj_b: Rc<RefCell<Box<dyn GameObject>>>,
+    #[case] expected_a: Rc<RefCell<Box<dyn GameObject>>>,
+    #[case] expected_b: Rc<RefCell<Box<dyn GameObject>>>,
 ) {
     let mut handler = CollisionHandler::new();
     handler.register((String::from("obj"), String::from("obj")), |a, b| {});
-    let res = handler.handle(&mut obj_a, &mut obj_b);
+    let res = handler.handle(obj_a, obj_b);
     assert_eq!(true, res)
     // assert_eq!(obj_a.pos(), expected_a.pos());
     // assert_eq!(obj_a.vel(), expected_a.vel());
@@ -84,8 +86,8 @@ fn create_game_obj(
     vel: Vector,
     orientation: Vector,
     is_static: bool,
-) -> Box<dyn GameObject> {
-    Box::new(DefaultGameObject::new(
+) -> Rc<RefCell<Box<dyn GameObject>>> {
+    Rc::new(RefCell::new(Box::new(DefaultGameObject::new(
         id,
         "obj".to_string(),
         Box::new(DefaultGeomComp::new(Shape::rect(
@@ -95,5 +97,5 @@ fn create_game_obj(
             20.,
         ))),
         Box::new(DefaultPhysicsComp::new(vel, is_static)),
-    ))
+    ))))
 }

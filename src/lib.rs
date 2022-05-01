@@ -1,5 +1,6 @@
 mod utils;
 
+use std::cell::RefCell;
 use pong::collision::collision::{Collision, CollisionDetector};
 use pong::game_field::{Field, Input, InputType};
 use pong::game_object::game_object::GameObject;
@@ -9,6 +10,7 @@ use pong::utils::utils::Logger;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::cmp::{max, min};
+use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
 extern crate serde_json;
@@ -39,7 +41,9 @@ pub struct GameObjectDTO {
 }
 
 impl GameObjectDTO {
-    pub fn from(obj: &Box<dyn GameObject>) -> GameObjectDTO {
+    pub fn from(obj: &Rc<RefCell<Box<dyn GameObject>>>) -> GameObjectDTO {
+        let obj = RefCell::borrow(obj);
+
         let pos = obj.pos();
         let shape = obj.shape();
         return GameObjectDTO {
@@ -123,9 +127,8 @@ impl FieldWrapper {
     pub fn objects(&self) -> *const GameObjectDTO {
         let mut objs = self
             .field
-            .objs
-            .borrow()
-            .iter()
+            .objs()
+            .into_iter()
             .map(|o| GameObjectDTO::from(o))
             .collect::<Vec<GameObjectDTO>>();
         objs.as_ptr()

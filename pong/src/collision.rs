@@ -2,7 +2,7 @@ pub mod collision {
     use crate::game_object::game_object::GameObject;
     use crate::geom::geom::Vector;
     use std::alloc::handle_alloc_error;
-    use std::cell::{Ref, RefCell};
+    use std::cell::{Ref, RefCell, RefMut};
     use std::collections::HashMap;
     use std::fmt::Debug;
     use std::rc::Rc;
@@ -78,7 +78,7 @@ pub mod collision {
 
     #[derive(Clone)]
     pub struct CollisionHandler {
-        handlers: HashMap<(String, String), fn(&mut Box<dyn GameObject>, &mut Box<dyn GameObject>)>,
+        handlers: HashMap<(String, String), fn(Rc<RefCell<Box<dyn GameObject>>>, Rc<RefCell<Box<dyn GameObject>>>)>
     }
 
     impl CollisionHandler {
@@ -91,7 +91,7 @@ pub mod collision {
         pub fn register(
             &mut self,
             mapping: (String, String),
-            callback: fn(&mut Box<dyn GameObject>, &mut Box<dyn GameObject>),
+            callback: fn(Rc<RefCell<Box<dyn GameObject>>>, Rc<RefCell<Box<dyn GameObject>>>),
         ) {
             if self.handlers.contains_key(&mapping) {
                 panic!(
@@ -104,10 +104,10 @@ pub mod collision {
 
         pub fn handle(
             &self,
-            obj_a: &mut Box<dyn GameObject>,
-            obj_b: &mut Box<dyn GameObject>,
+            obj_a: Rc<RefCell<Box<dyn GameObject>>>,
+            obj_b: Rc<RefCell<Box<dyn GameObject>>>,
         ) -> bool {
-            let key = (obj_a.obj_type().to_string(), obj_b.obj_type().to_string());
+            let key = (RefCell::borrow(&obj_a).obj_type().to_string(), RefCell::borrow(&obj_b).obj_type().to_string());
             if !self.handlers.contains_key(&key) {
                 return false;
             }

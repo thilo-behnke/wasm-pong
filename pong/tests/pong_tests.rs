@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use rstest::rstest;
 use pong::game_field::{Bound, Field};
 use pong::game_object::game_object::{DefaultGameObject, GameObject};
@@ -47,29 +49,29 @@ use pong::utils::utils::NoopLogger;
     get_bound(Bound::TOP)
 )]
 pub fn should_correctly_handle_player_bounds_collision(
-    #[case] mut player: Box<dyn GameObject>,
-    #[case] mut bounds: Box<dyn GameObject>,
-    #[case] mut player_expected: Box<dyn GameObject>,
-    #[case] mut bounds_expected: Box<dyn GameObject>
+    #[case] mut player: Rc<RefCell<Box<dyn GameObject>>>,
+    #[case] mut bounds: Rc<RefCell<Box<dyn GameObject>>>,
+    #[case] mut player_expected: Rc<RefCell<Box<dyn GameObject>>>,
+    #[case] mut bounds_expected: Rc<RefCell<Box<dyn GameObject>>>
 ) {
-    handle_player_bound_collision(&mut player, &mut bounds);
-    assert_eq!(player_expected.pos(), player.pos());
-    assert_eq!(bounds_expected.pos(), bounds.pos());
+    handle_player_bound_collision(player.clone(), bounds.clone());
+    assert_eq!(player_expected.borrow().pos(), player.borrow().pos());
+    assert_eq!(bounds_expected.borrow().pos(), bounds.borrow().pos());
 }
 
-fn create_player(id: u16, x: u16, y: u16, orientation: Vector) -> Box<dyn GameObject> {
+fn create_player(id: u16, x: u16, y: u16, orientation: Vector) -> Rc<RefCell<Box<dyn GameObject>>> {
     let field = Field::new(Box::new(NoopLogger{}));
     let mut player = DefaultGameObject::player(id, x, y, &field);
     let player_orientation = player.orientation_mut();
     player_orientation.x = orientation.x;
     player_orientation.y = orientation.y;
-    player
+    Rc::new(RefCell::new(player))
 }
 
-fn get_bound(bound: Bound) -> Box<dyn GameObject> {
+fn get_bound(bound: Bound) -> Rc<RefCell<Box<dyn GameObject>>> {
     let field = Field::new(Box::new(NoopLogger{}));
     let bounds = DefaultGameObject::bounds(field.width, field.height);
-    return bounds.into_iter().find(|b| {
+    return Rc::new(RefCell::new(bounds.into_iter().find(|b| {
         b.0 == bound
-    }).unwrap().inner();
+    }).unwrap().inner()));
 }

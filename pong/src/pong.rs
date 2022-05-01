@@ -1,14 +1,18 @@
 pub mod pong_collisions {
+    use std::cell::{RefCell, RefMut};
     use std::ops::Add;
+    use std::rc::Rc;
     use crate::game_object::game_object::GameObject;
     use crate::geom::geom::Vector;
     use crate::geom::shape::ShapeType;
 
     pub fn handle_player_ball_collision(
-        ball: &mut Box<dyn GameObject>,
-        player: &mut Box<dyn GameObject>,
+        ball: Rc<RefCell<Box<dyn GameObject>>>,
+        player: Rc<RefCell<Box<dyn GameObject>>>,
     ) {
         // reflect
+        let mut ball = RefCell::borrow_mut(&ball);
+        let player = player.borrow();
         ball.vel_mut().reflect(&player.orientation());
         // use vel of player obj
         if *player.vel() != Vector::zero() {
@@ -24,16 +28,20 @@ pub mod pong_collisions {
     }
 
     pub fn handle_ball_bounds_collision(
-        ball: &mut Box<dyn GameObject>,
-        bound: &mut Box<dyn GameObject>,
+        ball: Rc<RefCell<Box<dyn GameObject>>>,
+        bound: Rc<RefCell<Box<dyn GameObject>>>,
     ) {
+        let mut ball = RefCell::borrow_mut(&ball);
+        let bound = RefCell::borrow(&bound);
         ball.vel_mut().reflect(&bound.orientation());
     }
 
     pub fn handle_player_bound_collision(
-        player: &mut Box<dyn GameObject>,
-        bound: &mut Box<dyn GameObject>,
+        player: Rc<RefCell<Box<dyn GameObject>>>,
+        bound: Rc<RefCell<Box<dyn GameObject>>>,
     ) {
+        let mut player = RefCell::borrow_mut(&player);
+        let bound = RefCell::borrow(&bound);
         let shape = player.shape().clone();
         let player_orientation = player.orientation().clone();
         let height = match shape {

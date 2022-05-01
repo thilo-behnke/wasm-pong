@@ -136,6 +136,7 @@ impl Field {
         {
             for obj in self.objs.iter() {
                 let mut obj_mut = RefCell::borrow_mut(obj);
+                self.logger.log("update player");
                 obj_mut.update_pos();
             }
         }
@@ -144,35 +145,12 @@ impl Field {
 
         let collision_handler = self.collision_handler.clone();
         for collision in collisions.get_collisions().iter() {
-            // TODO: This is fine because an obj will not collide with itself - better abstraction?
-            // let idx
-            // let (obj_a, obj_b) = self.objs.split_at_mut();
-            // let obj_a = self.get_obj(collision.0, self.objs.borrow_mut());
-            // let obj_b = self.get_obj(collision.1, self.objs.borrow_mut());
-            // collision_handler.handle(obj_a, obj_b)
+            let objs = &self.objs;
+            let obj_a = objs.iter().find(|o| RefCell::borrow(o).id() == collision.0).unwrap().clone();
+            let obj_b = objs.iter().find(|o| RefCell::borrow(o).id() == collision.1).unwrap().clone();
+            self.logger.log(&*format!("Handling collision between {:?} and {:?}", obj_a, obj_b));
+            collision_handler.handle(obj_a, obj_b);
         }
-        //
-        // for ball in self.balls.iter_mut() {
-        //     let collisions = self.collisions.get_collisions_by_id(ball.obj.id());
-        //     if collisions.is_empty() {
-        //         continue;
-        //     }
-        //     let other = match collisions[0] {
-        //         Collision(obj_a_id, obj_b_id) if *obj_a_id == ball.obj.id() => {
-        //             objs.iter().find(|o| o.id() == *obj_b_id).unwrap()
-        //         }
-        //         collision => objs.iter().find(|o| o.id() == collision.0).unwrap(),
-        //     };
-        //
-        //     self.logger.log("### BEFORE COLLISION ###");
-        //     self.logger.log(&*format!("{:?}", ball.obj));
-        //     self.logger.log(&*format!("{:?}", other));
-        //     collision_handler.handle(&mut ball.obj, other);
-        //     self.logger.log("### AFTER COLLISION ###");
-        //     self.logger.log(&*format!("{:?}", ball.obj));
-        //     self.logger.log(&*format!("{:?}", other));
-        //     self.logger.log("### DONE ###");
-        // }
     }
 
     fn get_collisions(&self) -> Box<dyn CollisionRegistry> {

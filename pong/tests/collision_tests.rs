@@ -90,6 +90,10 @@ impl GameObject for MockGameObject {
         todo!()
     }
 
+    fn orientation_mut(&mut self) -> &mut Vector {
+        todo!()
+    }
+
     fn update_pos(&mut self) {
         todo!()
     }

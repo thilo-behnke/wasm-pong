@@ -121,7 +121,13 @@ impl FieldWrapper {
     }
 
     pub fn objects(&self) -> *const GameObjectDTO {
-        let mut objs = self.field.objs.borrow().iter().map(|o| GameObjectDTO::from(o)).collect::<Vec<GameObjectDTO>>();
+        let mut objs = self
+            .field
+            .objs
+            .borrow()
+            .iter()
+            .map(|o| GameObjectDTO::from(o))
+            .collect::<Vec<GameObjectDTO>>();
         objs.as_ptr()
     }
 

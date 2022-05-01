@@ -11,6 +11,7 @@ pub mod game_object {
         fn pos(&self) -> &Vector;
         fn pos_mut(&mut self) -> &mut Vector;
         fn orientation(&self) -> &Vector;
+        fn orientation_mut(&mut self) -> &mut Vector;
         fn update_pos(&mut self);
         fn bounding_box(&self) -> BoundingBox;
         fn vel(&self) -> &Vector;
@@ -66,6 +67,10 @@ pub mod game_object {
 
         fn orientation(&self) -> &Vector {
             self.geom.orientation()
+        }
+
+        fn orientation_mut(&mut self) -> &mut Vector {
+            self.geom.orientation_mut()
         }
 
         fn update_pos(&mut self) {

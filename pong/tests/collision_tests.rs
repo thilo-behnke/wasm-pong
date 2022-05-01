@@ -1,10 +1,10 @@
-use std::cell::{Ref, RefCell};
-use std::rc::Rc;
 use pong::collision::collision::{Collision, CollisionDetector};
 use pong::game_object::game_object::GameObject;
 use pong::geom::geom::{BoundingBox, Vector};
 use pong::geom::shape::ShapeType;
 use rstest::rstest;
+use std::cell::{Ref, RefCell};
+use std::rc::Rc;
 
 #[rstest]
 #[case(vec![], vec![])]

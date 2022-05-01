@@ -108,10 +108,12 @@ pub mod geom {
             let mut orthogonal1 = onto.clone();
             orthogonal1.orthogonal_clockwise();
             if self.dot(&orthogonal1) < 0. {
+                // orthogonal1.normalize();
                 return orthogonal1;
             }
             let mut orthogonal2 = onto.clone();
             orthogonal2.orthogonal_counter_clockwise();
+            // orthogonal2.normalize();
             return orthogonal2;
         }
 

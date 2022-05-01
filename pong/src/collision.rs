@@ -93,10 +93,20 @@ pub mod collision {
             mapping: (String, String),
             callback: fn(&mut Box<dyn GameObject>, &mut Box<dyn GameObject>),
         ) {
+            if self.handlers.contains_key(&mapping) {
+                panic!(
+                    "Collision handler for mapping {:?} is already registered.",
+                    mapping
+                )
+            }
             self.handlers.insert(mapping, callback);
         }
 
-        pub fn handle(&self, obj_a: &mut Box<dyn GameObject>, obj_b: &mut Box<dyn GameObject>) -> bool {
+        pub fn handle(
+            &self,
+            obj_a: &mut Box<dyn GameObject>,
+            obj_b: &mut Box<dyn GameObject>,
+        ) -> bool {
             let key = (obj_a.obj_type().to_string(), obj_b.obj_type().to_string());
             if !self.handlers.contains_key(&key) {
                 return false;

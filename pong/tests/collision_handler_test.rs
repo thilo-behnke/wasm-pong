@@ -1,10 +1,10 @@
-use std::borrow::{Borrow, BorrowMut};
 use pong::collision::collision::CollisionHandler;
 use pong::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
 use pong::game_object::game_object::{DefaultGameObject, GameObject};
 use pong::geom::geom::Vector;
 use pong::geom::shape::Shape;
 use rstest::rstest;
+use std::borrow::{Borrow, BorrowMut};
 
 #[rstest]
 #[case(
@@ -70,7 +70,7 @@ pub fn should_handle_collision(
     #[case] expected_b: Box<dyn GameObject>,
 ) {
     let mut handler = CollisionHandler::new();
-    handler.register((String::from("obj"), String::from("obj")), |a,b| {});
+    handler.register((String::from("obj"), String::from("obj")), |a, b| {});
     let res = handler.handle(&mut obj_a, &mut obj_b);
     assert_eq!(true, res)
     // assert_eq!(obj_a.pos(), expected_a.pos());

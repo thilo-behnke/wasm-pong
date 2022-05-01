@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod game_field_tests {
+    use pong::game_field::{Field, Input, InputType};
     use std::borrow::Borrow;
     use std::cell::RefCell;
-    use pong::game_field::{Field, Input, InputType};
 
     #[test]
     fn player_input_update_pos__up() {
@@ -14,7 +14,13 @@ mod game_field_tests {
             obj_id: 1,
         }];
         field.tick(inputs);
-        let player = RefCell::borrow(field.objs().iter().find(|o| RefCell::borrow(o).obj_type() == "player").unwrap());
+        let player = RefCell::borrow(
+            field
+                .objs()
+                .iter()
+                .find(|o| RefCell::borrow(o).obj_type() == "player")
+                .unwrap(),
+        );
         assert_eq!(player.pos().y, height as f64 / 2. + 1.);
     }
 
@@ -29,7 +35,10 @@ mod game_field_tests {
         }];
         field.tick(inputs);
         let objs = field.objs();
-        let player = objs.iter().find(|o| RefCell::borrow(o).obj_type() == "player").unwrap();
+        let player = objs
+            .iter()
+            .find(|o| RefCell::borrow(o).obj_type() == "player")
+            .unwrap();
         assert_eq!(RefCell::borrow(player).pos().y, height as f64 / 2. - 1.);
     }
 
@@ -44,8 +53,14 @@ mod game_field_tests {
         }];
         field.tick(inputs);
         let objs = field.objs();
-        let player = objs.iter().find(|o| RefCell::borrow(o).obj_type() == "player").unwrap();
-        assert_eq!(RefCell::borrow(player).pos().y, height as f64 - height as f64 / 5. / 2.);
+        let player = objs
+            .iter()
+            .find(|o| RefCell::borrow(o).obj_type() == "player")
+            .unwrap();
+        assert_eq!(
+            RefCell::borrow(player).pos().y,
+            height as f64 - height as f64 / 5. / 2.
+        );
     }
 
     #[test]
@@ -59,7 +74,10 @@ mod game_field_tests {
         }];
         field.tick(inputs);
         let objs = field.objs();
-        let player = objs.iter().find(|o| RefCell::borrow(o).obj_type() == "player").unwrap();
+        let player = objs
+            .iter()
+            .find(|o| RefCell::borrow(o).obj_type() == "player")
+            .unwrap();
         assert_eq!(RefCell::borrow(player).pos().y, height as f64 / 5. / 2.);
     }
 }

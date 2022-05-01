@@ -1,4 +1,3 @@
-use std::borrow::{Borrow, BorrowMut};
 use crate::collision::collision::{
     Collision, CollisionDetector, CollisionHandler, CollisionRegistry, Collisions,
 };
@@ -6,7 +5,9 @@ use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
 use crate::game_object::game_object::{DefaultGameObject, GameObject};
 use crate::geom::geom::Vector;
 use crate::geom::shape::{Shape, ShapeType};
+use crate::pong::pong_collisions::{handle_ball_bounds_collision, handle_player_ball_collision};
 use crate::utils::utils::{Logger, NoopLogger};
+use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -42,7 +43,10 @@ impl Field {
             logger,
             width,
             height,
-            objs: DefaultGameObject::bounds(width, height),
+            objs: DefaultGameObject::bounds(width, height)
+                .into_iter()
+                .map(|b| Rc::new(RefCell::new(b.inner())))
+                .collect(),
             collisions: Box::new(Collisions::new(vec![])),
             collision_handler: CollisionHandler::new(),
         };
@@ -53,28 +57,17 @@ impl Field {
 
         field.collision_handler.register(
             (String::from("ball"), String::from("player")),
-            |ball, player| {
-                // reflect
-                ball.vel_mut().reflect(&player.orientation());
-                // use vel of player obj
-                if *player.vel() != Vector::zero() {
-                    let mut adjusted = player.vel().clone();
-                    adjusted.normalize();
-                    ball.vel_mut().add(&adjusted);
-                }
-                // move out of collision
-                let mut b_to_a = ball.pos().clone();
-                b_to_a.sub(&player.pos());
-                b_to_a.normalize();
-                ball.pos_mut().add(&b_to_a);
-            },
+            handle_player_ball_collision,
         );
 
         field.collision_handler.register(
             (String::from("ball"), String::from("bound")),
-            |ball, bound| {
-                ball.vel_mut().reflect(&bound.orientation());
-            },
+            handle_ball_bounds_collision,
+        );
+
+        field.collision_handler.register(
+            (String::from("player"), String::from("bound")),
+            handle_ball_bounds_collision,
         );
 
         return field;
@@ -85,7 +78,10 @@ impl Field {
             logger: Box::new(NoopLogger {}),
             width,
             height,
-            objs: DefaultGameObject::bounds(width, height),
+            objs: DefaultGameObject::bounds(width, height)
+                .into_iter()
+                .map(|b| Rc::new(RefCell::new(b.inner())))
+                .collect(),
             collisions: Box::new(Collisions::new(vec![])),
             collision_handler: CollisionHandler::new(),
         }
@@ -193,18 +189,18 @@ impl Field {
 impl DefaultGameObject {
     pub fn player(id: u16, x: u16, y: u16, field: &Field) -> Box<dyn GameObject> {
         Box::new(DefaultGameObject::new(
-                id,
-                "player".to_string(),
-                Box::new(DefaultGeomComp::new(Shape::rect(
-                    Vector {
-                        x: x as f64,
-                        y: y as f64,
-                    },
-                    Vector::new(0., 1.),
-                    (field.width as f64) / 25.,
-                    (field.height as f64) / 5.,
-                ))),
-                Box::new(DefaultPhysicsComp::new(Vector::zero(), true)),
+            id,
+            "player".to_string(),
+            Box::new(DefaultGeomComp::new(Shape::rect(
+                Vector {
+                    x: x as f64,
+                    y: y as f64,
+                },
+                Vector::new(0., 1.),
+                (field.width as f64) / 25.,
+                (field.height as f64) / 5.,
+            ))),
+            Box::new(DefaultPhysicsComp::new(Vector::zero(), true)),
         ))
     }
 }
@@ -212,26 +208,25 @@ impl DefaultGameObject {
 impl DefaultGameObject {
     pub fn ball(id: u16, x: u16, y: u16, field: &Field) -> Box<dyn GameObject> {
         Box::new(DefaultGameObject::new(
-                id,
-                "ball".to_string(),
-                Box::new(DefaultGeomComp::new(Shape::circle(
-                    Vector {
-                        x: x as f64,
-                        y: y as f64,
-                    },
-                    Vector::zero(),
-                    (field.width as f64) / 80.,
-                ))),
-                Box::new(DefaultPhysicsComp::new(Vector::zero(), false)),
+            id,
+            "ball".to_string(),
+            Box::new(DefaultGeomComp::new(Shape::circle(
+                Vector {
+                    x: x as f64,
+                    y: y as f64,
+                },
+                Vector::zero(),
+                (field.width as f64) / 80.,
+            ))),
+            Box::new(DefaultPhysicsComp::new(Vector::zero(), false)),
         ))
     }
 }
 
 impl DefaultGameObject {
-    pub fn bounds(width: u16, height: u16) -> Vec<Rc<RefCell<Box<dyn GameObject>>>> {
-        let bounds: Vec<Box<dyn GameObject>> = vec![
-            // top
-            Box::new(DefaultGameObject::new(
+    pub fn bounds(width: u16, height: u16) -> Vec<Bounds> {
+        let bounds = vec![
+            Bounds(Bound::BOTTOM, Box::new(DefaultGameObject::new(
                 90,
                 "bound".to_string(),
                 Box::new(DefaultGeomComp::new(Shape::rect(
@@ -244,9 +239,8 @@ impl DefaultGameObject {
                     2.,
                 ))),
                 Box::new(DefaultPhysicsComp::new_static()),
-            )),
-            // bottom
-            Box::new(DefaultGameObject::new(
+            ))),
+            Bounds(Bound::TOP, Box::new(DefaultGameObject::new(
                 91,
                 "bound".to_string(),
                 Box::new(DefaultGeomComp::new(Shape::rect(
@@ -259,9 +253,8 @@ impl DefaultGameObject {
                     2.,
                 ))),
                 Box::new(DefaultPhysicsComp::new_static()),
-            )),
-            // left
-            Box::new(DefaultGameObject::new(
+            ))),
+            Bounds(Bound::LEFT, Box::new(DefaultGameObject::new(
                 92,
                 "bound".to_string(),
                 Box::new(DefaultGeomComp::new(Shape::rect(
@@ -274,9 +267,8 @@ impl DefaultGameObject {
                     height as f64,
                 ))),
                 Box::new(DefaultPhysicsComp::new_static()),
-            )),
-            // right
-            Box::new(DefaultGameObject::new(
+            ))),
+            Bounds(Bound::RIGHT, Box::new(DefaultGameObject::new(
                 93,
                 "bound".to_string(),
                 Box::new(DefaultGeomComp::new(Shape::rect(
@@ -289,8 +281,24 @@ impl DefaultGameObject {
                     height as f64,
                 ))),
                 Box::new(DefaultPhysicsComp::new_static()),
-            )),
+            ))),
         ];
-        bounds.into_iter().map(|o| Rc::new(RefCell::new(o))).collect()
+        bounds
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Bound {
+    TOP,
+    RIGHT,
+    BOTTOM,
+    LEFT,
+}
+
+pub struct Bounds(pub Bound, pub Box<dyn GameObject>);
+
+impl Bounds {
+    pub fn inner(self) -> Box<dyn GameObject> {
+        self.1
     }
 }

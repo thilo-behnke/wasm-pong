@@ -28,7 +28,8 @@ mod game_field_tests {
             obj_id: 1,
         }];
         field.tick(inputs);
-        let player = field.objs().iter().find(|o| RefCell::borrow(o).obj_type() == "player").unwrap();
+        let objs = field.objs();
+        let player = objs.iter().find(|o| RefCell::borrow(o).obj_type() == "player").unwrap();
         assert_eq!(RefCell::borrow(player).pos().y, height as f64 / 2. - 1.);
     }
 
@@ -42,9 +43,9 @@ mod game_field_tests {
             obj_id: 1,
         }];
         field.tick(inputs);
-        let objs = field.objs.borrow();
-        let player = objs.iter().find(|o| o.obj_type() == "player").unwrap();
-        assert_eq!(player.pos().y, height as f64 - height as f64 / 5. / 2.);
+        let objs = field.objs();
+        let player = objs.iter().find(|o| RefCell::borrow(o).obj_type() == "player").unwrap();
+        assert_eq!(RefCell::borrow(player).pos().y, height as f64 - height as f64 / 5. / 2.);
     }
 
     #[test]
@@ -57,8 +58,8 @@ mod game_field_tests {
             obj_id: 1,
         }];
         field.tick(inputs);
-        let objs = field.objs.borrow();
-        let player = objs.iter().find(|o| o.obj_type() == "player").unwrap();
-        assert_eq!(player.pos().y, height as f64 / 5. / 2.);
+        let objs = field.objs();
+        let player = objs.iter().find(|o| RefCell::borrow(o).obj_type() == "player").unwrap();
+        assert_eq!(RefCell::borrow(player).pos().y, height as f64 / 5. / 2.);
     }
 }

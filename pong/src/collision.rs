@@ -16,7 +16,7 @@ pub mod collision {
 
         pub fn detect_collisions(
             &self,
-            objs: Vec<&Rc<RefCell<Box<dyn GameObject>>>>,
+            objs: Vec<Rc<RefCell<Box<dyn GameObject>>>>,
         ) -> Box<dyn CollisionRegistry> {
             if objs.is_empty() {
                 return Box::new(Collisions::new(vec![]));
@@ -24,7 +24,8 @@ pub mod collision {
             let mut collisions: Vec<Collision> = vec![];
             let mut i = 0;
             loop {
-                let obj = objs[i].borrow();
+                let o = &objs[i];
+                let obj = RefCell::borrow(o);
                 i += 1;
 
                 let rest = &objs[i..];
@@ -95,13 +96,14 @@ pub mod collision {
             self.handlers.insert(mapping, callback);
         }
 
-        pub fn handle(&self, obj_a: &mut Box<dyn GameObject>, obj_b: &mut Box<dyn GameObject>) {
+        pub fn handle(&self, obj_a: &mut Box<dyn GameObject>, obj_b: &mut Box<dyn GameObject>) -> bool {
             let key = (obj_a.obj_type().to_string(), obj_b.obj_type().to_string());
             if !self.handlers.contains_key(&key) {
-                return;
+                return false;
             }
             let handler = self.handlers[&key];
             handler(obj_a, obj_b);
+            return true;
         }
 
         // pub fn new() -> CollisionHandler {

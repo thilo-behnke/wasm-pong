@@ -180,7 +180,7 @@ impl Field {
     }
 
     fn get_collisions(&self) -> Box<dyn CollisionRegistry> {
-        let objs = self.objs.iter().collect();
+        let objs = self.objs.iter().map(|o| o.clone()).collect();
         let collision_detector = CollisionDetector::new();
         collision_detector.detect_collisions(objs)
     }

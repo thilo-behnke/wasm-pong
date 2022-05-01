@@ -120,7 +120,7 @@ impl FieldWrapper {
             .into_iter()
             .map(|i| i.to_input())
             .collect::<Vec<Input>>();
-        // self.field.tick(inputs);
+        self.field.tick(inputs);
         // log!("{:?}", self.field.collisions);
     }
 
@@ -146,6 +146,7 @@ impl FieldWrapper {
     }
 }
 
+#[derive(Clone)]
 pub struct WasmLogger {}
 impl Logger for WasmLogger {
     fn log(&self, msg: &str) {

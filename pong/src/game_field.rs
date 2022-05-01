@@ -136,7 +136,6 @@ impl Field {
         {
             for obj in self.objs.iter() {
                 let mut obj_mut = RefCell::borrow_mut(obj);
-                self.logger.log("update player");
                 obj_mut.update_pos();
             }
         }
@@ -148,14 +147,13 @@ impl Field {
             let objs = &self.objs;
             let obj_a = objs.iter().find(|o| RefCell::borrow(o).id() == collision.0).unwrap().clone();
             let obj_b = objs.iter().find(|o| RefCell::borrow(o).id() == collision.1).unwrap().clone();
-            self.logger.log(&*format!("Handling collision between {:?} and {:?}", obj_a, obj_b));
             collision_handler.handle(obj_a, obj_b);
         }
     }
 
     fn get_collisions(&self) -> Box<dyn CollisionRegistry> {
         let objs = self.objs.iter().map(|o| o.clone()).collect();
-        let collision_detector = CollisionDetector::new();
+        let collision_detector = CollisionDetector::new(self.logger.clone());
         collision_detector.detect_collisions(objs)
     }
 

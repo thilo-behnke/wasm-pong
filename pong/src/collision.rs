@@ -6,12 +6,17 @@ pub mod collision {
     use std::collections::HashMap;
     use std::fmt::Debug;
     use std::rc::Rc;
+    use crate::utils::utils::Logger;
 
-    pub struct CollisionDetector {}
+    pub struct CollisionDetector {
+        logger: Box<dyn Logger>
+    }
 
     impl CollisionDetector {
-        pub fn new() -> CollisionDetector {
-            CollisionDetector {}
+        pub fn new(logger: Box<dyn Logger>) -> CollisionDetector {
+            CollisionDetector {
+                logger
+            }
         }
 
         pub fn detect_collisions(
@@ -111,6 +116,9 @@ pub mod collision {
             if !self.handlers.contains_key(&key) {
                 return false;
             }
+            self.logger.log(&*format!("Handling collision between {:?} and {:?}", obj_a, obj_b));
+            self.logger.log(&*format!("Handling collision using handler {:?}", key));
+
             let handler = self.handlers[&key];
             handler(obj_a, obj_b);
             return true;

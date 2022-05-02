@@ -4,7 +4,7 @@ use crate::game_object::game_object::{DefaultGameObject, GameObject};
 use crate::geom::geom::Vector;
 use crate::geom::shape::{Shape, ShapeType};
 use crate::pong::pong_collisions::{handle_ball_bounds_collision, handle_player_ball_collision, handle_player_bound_collision};
-use crate::pong::pong_events::{PongEventWriter, DefaultPongEventWriter, NoopPongEventWriter};
+use crate::pong::pong_events::{PongEventWriter, DefaultPongEventWriter, NoopPongEventWriter, PongEventType, GameObjUpdate};
 use crate::utils::utils::{DefaultLoggerFactory, Logger, LoggerFactory, NoopLogger};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Cell, Ref, RefCell, RefMut};
@@ -168,6 +168,14 @@ impl Field {
             let obj_a = objs.iter().find(|o| RefCell::borrow(o).id() == collision.0).unwrap().clone();
             let obj_b = objs.iter().find(|o| RefCell::borrow(o).id() == collision.1).unwrap().clone();
             collision_handler.handle(obj_a, obj_b);
+        }
+
+        {
+            for obj in self.objs.iter().filter(|o| RefCell::borrow(o).is_dirty()) {
+                let mut obj = RefCell::borrow_mut(obj);
+                self.event_writer.write(PongEventType::GameObjUpdate(GameObjUpdate{obj_id: &obj.id().to_string(), vel: obj.vel(), orientation: obj.orientation(), pos: obj.pos()}));
+                obj.set_dirty(false);
+            }
         }
     }
 

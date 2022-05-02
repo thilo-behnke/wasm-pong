@@ -17,6 +17,8 @@ pub mod game_object {
         fn vel(&self) -> &Vector;
         fn vel_mut(&mut self) -> &mut Vector;
         fn is_static(&self) -> bool;
+        fn is_dirty(&self) -> bool;
+        fn set_dirty(&mut self, is_dirty: bool);
     }
 
     // #[derive(Clone, Debug, PartialEq)]
@@ -26,6 +28,7 @@ pub mod game_object {
         pub obj_type: String,
         geom: Box<dyn GeomComp>,
         physics: Box<dyn PhysicsComp>,
+        dirty: bool
     }
 
     impl DefaultGameObject {
@@ -40,6 +43,7 @@ pub mod game_object {
                 obj_type,
                 geom,
                 physics,
+                dirty: false
             }
         }
     }
@@ -74,18 +78,20 @@ pub mod game_object {
         }
 
         fn update_pos(&mut self) {
+            // Keep last orientation if vel is now zero.
+            if self.vel() == &Vector::zero() {
+                return;
+            }
             let vel = self.vel().clone();
             let center = self.geom.center_mut();
             center.add(&vel);
-            // Keep last orientation if vel is now zero.
-            if vel == Vector::zero() {
-                return;
-            }
             let mut updated_orientation = vel.clone();
             updated_orientation.normalize();
             let orientation = self.geom.orientation_mut();
             orientation.x = updated_orientation.x;
             orientation.y = updated_orientation.y;
+
+            self.dirty = true;
         }
 
         fn bounding_box(&self) -> BoundingBox {
@@ -102,6 +108,14 @@ pub mod game_object {
 
         fn is_static(&self) -> bool {
             self.physics.is_static()
+        }
+
+        fn is_dirty(&self) -> bool {
+            return self.dirty
+        }
+
+        fn set_dirty(&mut self, is_dirty: bool) {
+            self.dirty = is_dirty;
         }
     }
 }

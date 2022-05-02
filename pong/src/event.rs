@@ -1,5 +1,8 @@
 
 pub mod event {
+    use std::fs::OpenOptions;
+    use std::io::Write;
+
     pub struct Event {
         pub topic: String,
         pub key: String,
@@ -7,19 +10,27 @@ pub mod event {
     }
 
     pub trait EventWriterImpl {
-        fn write(&self, event: Event) -> std::io::Result<()>;
+        fn write(&self, event: Event) -> Result<(), ()>;
     }
 
     pub struct FileEventWriterImpl {}
     impl EventWriterImpl for FileEventWriterImpl {
-        fn write(&self, event: Event) -> std::io::Result<()> {
-            todo!()
+        fn write(&self, event: Event) -> Result<(), ()> {
+            let options = OpenOptions::new().read(true).create(true).write(true).open("events.log");
+            if let Err(_) = options {
+                return Err(());
+            }
+            let mut file = options.unwrap();
+            match file.write(event.msg.as_bytes()) {
+                Ok(_) => Ok(()),
+                Err(e) => Err(())
+            }
         }
     }
 
     pub struct NoopEventWriterImpl {}
     impl EventWriterImpl for NoopEventWriterImpl {
-        fn write(&self, event: Event) -> std::io::Result<()> {
+        fn write(&self, event: Event) -> Result<(), ()> {
             todo!()
         }
     }
@@ -48,7 +59,7 @@ pub mod event {
         }
         // TODO: Kafka
 
-        pub fn write(&self, event: Event) -> std::io::Result<()>  {
+        pub fn write(&self, event: Event) -> Result<(), ()> {
            self.writer_impl.write(event)
         }
     }

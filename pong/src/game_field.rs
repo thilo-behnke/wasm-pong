@@ -75,8 +75,8 @@ impl Field {
         field.collision_detector.set_groups(
             vec![
                 CollisionGroup(String::from("player"), String::from("ball")),
-                CollisionGroup(String::from("player"), String::from("bounds")),
-                CollisionGroup(String::from("ball"), String::from("bounds")),
+                CollisionGroup(String::from("player"), String::from("bound")),
+                CollisionGroup(String::from("ball"), String::from("bound")),
             ]
         );
 

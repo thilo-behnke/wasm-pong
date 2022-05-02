@@ -25,6 +25,7 @@ pub mod collision {
         }
     }
 
+    #[derive(Debug)]
     pub struct CollisionGroup(pub String, pub String);
 
     impl CollisionGroup {
@@ -68,6 +69,7 @@ pub mod collision {
                 let rest = &objs[i..];
                 for other in rest.iter().map(|o| o.borrow()) {
                     if !self.config.matches_any_group(obj.obj_type(), other.obj_type()) {
+                        self.logger.log(&*format!("objs {} and {} do not match any group: {:?}", obj.obj_type(), other.obj_type(), self.config.groups));
                         continue;
                     }
                     let has_collision = obj.bounding_box().overlaps(&other.bounding_box());
@@ -131,12 +133,21 @@ pub mod collision {
                     mapping
                 )
             }
-            self.handlers.insert((mapping.1.clone(), mapping.0.clone()), callback);
             self.handlers.insert(mapping, callback);
         }
 
-        pub fn get(&self, mapping: &(String, String)) -> Option<&CollisionCallback> {
-            return self.handlers.get(mapping);
+        pub fn call(&self, mapping: &(String, String), values: (Rc<RefCell<Box<dyn GameObject>>>, Rc<RefCell<Box<dyn GameObject>>>)) -> bool {
+            let regular = self.handlers.get(&mapping);
+            if let Some(callback) = regular {
+                callback(values.0, values.1);
+                return true;
+            }
+            let inverse = self.handlers.get(&(mapping.clone().1, mapping.clone().0));
+            if let Some(callback) = inverse {
+                callback(values.1, values.0);
+                return true;
+            }
+            return false;
         }
     }
 
@@ -171,16 +182,11 @@ pub mod collision {
             obj_b: Rc<RefCell<Box<dyn GameObject>>>,
         ) -> bool {
             let key = (RefCell::borrow(&obj_a).obj_type().to_string(), RefCell::borrow(&obj_b).obj_type().to_string());
-            let handler_opt = self.handlers.get(&key);
-            if let None = handler_opt {
+            let handler_res = self.handlers.call(&key, (obj_a, obj_b));
+            if !handler_res {
                 self.logger.log(&*format!("Found no matching collision handler: {:?}", key));
                 return false;
             }
-            let handler = handler_opt.unwrap();
-            self.logger.log(&*format!("Handling collision between {:?} and {:?}", obj_a, obj_b));
-            self.logger.log(&*format!("Handling collision using handler {:?}", key));
-
-            handler(obj_a, obj_b);
             return true;
         }
 

@@ -135,11 +135,11 @@ impl Field {
                 let input = input_opt.unwrap();
                 match input.input {
                     InputType::UP => {
-                        let updated_vel_y = (obj_mut.vel().y + 1.).min(5.);
+                        let updated_vel_y = (obj_mut.vel().y + 1.).min(1.);
                         obj_mut.vel_mut().y = updated_vel_y;
                     }
                     InputType::DOWN => {
-                        let updated_vel_y = (obj_mut.vel().y - 1.).max(-5.);
+                        let updated_vel_y = (obj_mut.vel().y - 1.).max(-1.);
                         obj_mut.vel_mut().y = updated_vel_y;
                     }
                 };

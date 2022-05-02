@@ -114,6 +114,14 @@ impl FieldWrapper {
         self.field.height
     }
 
+    pub fn pause(&mut self) {
+        self.paused = true
+    }
+
+    pub fn resume(&mut self) {
+        self.paused = false
+    }
+
     pub fn tick(&mut self, inputs_js: &JsValue) {
         let input_dtos: Vec<InputDTO> = inputs_js.into_serde().unwrap();
         let inputs = input_dtos

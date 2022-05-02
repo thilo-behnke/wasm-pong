@@ -14,31 +14,54 @@ canvas.width = width
 
 const ctx = canvas.getContext('2d');
 
+let paused = false;
 let keysDown = new Set();
-
-console.log(field.get_state())
+let actions = [];
 
 const renderLoop = () => {
-    let actions = getInputActions();
-    field.tick(actions);
-
-    render();
+    actions = getInputActions();
+    if (paused) {
+        requestAnimationFrame(renderLoop);
+        return;
+    }
+    tick();
     requestAnimationFrame(renderLoop);
+}
+
+const tick = () => {
+    field.tick(actions);
+    render();
 }
 
 const render = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // drawField();
     drawObjects();
 }
 
-const drawField = () => {
-    ctx.beginPath();
+window.WASM_PONG = {}
+window.WASM_PONG.width = width
+window.WASM_PONG.height = height
 
-    ctx.strokeStyle = GRID_COLOR;
-    ctx.rect(1, 1, field.width - 2, field.height - 2);
+window.WASM_PONG.pauseGame = () => {
+    paused = true;
+    document.getElementById("pause-btn").disabled = true;
+    document.getElementById("resume-btn").disabled = false;
+    document.getElementById("tick-btn").disabled = false;
+}
 
-    ctx.stroke();
+window.WASM_PONG.resumeGame = () => {
+    paused = false;
+    document.getElementById("pause-btn").disabled = false;
+    document.getElementById("resume-btn").disabled = true;
+    document.getElementById("tick-btn").disabled = true;
+}
+
+
+window.WASM_PONG.oneTick = () => {
+    if (!paused) {
+        return;
+    }
+    tick()
 }
 
 const drawObjects = () => {

@@ -20,6 +20,17 @@
   </head>
   <body>
     <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
+    <div>
+      <button id="pause-btn" onclick="WASM_PONG.pauseGame()">
+        Pause
+      </button>
+      <button id="resume-btn" onclick="WASM_PONG.resumeGame()" disabled>
+        Resume
+      </button>
+      <button id="tick-btn" onclick="WASM_PONG.oneTick()" disabled>
+        Tick
+      </button>
+    </div>
     <canvas id="wasm-app-canvas"></canvas>
     <script src="./bootstrap.js"></script>
   </body>

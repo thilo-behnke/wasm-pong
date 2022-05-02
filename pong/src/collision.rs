@@ -69,7 +69,7 @@ pub mod collision {
                 let rest = &objs[i..];
                 for other in rest.iter().map(|o| o.borrow()) {
                     if !self.config.matches_any_group(obj.obj_type(), other.obj_type()) {
-                        self.logger.log(&*format!("objs {} and {} do not match any group: {:?}", obj.obj_type(), other.obj_type(), self.config.groups));
+                        // self.logger.log(&*format!("objs {} and {} do not match any group: {:?}", obj.obj_type(), other.obj_type(), self.config.groups));
                         continue;
                     }
                     let has_collision = obj.bounding_box().overlaps(&other.bounding_box());

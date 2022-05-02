@@ -13,31 +13,23 @@ use pong::utils::utils::{DefaultLoggerFactory, NoopLogger};
     create_player(1, 10, 0, Vector::new(0., -1.)),
     get_bound(Bound::BOTTOM),
     // expected
-    create_player(1, 10, 120, Vector::new(0., -1.)),
+    create_player(1, 10, 61, Vector::new(0., -1.)),
     get_bound(Bound::BOTTOM)
 )]
 #[case(
     // given
-    create_player(1, 10, 119, Vector::new(0., -1.)),
+    create_player(1, 10, 1, Vector::new(0., -1.)),
     get_bound(Bound::BOTTOM),
     // expected
-    create_player(1, 10, 120, Vector::new(0., -1.)),
+    create_player(1, 10, 61, Vector::new(0., -1.)),
     get_bound(Bound::BOTTOM)
 )]
 #[case(
     // given
-    create_player(1, 10, 121, Vector::new(0., -1.)),
-    get_bound(Bound::BOTTOM),
-    // expected
-    create_player(1, 10, 120, Vector::new(0., -1.)),
-    get_bound(Bound::BOTTOM)
-)]
-#[case(
-    // given
-    create_player(1, 10, 600, Vector::new(0., 1.)),
+    create_player(1, 10, 601, Vector::new(0., 1.)),
     get_bound(Bound::TOP),
     // expected
-    create_player(1, 10, 480, Vector::new(0., 1.)),
+    create_player(1, 10, 539, Vector::new(0., 1.)),
     get_bound(Bound::TOP)
 )]
 #[case(
@@ -45,7 +37,7 @@ use pong::utils::utils::{DefaultLoggerFactory, NoopLogger};
     create_player(1, 10, 599, Vector::new(0., 1.)),
     get_bound(Bound::TOP),
     // expected
-    create_player(1, 10, 480, Vector::new(0., 1.)),
+    create_player(1, 10, 539, Vector::new(0., 1.)),
     get_bound(Bound::TOP)
 )]
 pub fn should_correctly_handle_player_bounds_collision(

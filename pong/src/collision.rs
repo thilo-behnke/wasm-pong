@@ -2,13 +2,39 @@ pub mod collision {
     use crate::game_object::game_object::GameObject;
     use crate::geom::geom::Vector;
     use std::alloc::handle_alloc_error;
+    use std::any::Any;
     use std::cell::{Ref, RefCell, RefMut};
     use std::collections::HashMap;
     use std::fmt::Debug;
     use std::rc::Rc;
     use crate::utils::utils::{Logger, LoggerFactory};
 
+    pub struct CollisionDetectorConfig {
+        groups: Vec<CollisionGroup>
+    }
+
+    impl CollisionDetectorConfig {
+        pub fn new() -> CollisionDetectorConfig {
+            CollisionDetectorConfig {
+                groups: vec![]
+            }
+        }
+
+        pub fn matches_any_group(&self, type_a: &str, type_b: &str) -> bool {
+            self.groups.iter().any(|g| g.matches(type_a, type_b))
+        }
+    }
+
+    pub struct CollisionGroup(pub String, pub String);
+
+    impl CollisionGroup {
+        pub fn matches(&self, type_a: &str, type_b: &str) -> bool {
+            self.0 == type_a && self.1 == type_b || self.0 == type_b && self.1 == type_a
+        }
+    }
+
     pub struct CollisionDetector {
+        config: CollisionDetectorConfig,
         logger: Box<dyn Logger>
     }
 
@@ -16,8 +42,13 @@ pub mod collision {
         pub fn new(logger_factory: &Box<dyn LoggerFactory>) -> CollisionDetector {
             let logger = logger_factory.get("collision_detector");
             CollisionDetector {
+                config: CollisionDetectorConfig::new(),
                 logger
             }
+        }
+
+        pub fn set_groups(&mut self, groups: Vec<CollisionGroup>) {
+            self.config.groups = groups;
         }
 
         pub fn detect_collisions(
@@ -36,6 +67,9 @@ pub mod collision {
 
                 let rest = &objs[i..];
                 for other in rest.iter().map(|o| o.borrow()) {
+                    if !self.config.matches_any_group(obj.obj_type(), other.obj_type()) {
+                        continue;
+                    }
                     let has_collision = obj.bounding_box().overlaps(&other.bounding_box());
                     if !has_collision {
                         continue;
@@ -79,12 +113,39 @@ pub mod collision {
         }
     }
 
+    pub struct CollisionHandlerRegistry {
+        handlers: HashMap<(String, String), fn(Rc<RefCell<Box<dyn GameObject>>>, Rc<RefCell<Box<dyn GameObject>>>)>
+    }
+
+    type CollisionCallback = fn(Rc<RefCell<Box<dyn GameObject>>>, Rc<RefCell<Box<dyn GameObject>>>);
+
+    impl CollisionHandlerRegistry {
+        pub fn new() -> CollisionHandlerRegistry {
+            CollisionHandlerRegistry {handlers: HashMap::new()}
+        }
+
+        pub fn add(&mut self, mapping: (String, String), callback: CollisionCallback) {
+            if self.handlers.contains_key(&mapping) {
+                panic!(
+                    "Collision handler for mapping {:?} is already registered.",
+                    mapping
+                )
+            }
+            self.handlers.insert((mapping.1.clone(), mapping.0.clone()), callback);
+            self.handlers.insert(mapping, callback);
+        }
+
+        pub fn get(&self, mapping: &(String, String)) -> Option<&CollisionCallback> {
+            return self.handlers.get(mapping);
+        }
+    }
+
     #[derive(Debug, Eq, PartialEq)]
     pub struct Collision(pub u16, pub u16);
 
     pub struct CollisionHandler {
         logger: Box<dyn Logger>,
-        handlers: HashMap<(String, String), fn(Rc<RefCell<Box<dyn GameObject>>>, Rc<RefCell<Box<dyn GameObject>>>)>
+        handlers: CollisionHandlerRegistry
     }
 
     impl CollisionHandler {
@@ -92,7 +153,7 @@ pub mod collision {
             let logger = logger_factory.get("collision_handler");
             CollisionHandler {
                 logger,
-                handlers: HashMap::new(),
+                handlers: CollisionHandlerRegistry::new(),
             }
         }
 
@@ -101,13 +162,7 @@ pub mod collision {
             mapping: (String, String),
             callback: fn(Rc<RefCell<Box<dyn GameObject>>>, Rc<RefCell<Box<dyn GameObject>>>),
         ) {
-            if self.handlers.contains_key(&mapping) {
-                panic!(
-                    "Collision handler for mapping {:?} is already registered.",
-                    mapping
-                )
-            }
-            self.handlers.insert(mapping, callback);
+            self.handlers.add(mapping, callback)
         }
 
         pub fn handle(
@@ -116,14 +171,15 @@ pub mod collision {
             obj_b: Rc<RefCell<Box<dyn GameObject>>>,
         ) -> bool {
             let key = (RefCell::borrow(&obj_a).obj_type().to_string(), RefCell::borrow(&obj_b).obj_type().to_string());
-            if !self.handlers.contains_key(&key) {
+            let handler_opt = self.handlers.get(&key);
+            if let None = handler_opt {
                 self.logger.log(&*format!("Found no matching collision handler: {:?}", key));
                 return false;
             }
+            let handler = handler_opt.unwrap();
             self.logger.log(&*format!("Handling collision between {:?} and {:?}", obj_a, obj_b));
             self.logger.log(&*format!("Handling collision using handler {:?}", key));
 
-            let handler = self.handlers[&key];
             handler(obj_a, obj_b);
             return true;
         }

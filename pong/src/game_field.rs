@@ -1,6 +1,4 @@
-use crate::collision::collision::{
-    Collision, CollisionDetector, CollisionHandler, CollisionRegistry, Collisions,
-};
+use crate::collision::collision::{Collision, CollisionDetector, CollisionGroup, CollisionHandler, CollisionRegistry, Collisions};
 use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
 use crate::game_object::game_object::{DefaultGameObject, GameObject};
 use crate::geom::geom::Vector;
@@ -32,6 +30,7 @@ pub struct Field {
     pub height: u16,
     pub collisions: Box<dyn CollisionRegistry>,
     objs: Vec<Rc<RefCell<Box<dyn GameObject>>>>,
+    collision_detector: CollisionDetector,
     collision_handler: CollisionHandler,
 }
 
@@ -49,6 +48,7 @@ impl Field {
                 .map(|b| Rc::new(RefCell::new(b.inner())))
                 .collect(),
             collisions: Box::new(Collisions::new(vec![])),
+            collision_detector: CollisionDetector::new(&logger_factory),
             collision_handler: CollisionHandler::new(&logger_factory),
             logger_factory
         };
@@ -72,6 +72,14 @@ impl Field {
             handle_ball_bounds_collision,
         );
 
+        field.collision_detector.set_groups(
+            vec![
+                CollisionGroup(String::from("player"), String::from("ball")),
+                CollisionGroup(String::from("player"), String::from("bounds")),
+                CollisionGroup(String::from("ball"), String::from("bounds")),
+            ]
+        );
+
         return field;
     }
 
@@ -86,6 +94,7 @@ impl Field {
                 .map(|b| Rc::new(RefCell::new(b.inner())))
                 .collect(),
             collisions: Box::new(Collisions::new(vec![])),
+            collision_detector: CollisionDetector::new(&logger_factory),
             collision_handler: CollisionHandler::new(&logger_factory),
             logger_factory,
         }
@@ -159,8 +168,7 @@ impl Field {
 
     fn get_collisions(&self) -> Box<dyn CollisionRegistry> {
         let objs = self.objs.iter().map(|o| o.clone()).collect();
-        let collision_detector = CollisionDetector::new(&self.logger_factory);
-        collision_detector.detect_collisions(objs)
+        self.collision_detector.detect_collisions(objs)
     }
 
     pub fn objs(&self) -> Vec<&Rc<RefCell<Box<dyn GameObject>>>> {

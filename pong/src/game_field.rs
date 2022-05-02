@@ -6,7 +6,7 @@ use crate::game_object::game_object::{DefaultGameObject, GameObject};
 use crate::geom::geom::Vector;
 use crate::geom::shape::{Shape, ShapeType};
 use crate::pong::pong_collisions::{handle_ball_bounds_collision, handle_player_ball_collision};
-use crate::utils::utils::{Logger, NoopLogger};
+use crate::utils::utils::{DefaultLoggerFactory, Logger, LoggerFactory, NoopLogger};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::collections::HashMap;
@@ -26,6 +26,7 @@ pub struct Input {
 }
 
 pub struct Field {
+    pub logger_factory: Box<dyn LoggerFactory>,
     pub logger: Box<dyn Logger>,
     pub width: u16,
     pub height: u16,
@@ -35,12 +36,12 @@ pub struct Field {
 }
 
 impl Field {
-    pub fn new(logger: Box<dyn Logger>) -> Field {
+    pub fn new(logger_factory: Box<dyn LoggerFactory>) -> Field {
         let width = 800;
         let height = 600;
 
         let mut field = Field {
-            logger,
+            logger: logger_factory.get("game_field"),
             width,
             height,
             objs: DefaultGameObject::bounds(width, height)
@@ -48,7 +49,8 @@ impl Field {
                 .map(|b| Rc::new(RefCell::new(b.inner())))
                 .collect(),
             collisions: Box::new(Collisions::new(vec![])),
-            collision_handler: CollisionHandler::new(),
+            collision_handler: CollisionHandler::new(&logger_factory),
+            logger_factory
         };
 
         field.add_player(0, 0 + width / 20, height / 2);
@@ -74,8 +76,9 @@ impl Field {
     }
 
     pub fn mock(width: u16, height: u16) -> Field {
+        let logger_factory = DefaultLoggerFactory::new(Box::new(NoopLogger{}));
         Field {
-            logger: Box::new(NoopLogger {}),
+            logger: logger_factory.get("game_field"),
             width,
             height,
             objs: DefaultGameObject::bounds(width, height)
@@ -83,7 +86,8 @@ impl Field {
                 .map(|b| Rc::new(RefCell::new(b.inner())))
                 .collect(),
             collisions: Box::new(Collisions::new(vec![])),
-            collision_handler: CollisionHandler::new(),
+            collision_handler: CollisionHandler::new(&logger_factory),
+            logger_factory,
         }
     }
 
@@ -142,8 +146,10 @@ impl Field {
 
         let collisions = self.get_collisions();
 
-        let collision_handler = self.collision_handler.clone();
-        for collision in collisions.get_collisions().iter() {
+        let collision_handler = &self.collision_handler;
+        let registered_collisions = collisions.get_collisions();
+        self.logger.log(&*format!("Found {} collisions: {:?}", registered_collisions.len(), registered_collisions));
+        for collision in registered_collisions.iter() {
             let objs = &self.objs;
             let obj_a = objs.iter().find(|o| RefCell::borrow(o).id() == collision.0).unwrap().clone();
             let obj_b = objs.iter().find(|o| RefCell::borrow(o).id() == collision.1).unwrap().clone();
@@ -153,7 +159,7 @@ impl Field {
 
     fn get_collisions(&self) -> Box<dyn CollisionRegistry> {
         let objs = self.objs.iter().map(|o| o.clone()).collect();
-        let collision_detector = CollisionDetector::new(self.logger.clone());
+        let collision_detector = CollisionDetector::new(&self.logger_factory);
         collision_detector.detect_collisions(objs)
     }
 

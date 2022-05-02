@@ -6,7 +6,7 @@ use pong::game_field::{Field, Input, InputType};
 use pong::game_object::game_object::GameObject;
 use pong::geom::geom::Vector;
 use pong::geom::shape::ShapeType;
-use pong::utils::utils::Logger;
+use pong::utils::utils::{DefaultLoggerFactory, Logger};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::cmp::{max, min};
@@ -102,7 +102,7 @@ pub struct FieldWrapper {
 #[wasm_bindgen]
 impl FieldWrapper {
     pub fn new() -> FieldWrapper {
-        let field = Field::new(Box::new(WasmLogger {}));
+        let field = Field::new(DefaultLoggerFactory::new(Box::new(WasmLogger::root())));
         FieldWrapper { field }
     }
 
@@ -147,9 +147,26 @@ impl FieldWrapper {
 }
 
 #[derive(Clone)]
-pub struct WasmLogger {}
+pub struct WasmLogger {
+    name: String
+}
+
+impl WasmLogger {
+    pub fn root() -> WasmLogger {
+        WasmLogger {name: String::from("root")}
+    }
+}
+
 impl Logger for WasmLogger {
+    fn box_clone(&self) -> Box<dyn Logger> {
+        Box::new(self.clone())
+    }
+
+    fn set_name(&mut self, name: &str) {
+        self.name = String::from(name);
+    }
+
     fn log(&self, msg: &str) {
-        log!("{}", msg)
+        log!("[{}] {}", self.name, msg)
     }
 }

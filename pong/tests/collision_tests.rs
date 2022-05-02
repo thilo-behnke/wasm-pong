@@ -5,6 +5,7 @@ use pong::geom::shape::ShapeType;
 use rstest::rstest;
 use std::cell::{Ref, RefCell};
 use std::rc::Rc;
+use pong::utils::utils::DefaultLoggerFactory;
 
 #[rstest]
 #[case(vec![], vec![])]
@@ -40,7 +41,8 @@ pub fn should_detect_collisions(
     #[case] objs: Vec<Rc<RefCell<Box<dyn GameObject>>>>,
     #[case] expected_collisions: Vec<Collision>,
 ) {
-    let detector = CollisionDetector::new();
+    let logger = DefaultLoggerFactory::noop();
+    let detector = CollisionDetector::new(&logger);
     let res = detector.detect_collisions(objs);
     assert_eq!(
         res.get_collisions(),

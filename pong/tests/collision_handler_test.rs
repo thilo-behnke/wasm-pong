@@ -7,6 +7,7 @@ use rstest::rstest;
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::RefCell;
 use std::rc::Rc;
+use pong::utils::utils::DefaultLoggerFactory;
 
 #[rstest]
 #[case(
@@ -71,7 +72,8 @@ pub fn should_handle_collision(
     #[case] expected_a: Rc<RefCell<Box<dyn GameObject>>>,
     #[case] expected_b: Rc<RefCell<Box<dyn GameObject>>>,
 ) {
-    let mut handler = CollisionHandler::new();
+    let logger = DefaultLoggerFactory::noop();
+    let mut handler = CollisionHandler::new(&logger);
     handler.register((String::from("obj"), String::from("obj")), |a, b| {});
     let res = handler.handle(obj_a, obj_b);
     assert_eq!(true, res)

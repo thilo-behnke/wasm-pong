@@ -5,7 +5,7 @@ use pong::game_field::{Bound, Field};
 use pong::game_object::game_object::{DefaultGameObject, GameObject};
 use pong::geom::geom::Vector;
 use pong::pong::pong_collisions::handle_player_bound_collision;
-use pong::utils::utils::NoopLogger;
+use pong::utils::utils::{DefaultLoggerFactory, NoopLogger};
 
 #[rstest]
 #[case(
@@ -60,7 +60,8 @@ pub fn should_correctly_handle_player_bounds_collision(
 }
 
 fn create_player(id: u16, x: u16, y: u16, orientation: Vector) -> Rc<RefCell<Box<dyn GameObject>>> {
-    let field = Field::new(Box::new(NoopLogger{}));
+    let logger = DefaultLoggerFactory::noop();
+    let field = Field::new(logger);
     let mut player = DefaultGameObject::player(id, x, y, &field);
     let player_orientation = player.orientation_mut();
     player_orientation.x = orientation.x;
@@ -69,7 +70,8 @@ fn create_player(id: u16, x: u16, y: u16, orientation: Vector) -> Rc<RefCell<Box
 }
 
 fn get_bound(bound: Bound) -> Rc<RefCell<Box<dyn GameObject>>> {
-    let field = Field::new(Box::new(NoopLogger{}));
+    let logger = DefaultLoggerFactory::noop();
+    let field = Field::new(logger);
     let bounds = DefaultGameObject::bounds(field.width, field.height);
     return Rc::new(RefCell::new(bounds.into_iter().find(|b| {
         b.0 == bound

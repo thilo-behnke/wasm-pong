@@ -6,14 +6,15 @@ pub mod collision {
     use std::collections::HashMap;
     use std::fmt::Debug;
     use std::rc::Rc;
-    use crate::utils::utils::Logger;
+    use crate::utils::utils::{Logger, LoggerFactory};
 
     pub struct CollisionDetector {
         logger: Box<dyn Logger>
     }
 
     impl CollisionDetector {
-        pub fn new(logger: Box<dyn Logger>) -> CollisionDetector {
+        pub fn new(logger_factory: &Box<dyn LoggerFactory>) -> CollisionDetector {
+            let logger = logger_factory.get("collision_detector");
             CollisionDetector {
                 logger
             }
@@ -81,14 +82,16 @@ pub mod collision {
     #[derive(Debug, Eq, PartialEq)]
     pub struct Collision(pub u16, pub u16);
 
-    #[derive(Clone)]
     pub struct CollisionHandler {
+        logger: Box<dyn Logger>,
         handlers: HashMap<(String, String), fn(Rc<RefCell<Box<dyn GameObject>>>, Rc<RefCell<Box<dyn GameObject>>>)>
     }
 
     impl CollisionHandler {
-        pub fn new() -> CollisionHandler {
+        pub fn new(logger_factory: &Box<dyn LoggerFactory>) -> CollisionHandler {
+            let logger = logger_factory.get("collision_handler");
             CollisionHandler {
+                logger,
                 handlers: HashMap::new(),
             }
         }
@@ -114,6 +117,7 @@ pub mod collision {
         ) -> bool {
             let key = (RefCell::borrow(&obj_a).obj_type().to_string(), RefCell::borrow(&obj_b).obj_type().to_string());
             if !self.handlers.contains_key(&key) {
+                self.logger.log(&*format!("Found no matching collision handler: {:?}", key));
                 return false;
             }
             self.logger.log(&*format!("Handling collision between {:?} and {:?}", obj_a, obj_b));

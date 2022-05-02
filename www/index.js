@@ -15,6 +15,7 @@ canvas.width = width
 const ctx = canvas.getContext('2d');
 
 let paused = false;
+let debug = false;
 let keysDown = new Set();
 let actions = [];
 
@@ -64,46 +65,49 @@ window.WASM_PONG.oneTick = () => {
     tick()
 }
 
+window.WASM_PONG.toggleDebug = () => {
+    debug = !debug
+}
+
 const drawObjects = () => {
     const objects = getObjects();
-    ctx.beginPath();
 
     objects.forEach(obj => {
+        ctx.beginPath();
         ctx.strokeStyle = GRID_COLOR;
 
         // rect
-        if (obj.shape_2) {
+        if (obj.shape_param_2) {
             ctx.moveTo(obj.x, obj.y)
             ctx.arc(obj.x, obj.y, 10, 0, 2 * Math.PI);
-            ctx.rect(obj.x - obj.shape_1 / 2, obj.y - obj.shape_2 / 2, obj.shape_1, obj.shape_2);
+            ctx.rect(obj.x - obj.shape_param_1 / 2, obj.y - obj.shape_param_2 / 2, obj.shape_param_1, obj.shape_param_2);
         }
         // circle
         else {
             ctx.moveTo(obj.x, obj.y);
-            ctx.arc(obj.x, obj.y, obj.shape_1, 0, 2 * Math.PI);
+            ctx.arc(obj.x, obj.y, obj.shape_param_1, 0, 2 * Math.PI);
+        }
+        ctx.stroke();
+
+        if (debug) {
+            // velocity
+            drawLine(ctx, obj.x, obj.y, obj.x + obj.vel_x * 20, obj.y + obj.vel_y * 20, 'red')
+            // orientation
+            drawLine(ctx, obj.x, obj.y, obj.x + obj.orientation_x * 20, obj.y + obj.orientation_y * 20, 'blue')
         }
     })
+}
 
+const drawLine = (ctx, from_x, from_y, to_x, to_y, color) => {
+    ctx.beginPath();
+    ctx.moveTo(from_x, from_y);
+    ctx.strokeStyle = color;
+    ctx.lineTo(to_x, to_y);
     ctx.stroke();
 }
 
 const getObjects = () => {
-    const objectsPtr = field.objects();
-    const objects = new Uint16Array(memory.buffer, objectsPtr, 3 * 5 + 4 * 5) // player1, player2, ball + 4x bounds
-        .reduce((acc, val) => {
-            if (!acc.length) {
-                return [[val]]
-            }
-            const last = acc[acc.length - 1]
-            if (last.length === 5) {
-                return [...acc, [val]]
-            }
-            return [...acc.slice(0, -1), [...last, val]]
-        }, [])
-        .map(([id, x, y, shape_1, shape_2]) => {
-            return {id, x, y: height - y, shape_1, shape_2};
-        });
-    return objects;
+    return JSON.parse(field.objects());
 }
 
 const listenToKeys = () => {

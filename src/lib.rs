@@ -30,12 +30,15 @@ macro_rules! log {
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
-#[repr(packed)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct GameObjectDTO {
     pub id: u16,
     pub x: u16,
     pub y: u16,
+    pub orientation_x: f64,
+    pub orientation_y: f64,
+    pub vel_x: f64,
+    pub vel_y: f64,
     pub shape_param_1: u16,
     pub shape_param_2: u16,
 }
@@ -45,11 +48,17 @@ impl GameObjectDTO {
         let obj = RefCell::borrow(obj);
 
         let pos = obj.pos();
+        let orientation = obj.orientation();
+        let vel = obj.vel();
         let shape = obj.shape();
         return GameObjectDTO {
             id: obj.id(),
             x: pos.x as u16,
             y: pos.y as u16,
+            orientation_x: orientation.x,
+            orientation_y: orientation.y,
+            vel_x: vel.x,
+            vel_y: vel.y,
             shape_param_1: match shape {
                 ShapeType::Rect(_, width, _) => *width as u16,
                 ShapeType::Circle(_, radius) => *radius as u16,
@@ -114,14 +123,6 @@ impl FieldWrapper {
         self.field.height
     }
 
-    pub fn pause(&mut self) {
-        self.paused = true
-    }
-
-    pub fn resume(&mut self) {
-        self.paused = false
-    }
-
     pub fn tick(&mut self, inputs_js: &JsValue) {
         let input_dtos: Vec<InputDTO> = inputs_js.into_serde().unwrap();
         let inputs = input_dtos
@@ -132,24 +133,14 @@ impl FieldWrapper {
         // log!("{:?}", self.field.collisions);
     }
 
-    pub fn objects(&self) -> *const GameObjectDTO {
-        let mut objs = self
+    pub fn objects(&self) -> String {
+        let objs = self
             .field
             .objs()
             .into_iter()
             .map(|o| GameObjectDTO::from(o))
             .collect::<Vec<GameObjectDTO>>();
-        objs.as_ptr()
-    }
-
-    pub fn get_state(&self) -> String {
-        let json = json!(GameObjectDTO {
-            shape_param_1: 0,
-            shape_param_2: 0,
-            x: 10,
-            y: 10,
-            id: 1
-        });
+        let json = json!(objs);
         serde_json::to_string(&json).unwrap()
     }
 }

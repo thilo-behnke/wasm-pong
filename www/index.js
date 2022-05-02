@@ -76,25 +76,29 @@ const drawObjects = () => {
         ctx.beginPath();
         ctx.strokeStyle = GRID_COLOR;
 
+        const obj_y = height - obj.y;
+        const orientation_y = obj.orientation_y * -1;
+        const vel_y = obj.vel_y * -1;
+
         // rect
         if (obj.shape_param_2) {
-            ctx.moveTo(obj.x, obj.y)
-            ctx.arc(obj.x, obj.y, 10, 0, 2 * Math.PI);
-            ctx.rect(obj.x - obj.shape_param_1 / 2, obj.y - obj.shape_param_2 / 2, obj.shape_param_1, obj.shape_param_2);
+            ctx.moveTo(obj.x, obj_y)
+            ctx.arc(obj.x, obj_y, 10, 0, 2 * Math.PI);
+            ctx.rect(obj.x - obj.shape_param_1 / 2, obj_y - obj.shape_param_2 / 2, obj.shape_param_1, obj.shape_param_2);
         }
         // circle
         else {
-            ctx.moveTo(obj.x, obj.y);
-            ctx.arc(obj.x, obj.y, obj.shape_param_1, 0, 2 * Math.PI);
+            ctx.moveTo(obj.x, obj_y);
+            ctx.arc(obj.x, obj_y, obj.shape_param_1, 0, 2 * Math.PI);
         }
         ctx.stroke();
 
         if (debug) {
             // velocity
-            drawLine(ctx, obj.x, obj.y, obj.x + obj.vel_x * 20, obj.y + obj.vel_y * 20, 'red')
+            drawLine(ctx, obj.x, obj_y, obj.x + obj.vel_x * 20, obj_y + vel_y * 20, 'red')
             // orientation
-            drawLine(ctx, obj.x, obj.y, obj.x + obj.orientation_x * 20, obj.y + obj.orientation_y * 20, 'blue')
-            ctx.fillText(`[x: ${obj.x}, y: ${obj.y}]`, obj.x + 10, obj.y)
+            drawLine(ctx, obj.x, obj_y, obj.x + obj.orientation_x * 20, obj_y + orientation_y * 20, 'blue')
+            ctx.fillText(`[x: ${obj.x}, y: ${obj_y}]`, obj.x + 10, obj_y)
         }
     })
 }

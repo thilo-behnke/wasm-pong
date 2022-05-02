@@ -49,9 +49,6 @@ pub mod pong_collisions {
             ShapeType::Circle(_, radius) => radius * 2.,
         };
         let mut perpendicular = player_orientation.get_opposing_orthogonal(bound.orientation());
-        println!("{:?}", bound);
-        println!("{:?}", perpendicular);
-        perpendicular.x = 0.;
         perpendicular.y *= height;
         let mut new_pos = bound.pos().clone();
         new_pos.add(&perpendicular);

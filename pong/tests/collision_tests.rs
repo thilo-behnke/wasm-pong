@@ -1,4 +1,4 @@
-use pong::collision::collision::{Collision, CollisionDetector};
+use pong::collision::collision::{Collision, CollisionDetector, CollisionGroup};
 use pong::game_object::game_object::GameObject;
 use pong::geom::geom::{BoundingBox, Vector};
 use pong::geom::shape::ShapeType;
@@ -11,29 +11,36 @@ use pong::utils::utils::DefaultLoggerFactory;
 #[case(vec![], vec![])]
 #[case(
     vec![
-        MockGameObject::new(1, BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
-        MockGameObject::new(2, BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.))
+        MockGameObject::new(1, "a", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
+        MockGameObject::new(2, "b", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.))
     ],
     vec![Collision(1, 2)]
 )]
 #[case(
     vec![
-        MockGameObject::new(1, BoundingBox::create(&Vector{x: 60., y: 65.}, 20., 20.)),
-        MockGameObject::new(2, BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
+        MockGameObject::new(1, "a", BoundingBox::create(&Vector{x: 60., y: 65.}, 20., 20.)),
+        MockGameObject::new(2, "b", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
     ],
     vec![Collision(1, 2)]
 )]
 #[case(
     vec![
-        MockGameObject::new(1, BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
-        MockGameObject::new(2, BoundingBox::create(&Vector{x: 80., y: 80.}, 20., 20.)),
+        MockGameObject::new(1, "a", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
+        MockGameObject::new(2, "b", BoundingBox::create(&Vector{x: 80., y: 80.}, 20., 20.)),
     ],
     vec![]
 )]
 #[case(
     vec![
-        MockGameObject::new(1, BoundingBox::create(&Vector{x: 50., y: 50.}, 50., 50.)),
-        MockGameObject::new(2, BoundingBox::create(&Vector{x: 500., y: 50.}, 50., 50.)),
+        MockGameObject::new(1, "a", BoundingBox::create(&Vector{x: 50., y: 50.}, 50., 50.)),
+        MockGameObject::new(2, "b", BoundingBox::create(&Vector{x: 500., y: 50.}, 50., 50.)),
+    ],
+    vec![]
+)]
+#[case(
+    vec![
+        MockGameObject::new(1, "a", BoundingBox::create(&Vector{x: 60., y: 65.}, 20., 20.)),
+        MockGameObject::new(2, "c", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
     ],
     vec![]
 )]
@@ -42,7 +49,8 @@ pub fn should_detect_collisions(
     #[case] expected_collisions: Vec<Collision>,
 ) {
     let logger = DefaultLoggerFactory::noop();
-    let detector = CollisionDetector::new(&logger);
+    let mut detector = CollisionDetector::new(&logger);
+    detector.set_groups(vec![CollisionGroup(String::from("a"), String::from("b"))]);
     let res = detector.detect_collisions(objs);
     assert_eq!(
         res.get_collisions(),
@@ -53,14 +61,16 @@ pub fn should_detect_collisions(
 #[derive(Debug)]
 pub struct MockGameObject {
     id: u16,
+    obj_type: String,
     bounding_box: BoundingBox,
     zero_vec: Vector,
 }
 
 impl MockGameObject {
-    pub fn new(id: u16, bounding_box: BoundingBox) -> Rc<RefCell<Box<dyn GameObject>>> {
+    pub fn new(id: u16, obj_type: &str, bounding_box: BoundingBox) -> Rc<RefCell<Box<dyn GameObject>>> {
         Rc::new(RefCell::new(Box::new(MockGameObject {
             id,
+            obj_type: String::from(obj_type),
             bounding_box,
             zero_vec: Vector::zero(),
         })))
@@ -73,7 +83,7 @@ impl GameObject for MockGameObject {
     }
 
     fn obj_type(&self) -> &str {
-        todo!()
+        &*self.obj_type
     }
 
     fn shape(&self) -> &ShapeType {

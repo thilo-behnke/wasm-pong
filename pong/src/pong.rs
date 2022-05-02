@@ -56,3 +56,37 @@ pub mod pong_collisions {
         player_pos.y = new_pos.y;
     }
 }
+
+pub mod pong_events {
+    use crate::event::event::EventWriter;
+    use crate::geom::geom::Vector;
+
+    pub enum PongEventType {
+        GameObjUpdate(GameObjUpdate)
+    }
+
+    pub struct GameObjUpdate {
+        pub pos: Vector,
+        pub vel: Vector,
+        pub orientation: Vector
+    }
+
+    pub struct PongEventWriter {
+        writer: EventWriter
+    }
+
+    impl PongEventWriter {
+        pub fn new() -> PongEventWriter {
+            PongEventWriter {
+                writer: EventWriter::file()
+            }
+        }
+
+        pub fn write(&self, event: PongEventType) -> std::io::Result<()> {
+            // TODO: Event to string
+            self.writer.write()
+        }
+    }
+
+
+}

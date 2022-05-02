@@ -4,6 +4,7 @@ use crate::game_object::game_object::{DefaultGameObject, GameObject};
 use crate::geom::geom::Vector;
 use crate::geom::shape::{Shape, ShapeType};
 use crate::pong::pong_collisions::{handle_ball_bounds_collision, handle_player_ball_collision, handle_player_bound_collision};
+use crate::pong::pong_events::{PongEventWriter, DefaultPongEventWriter, NoopPongEventWriter};
 use crate::utils::utils::{DefaultLoggerFactory, Logger, LoggerFactory, NoopLogger};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Cell, Ref, RefCell, RefMut};
@@ -30,12 +31,13 @@ pub struct Field {
     pub height: u16,
     pub collisions: Box<dyn CollisionRegistry>,
     objs: Vec<Rc<RefCell<Box<dyn GameObject>>>>,
+    event_writer: Box<dyn PongEventWriter>,
     collision_detector: CollisionDetector,
     collision_handler: CollisionHandler,
 }
 
 impl Field {
-    pub fn new(logger_factory: Box<dyn LoggerFactory>) -> Field {
+    pub fn new(logger_factory: Box<dyn LoggerFactory>, event_writer: Box<dyn PongEventWriter>) -> Field {
         let width = 800;
         let height = 600;
 
@@ -50,6 +52,7 @@ impl Field {
             collisions: Box::new(Collisions::new(vec![])),
             collision_detector: CollisionDetector::new(&logger_factory),
             collision_handler: CollisionHandler::new(&logger_factory),
+            event_writer,
             logger_factory
         };
 
@@ -85,6 +88,7 @@ impl Field {
 
     pub fn mock(width: u16, height: u16) -> Field {
         let logger_factory = DefaultLoggerFactory::new(Box::new(NoopLogger{}));
+        let event_writer = NoopPongEventWriter::new();
         Field {
             logger: logger_factory.get("game_field"),
             width,
@@ -96,6 +100,7 @@ impl Field {
             collisions: Box::new(Collisions::new(vec![])),
             collision_detector: CollisionDetector::new(&logger_factory),
             collision_handler: CollisionHandler::new(&logger_factory),
+            event_writer,
             logger_factory,
         }
     }

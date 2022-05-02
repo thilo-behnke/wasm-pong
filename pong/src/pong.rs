@@ -58,35 +58,61 @@ pub mod pong_collisions {
 }
 
 pub mod pong_events {
-    use crate::event::event::EventWriter;
+    use serde_json::json;
+    use serde::{Serialize};
+    use crate::event::event::{Event, EventWriter};
     use crate::geom::geom::Vector;
 
+    #[derive(Serialize)]
     pub enum PongEventType {
         GameObjUpdate(GameObjUpdate)
     }
 
+    #[derive(Serialize)]
     pub struct GameObjUpdate {
+        pub obj_id: String,
         pub pos: Vector,
         pub vel: Vector,
         pub orientation: Vector
     }
 
-    pub struct PongEventWriter {
+    pub trait PongEventWriter {
+        fn write(&self, event: PongEventType) -> std::io::Result<()>;
+    }
+
+    pub struct DefaultPongEventWriter {
         writer: EventWriter
     }
 
-    impl PongEventWriter {
-        pub fn new() -> PongEventWriter {
-            PongEventWriter {
-                writer: EventWriter::file()
-            }
-        }
-
-        pub fn write(&self, event: PongEventType) -> std::io::Result<()> {
-            // TODO: Event to string
-            self.writer.write()
+    impl PongEventWriter for DefaultPongEventWriter {
+        fn write(&self, event: PongEventType) -> std::io::Result<()> {
+            let out_event = match event {
+                PongEventType::GameObjUpdate(ref update) => {
+                    Event {
+                        topic: String::from("obj_update"),
+                        key: update.obj_id.clone(),
+                        msg: serde_json::to_string(&event).unwrap()
+                    }
+                }
+            };
+            self.writer.write(out_event)
         }
     }
 
+    pub struct NoopPongEventWriter {}
+    impl NoopPongEventWriter {
+        pub fn new() -> Box<dyn PongEventWriter> {
+            Box::new(DefaultPongEventWriter {
+                writer: EventWriter::noop()
+            })
+        }
+    }
 
+    impl DefaultPongEventWriter {
+        pub fn new() -> Box<dyn PongEventWriter> {
+            Box::new(DefaultPongEventWriter {
+                writer: EventWriter::file()
+            })
+        }
+    }
 }

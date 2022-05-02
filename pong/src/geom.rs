@@ -1,5 +1,7 @@
 pub mod geom {
-    #[derive(Debug, Clone)]
+    use serde::{Serialize};
+
+    #[derive(Debug, Clone, Serialize)]
     pub struct Vector {
         pub x: f64,
         pub y: f64,

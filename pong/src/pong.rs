@@ -45,11 +45,11 @@ pub mod pong_collisions {
         let shape = player.shape().clone();
         let player_orientation = player.orientation().clone();
         let height = match shape {
-            ShapeType::Rect(_, _, height) => height.clone(),
-            ShapeType::Circle(_, radius) => radius * 2.,
+            ShapeType::Rect(_, _, height) => height.clone() / 2.,
+            ShapeType::Circle(_, radius) => radius,
         };
         let mut perpendicular = player_orientation.get_opposing_orthogonal(bound.orientation());
-        perpendicular.y *= height;
+        perpendicular.y *= (height + 1.);
         let mut new_pos = bound.pos().clone();
         new_pos.add(&perpendicular);
         let player_pos = player.pos_mut();

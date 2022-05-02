@@ -94,6 +94,7 @@ const drawObjects = () => {
             drawLine(ctx, obj.x, obj.y, obj.x + obj.vel_x * 20, obj.y + obj.vel_y * 20, 'red')
             // orientation
             drawLine(ctx, obj.x, obj.y, obj.x + obj.orientation_x * 20, obj.y + obj.orientation_y * 20, 'blue')
+            ctx.fillText(`[x: ${obj.x}, y: ${obj.y}]`, obj.x + 10, obj.y)
         }
     })
 }

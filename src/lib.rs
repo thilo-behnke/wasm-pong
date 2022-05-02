@@ -33,8 +33,8 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct GameObjectDTO {
     pub id: u16,
-    pub x: u16,
-    pub y: u16,
+    pub x: f64,
+    pub y: f64,
     pub orientation_x: f64,
     pub orientation_y: f64,
     pub vel_x: f64,
@@ -53,8 +53,8 @@ impl GameObjectDTO {
         let shape = obj.shape();
         return GameObjectDTO {
             id: obj.id(),
-            x: pos.x as u16,
-            y: pos.y as u16,
+            x: pos.x,
+            y: pos.y,
             orientation_x: orientation.x,
             orientation_y: orientation.y,
             vel_x: vel.x,

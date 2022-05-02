@@ -3,7 +3,7 @@ use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
 use crate::game_object::game_object::{DefaultGameObject, GameObject};
 use crate::geom::geom::Vector;
 use crate::geom::shape::{Shape, ShapeType};
-use crate::pong::pong_collisions::{handle_ball_bounds_collision, handle_player_ball_collision};
+use crate::pong::pong_collisions::{handle_ball_bounds_collision, handle_player_ball_collision, handle_player_bound_collision};
 use crate::utils::utils::{DefaultLoggerFactory, Logger, LoggerFactory, NoopLogger};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Cell, Ref, RefCell, RefMut};
@@ -69,7 +69,7 @@ impl Field {
 
         field.collision_handler.register(
             (String::from("player"), String::from("bound")),
-            handle_ball_bounds_collision,
+            handle_player_bound_collision,
         );
 
         field.collision_detector.set_groups(
@@ -135,11 +135,11 @@ impl Field {
                 let input = input_opt.unwrap();
                 match input.input {
                     InputType::UP => {
-                        let updated_vel_y = (obj_mut.vel().y - 1.).max(-1.);
+                        let updated_vel_y = (obj_mut.vel().y - 1.).max(-5.);
                         obj_mut.vel_mut().y = updated_vel_y;
                     }
                     InputType::DOWN => {
-                        let updated_vel_y = (obj_mut.vel().y + 1.).min(1.);
+                        let updated_vel_y = (obj_mut.vel().y + 1.).min(5.);
                         obj_mut.vel_mut().y = updated_vel_y;
                     }
                 };

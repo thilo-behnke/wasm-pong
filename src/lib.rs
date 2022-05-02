@@ -1,14 +1,17 @@
 mod utils;
 
+use std::cell::RefCell;
+use pong::collision::collision::{Collision, CollisionDetector};
+use pong::game_field::{Field, Input, InputType};
+use pong::game_object::game_object::GameObject;
+use pong::geom::geom::Vector;
+use pong::geom::shape::ShapeType;
+use pong::utils::utils::{DefaultLoggerFactory, Logger};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::cmp::{max, min};
+use std::rc::Rc;
 use wasm_bindgen::prelude::*;
-use pong::collision::collision::{Collision, CollisionDetector};
-use pong::game_field::{Field, Input, InputType};
-use pong::game_object::game_object::{GameObject, Shape};
-use pong::geom::geom::Vector;
-use pong::utils::utils::Logger;
 
 extern crate serde_json;
 extern crate web_sys;
@@ -27,30 +30,42 @@ macro_rules! log {
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
-#[repr(packed)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct GameObjectDTO {
     pub id: u16,
-    pub x: u16,
-    pub y: u16,
+    pub x: f64,
+    pub y: f64,
+    pub orientation_x: f64,
+    pub orientation_y: f64,
+    pub vel_x: f64,
+    pub vel_y: f64,
     pub shape_param_1: u16,
     pub shape_param_2: u16,
 }
 
 impl GameObjectDTO {
-    pub fn from(obj: &GameObject) -> GameObjectDTO {
+    pub fn from(obj: &Rc<RefCell<Box<dyn GameObject>>>) -> GameObjectDTO {
+        let obj = RefCell::borrow(obj);
+
+        let pos = obj.pos();
+        let orientation = obj.orientation();
+        let vel = obj.vel();
+        let shape = obj.shape();
         return GameObjectDTO {
-            id: obj.id,
-            x: obj.pos.x as u16,
-            y: obj.pos.y as u16,
-            shape_param_1: match obj.shape_params[..] {
-                [p1, _] => p1,
-                [p1] => p1,
-                _ => 0,
+            id: obj.id(),
+            x: pos.x,
+            y: pos.y,
+            orientation_x: orientation.x,
+            orientation_y: orientation.y,
+            vel_x: vel.x,
+            vel_y: vel.y,
+            shape_param_1: match shape {
+                ShapeType::Rect(_, width, _) => *width as u16,
+                ShapeType::Circle(_, radius) => *radius as u16,
             },
-            shape_param_2: match obj.shape_params[..] {
-                [_, p2] => p2,
-                _ => 0,
+            shape_param_2: match shape {
+                ShapeType::Rect(_, _, height) => *height as u16,
+                ShapeType::Circle(_, _) => 0,
             },
         };
     }
@@ -67,7 +82,7 @@ impl InputTypeDTO {
     pub fn to_input_type(&self) -> InputType {
         match self {
             InputTypeDTO::UP => InputType::UP,
-            InputTypeDTO::DOWN => InputType::DOWN
+            InputTypeDTO::DOWN => InputType::DOWN,
         }
     }
 }
@@ -84,22 +99,20 @@ impl InputDTO {
         return Input {
             input: self.input.to_input_type(),
             obj_id: self.obj_id,
-        }
+        };
     }
 }
 
 #[wasm_bindgen]
 pub struct FieldWrapper {
-    field: Field
+    field: Field,
 }
 
 #[wasm_bindgen]
 impl FieldWrapper {
     pub fn new() -> FieldWrapper {
-        let field = Field::new(Box::new(WasmLogger {}));
-        FieldWrapper {
-            field
-        }
+        let field = Field::new(DefaultLoggerFactory::new(Box::new(WasmLogger::root())));
+        FieldWrapper { field }
     }
 
     pub fn width(&self) -> u16 {
@@ -112,52 +125,47 @@ impl FieldWrapper {
 
     pub fn tick(&mut self, inputs_js: &JsValue) {
         let input_dtos: Vec<InputDTO> = inputs_js.into_serde().unwrap();
-        let inputs = input_dtos.into_iter().map(|i| i.to_input()).collect::<Vec<Input>>();
+        let inputs = input_dtos
+            .into_iter()
+            .map(|i| i.to_input())
+            .collect::<Vec<Input>>();
         self.field.tick(inputs);
         // log!("{:?}", self.field.collisions);
     }
 
-    pub fn objects(&self) -> *const GameObjectDTO {
-        let mut objs = vec![];
-        objs.append(
-            &mut self.field
-                .balls
-                .iter()
-                .map(|ball| GameObjectDTO::from(&ball.obj))
-                .collect::<Vec<GameObjectDTO>>(),
-        );
-        objs.append(
-            &mut self.field
-                .players
-                .iter()
-                .map(|player| GameObjectDTO::from(&player.obj))
-                .collect::<Vec<GameObjectDTO>>(),
-        );
-        objs.append(
-            &mut self.field
-                .bounds.objs
-                .iter()
-                .map(|bound| GameObjectDTO::from(&bound))
-                .collect::<Vec<GameObjectDTO>>()
-        );
-        objs.as_ptr()
-    }
-
-    pub fn get_state(&self) -> String {
-        let json = json!(GameObjectDTO {
-            shape_param_1: 0,
-            shape_param_2: 0,
-            x: 10,
-            y: 10,
-            id: 1
-        });
+    pub fn objects(&self) -> String {
+        let objs = self
+            .field
+            .objs()
+            .into_iter()
+            .map(|o| GameObjectDTO::from(o))
+            .collect::<Vec<GameObjectDTO>>();
+        let json = json!(objs);
         serde_json::to_string(&json).unwrap()
     }
 }
 
-pub struct WasmLogger {}
+#[derive(Clone)]
+pub struct WasmLogger {
+    name: String
+}
+
+impl WasmLogger {
+    pub fn root() -> WasmLogger {
+        WasmLogger {name: String::from("root")}
+    }
+}
+
 impl Logger for WasmLogger {
+    fn box_clone(&self) -> Box<dyn Logger> {
+        Box::new(self.clone())
+    }
+
+    fn set_name(&mut self, name: &str) {
+        self.name = String::from(name);
+    }
+
     fn log(&self, msg: &str) {
-        log!("{}", msg)
+        log!("[{}] {}", self.name, msg)
     }
 }

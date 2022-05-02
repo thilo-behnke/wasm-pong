@@ -1,10 +1,10 @@
-use rstest::rstest;
 use pong::geom::geom::{BoundingBox, Vector};
+use rstest::rstest;
 
 #[rstest]
-#[case(BoundingBox::create_from_coords(10., 10., 5, 5), Vector::new(10., 10.), true)]
-#[case(BoundingBox::create_from_coords(10., 10., 5, 5), Vector::new(8., 8.), true)]
-#[case(BoundingBox::create_from_coords(10., 10., 5, 5), Vector::new(20., 20.), false)]
+#[case(BoundingBox::create(&Vector::new(10., 10.), 5., 5.), Vector::new(10., 10.), true)]
+#[case(BoundingBox::create(&Vector::new(10., 10.), 5., 5.), Vector::new(8., 8.), true)]
+#[case(BoundingBox::create(&Vector::new(10., 10.), 5., 5.), Vector::new(20., 20.), false)]
 pub fn should_correctly_determine_if_point_is_within_box(
     #[case] bounding_box: BoundingBox,
     #[case] point: Vector,
@@ -16,23 +16,23 @@ pub fn should_correctly_determine_if_point_is_within_box(
 
 #[rstest]
 #[case(
-    BoundingBox::create_from_coords(10., 10., 5, 5),
-    BoundingBox::create_from_coords(10., 10., 5, 5),
+    BoundingBox::create(&Vector::new(10., 10.), 5., 5.),
+    BoundingBox::create(&Vector::new(10., 10.), 5., 5.),
     true
 )]
 #[case(
-    BoundingBox::create_from_coords(10., 10., 5, 5),
-    BoundingBox::create_from_coords(8., 8., 5, 5),
+    BoundingBox::create(&Vector::new(10., 10.), 5., 5.),
+    BoundingBox::create(&Vector::new(8., 8.), 5., 5.),
     true
 )]
 #[case(
-    BoundingBox::create_from_coords(10., 10., 5, 5),
-    BoundingBox::create_from_coords(4.9, 4.9, 5, 5),
+    BoundingBox::create(&Vector::new(10., 10.), 5., 5.),
+    BoundingBox::create(&Vector::new(4.9, 4.9), 5., 5.),
     false
 )]
 #[case(
-    BoundingBox::create_from_coords(10., 10., 5, 5),
-    BoundingBox::create_from_coords(5., 5., 5, 5),
+    BoundingBox::create(&Vector::new(10., 10.), 5., 5.),
+    BoundingBox::create(&Vector::new(5., 5.), 5., 5.),
     true
 )]
 pub fn should_correctly_determine_if_overlap(

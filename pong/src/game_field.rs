@@ -115,7 +115,7 @@ impl Field {
         self.objs.push(Rc::new(RefCell::new(ball)));
     }
 
-    pub fn tick(&self, inputs: Vec<Input>) {
+    pub fn tick(&mut self, inputs: Vec<Input>) {
         for obj in self.objs.iter() {
             let mut obj_mut = RefCell::borrow_mut(obj);
             if obj_mut.obj_type() != "ball" {

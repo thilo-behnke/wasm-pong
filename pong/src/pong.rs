@@ -83,7 +83,7 @@ pub mod pong_events {
     }
 
     pub trait PongEventWriter {
-        fn write(&self, event: PongEventType) -> Result<(), ()>;
+        fn write(&mut self, event: PongEventType) -> Result<(), ()>;
     }
 
     pub struct DefaultPongEventWriter {
@@ -91,7 +91,7 @@ pub mod pong_events {
     }
 
     impl PongEventWriter for DefaultPongEventWriter {
-        fn write(&self, event: PongEventType) -> Result<(), ()> {
+        fn write(&mut self, event: PongEventType) -> Result<(), ()> {
             let out_event = match event {
                 PongEventType::GameObjUpdate(ref update) => {
                     Event {

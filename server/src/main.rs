@@ -1,6 +1,7 @@
 use crate::http::HttpServer;
 
 mod http;
+mod kafka;
 
 #[tokio::main]
 pub async fn main() {

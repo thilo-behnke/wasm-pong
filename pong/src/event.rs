@@ -10,12 +10,12 @@ pub mod event {
     }
 
     pub trait EventWriterImpl {
-        fn write(&self, event: Event) -> Result<(), ()>;
+        fn write(&mut self, event: Event) -> Result<(), ()>;
     }
 
     pub struct FileEventWriterImpl {}
     impl EventWriterImpl for FileEventWriterImpl {
-        fn write(&self, event: Event) -> Result<(), ()> {
+        fn write(&mut self, event: Event) -> Result<(), ()> {
             let options = OpenOptions::new().read(true).create(true).write(true).open("events.log");
             if let Err(_) = options {
                 return Err(());
@@ -30,7 +30,7 @@ pub mod event {
 
     pub struct NoopEventWriterImpl {}
     impl EventWriterImpl for NoopEventWriterImpl {
-        fn write(&self, event: Event) -> Result<(), ()> {
+        fn write(&mut self, event: Event) -> Result<(), ()> {
             todo!()
         }
     }
@@ -40,7 +40,7 @@ pub mod event {
     }
 
     impl EventWriter {
-        fn new(writer_impl: Box<dyn EventWriterImpl>) -> EventWriter {
+        pub fn new(writer_impl: Box<dyn EventWriterImpl>) -> EventWriter {
             EventWriter {
                 writer_impl
             }
@@ -57,9 +57,8 @@ pub mod event {
                 writer_impl: Box::new(FileEventWriterImpl {})
             }
         }
-        // TODO: Kafka
 
-        pub fn write(&self, event: Event) -> Result<(), ()> {
+        pub fn write(&mut self, event: Event) -> Result<(), ()> {
            self.writer_impl.write(event)
         }
     }

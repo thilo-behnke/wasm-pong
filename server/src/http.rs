@@ -20,12 +20,19 @@ impl HttpServer {
         let host = (self.addr, self.port).into();
         let server = Server::bind(&host).serve(make_svc);
         println!("Listening on http://{}", host);
-        server.await?;
+        let graceful = server.with_graceful_shutdown(shutdown_signal());
+        graceful.await?;
         Ok(())
     }
-
 }
 
 async fn handle_request(req: Request<Body>) -> Result<Response<Body>, Infallible> {
     Ok(Response::new("hello".into()))
+}
+
+async fn shutdown_signal() {
+    // Wait for the CTRL+C signal
+    tokio::signal::ctrl_c()
+        .await
+        .expect("failed to install CTRL+C signal handler");
 }

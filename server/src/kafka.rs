@@ -22,11 +22,11 @@ impl KafkaEventWriterImpl {
     }
 }
 impl EventWriterImpl for KafkaEventWriterImpl {
-    fn write(&mut self, event: Event) -> Result<(), ()> {
+    fn write(&mut self, event: Event) -> Result<(), String> {
         let record = Record::from_key_value(event.topic.as_str(), event.key.as_str(), event.msg.as_str());
         match self.producer.send(&record) {
             Ok(()) => Ok(()),
-            Err(_) => Err(())
+            Err(e) => Err(format!("{}", e))
         }
     }
 }

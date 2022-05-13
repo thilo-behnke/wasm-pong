@@ -10,27 +10,27 @@ pub mod event {
     }
 
     pub trait EventWriterImpl : Send + Sync {
-        fn write(&mut self, event: Event) -> Result<(), ()>;
+        fn write(&mut self, event: Event) -> Result<(), String>;
     }
 
     pub struct FileEventWriterImpl {}
     impl EventWriterImpl for FileEventWriterImpl {
-        fn write(&mut self, event: Event) -> Result<(), ()> {
+        fn write(&mut self, event: Event) -> Result<(), String> {
             let options = OpenOptions::new().read(true).create(true).write(true).open("events.log");
-            if let Err(_) = options {
-                return Err(());
+            if let Err(e) = options {
+                return Err(format!("{}", e));
             }
             let mut file = options.unwrap();
             match file.write(event.msg.as_bytes()) {
                 Ok(_) => Ok(()),
-                Err(e) => Err(())
+                Err(e) => Err(format!("{}", e))
             }
         }
     }
 
     pub struct NoopEventWriterImpl {}
     impl EventWriterImpl for NoopEventWriterImpl {
-        fn write(&mut self, event: Event) -> Result<(), ()> {
+        fn write(&mut self, event: Event) -> Result<(), String> {
             todo!()
         }
     }
@@ -58,7 +58,7 @@ pub mod event {
             }
         }
 
-        pub fn write(&mut self, event: Event) -> Result<(), ()> {
+        pub fn write(&mut self, event: Event) -> Result<(), String> {
            self.writer_impl.write(event)
         }
     }

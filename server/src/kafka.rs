@@ -42,7 +42,9 @@ impl KafkaEventReaderImpl {
 
     pub fn new(host: &str) -> KafkaEventReaderImpl {
         let mut consumer = Consumer::from_hosts(vec![host.to_owned()])
-            .with_topic("topic".to_owned())
+            .with_topic("move".to_owned())
+            .with_topic("status".to_owned())
+            .with_topic("input".to_owned())
             .with_fallback_offset(FetchOffset::Earliest)
             .with_group("group".to_owned())
             .with_offset_storage(GroupOffsetStorage::Kafka)
@@ -63,6 +65,7 @@ impl EventReaderImpl for KafkaEventReaderImpl {
                 let event = Event {topic: String::from(ms.topic()), key: std::str::from_utf8(m.key).unwrap().parse().unwrap(), msg: std::str::from_utf8(m.value).unwrap().parse().unwrap() };
                 events.push(event);
             }
+            self.consumer.consume_messageset(ms);
         }
         events
     }

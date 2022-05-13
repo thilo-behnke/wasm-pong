@@ -2,8 +2,9 @@
 pub mod event {
     use std::fs::OpenOptions;
     use std::io::Write;
+    use serde::{Deserialize};
 
-    #[derive(Debug)]
+    #[derive(Debug, Deserialize)]
     pub struct Event {
         pub topic: String,
         pub key: String,
@@ -64,7 +65,7 @@ pub mod event {
         }
     }
 
-    pub trait EventReaderImpl {
+    pub trait EventReaderImpl : Send + Sync {
         fn read(&mut self) -> Vec<Event>;
     }
 

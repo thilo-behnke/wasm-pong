@@ -78,7 +78,7 @@ impl KafkaEventReaderImpl {
                 let event = Event {topic: String::from(topic), key: std::str::from_utf8(m.key).unwrap().parse().unwrap(), msg: std::str::from_utf8(m.value).unwrap().parse().unwrap() };
                 events.push(event);
             }
-            self.consumer.consume_messageset(ms);
+            self.consumer.consume_messageset(ms).unwrap();
         }
         self.consumer.commit_consumed().unwrap();
         events

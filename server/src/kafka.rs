@@ -57,16 +57,30 @@ impl KafkaEventReaderImpl {
 }
 impl EventReaderImpl for KafkaEventReaderImpl {
     fn read(&mut self) -> Vec<Event> {
+        self.consume(None, None)
+    }
+
+    fn read_from_topic(&mut self, topic: &str, key: &str) -> Vec<Event> {
+        self.consume(Some(topic), Some(key))
+    }
+}
+
+impl KafkaEventReaderImpl {
+    fn consume(&mut self, topic: Option<&str>, key: Option<&str>) -> Vec<Event> {
         let polled = self.consumer.poll().unwrap();
         let message_sets: Vec<MessageSet<'_>> = polled.iter().collect();
         let mut events = vec![];
         for ms in message_sets {
+            let topic = ms.topic();
+            let partition = ms.partition();
+            println!("topic={},partition={}", topic, partition);
             for m in ms.messages() {
-                let event = Event {topic: String::from(ms.topic()), key: std::str::from_utf8(m.key).unwrap().parse().unwrap(), msg: std::str::from_utf8(m.value).unwrap().parse().unwrap() };
+                let event = Event {topic: String::from(topic), key: std::str::from_utf8(m.key).unwrap().parse().unwrap(), msg: std::str::from_utf8(m.value).unwrap().parse().unwrap() };
                 events.push(event);
             }
             self.consumer.consume_messageset(ms);
         }
+        self.consumer.commit_consumed().unwrap();
         events
     }
 }

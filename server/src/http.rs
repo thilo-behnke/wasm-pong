@@ -8,6 +8,7 @@ use kafka::producer::Producer;
 use tokio::sync::Mutex;
 use pong::event::event::{Event, EventReader, EventWriter};
 use crate::kafka::{KafkaEventReaderImpl, KafkaEventWriterImpl};
+use crate::utils::http_utils::get_query_params;
 
 pub struct HttpServer {
     addr: [u8; 4],
@@ -68,10 +69,19 @@ async fn handle_event_write(event_writer: &Arc<Mutex<EventWriter>>, req: Request
 }
 
 async fn handle_event_read(event_reader: &Arc<Mutex<EventReader>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
-    let mut locked = event_reader.lock().await;
-    let events = locked.read();
-    println!("read {} events", events.len());
-    Ok(Response::new(format!("{:?}", events).into()))
+    let query_params = get_query_params(&req);
+    println!("{:?}", query_params);
+    let topic = query_params.get("topic");
+    let key = query_params.get("key");
+    match (topic, key) {
+        (Some(topic), Some(key)) => {
+            let mut locked = event_reader.lock().await;
+            let events = locked.read();
+            println!("read {} events", events.len());
+            Ok(Response::new(format!("{:?}", events).into()))
+        },
+        _ => Ok(Response::new(format!("provide topic and key as query params").into())),
+    }
 }
 
 

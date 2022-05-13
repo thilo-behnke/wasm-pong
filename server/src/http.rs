@@ -1,6 +1,7 @@
 use std::convert::Infallible;
+use std::io::ErrorKind::NotFound;
 use std::sync::Arc;
-use hyper::{Body, Request, Response, Server};
+use hyper::{Body, Method, Request, Response, Server};
 use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
 use kafka::producer::Producer;
@@ -42,6 +43,15 @@ impl HttpServer {
 }
 
 async fn handle_request(event_writer: &Arc<Mutex<EventWriter>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+    println!("req to {} with method {}", req.uri().path(), req.method());
+    match (req.method(), req.uri().path()) {
+        (&Method::POST, "/write") => handle_event_write(event_writer, req).await,
+        (&Method::GET, "/show") => handle_event_read(req).await,
+        _ => Ok(Response::new("unknown".into()))
+    }
+}
+
+async fn handle_event_write(event_writer: &Arc<Mutex<EventWriter>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
     let mut locked = event_writer.lock().await;
     let event = Event {topic: "topic".into(), key: "key".into(), msg: "msg".into()};
     println!("Writing event to kafka: {:?}", event);
@@ -49,6 +59,10 @@ async fn handle_request(event_writer: &Arc<Mutex<EventWriter>>, req: Request<Bod
         println!("Failed to write to kafka! {:?}", e);
     }
     Ok(Response::new("response".into()))
+}
+
+async fn handle_event_read(req: Request<Body>) -> Result<Response<Body>, Infallible> {
+    Ok(Response::new("events".into()))
 }
 
 

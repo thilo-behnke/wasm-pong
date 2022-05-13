@@ -79,7 +79,7 @@ pub mod event {
             }
         }
 
-        pub fn read(&mut self) -> Event<Event> {
+        pub fn read(&mut self) -> Vec<Event> {
             self.reader_impl.read()
         }
     }

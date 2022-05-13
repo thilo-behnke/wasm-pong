@@ -43,8 +43,10 @@ impl HttpServer {
 
 async fn handle_request(event_writer: &Arc<Mutex<EventWriter>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
     let mut locked = event_writer.lock().await;
-    if let err = locked.write(Event {topic: "topic".into(), key: "key".into(), msg: "msg".into()}) {
-        println!("Failed to write to kafka! {:?}", err);
+    let event = Event {topic: "topic".into(), key: "key".into(), msg: "msg".into()};
+    println!("Writing event to kafka: {:?}", event);
+    if let Err(e) = locked.write(event) {
+        println!("Failed to write to kafka! {:?}", e);
     }
     Ok(Response::new("response".into()))
 }

@@ -3,6 +3,7 @@ pub mod event {
     use std::fs::OpenOptions;
     use std::io::Write;
 
+    #[derive(Debug)]
     pub struct Event {
         pub topic: String,
         pub key: String,
@@ -60,6 +61,26 @@ pub mod event {
 
         pub fn write(&mut self, event: Event) -> Result<(), String> {
            self.writer_impl.write(event)
+        }
+    }
+
+    pub trait EventReaderImpl {
+        fn read(&mut self) -> Vec<Event>;
+    }
+
+    pub struct EventReader {
+        reader_impl: Box<dyn EventReaderImpl>
+    }
+
+    impl EventReader {
+        pub fn new(reader_impl: Box<dyn EventReaderImpl>) -> EventReader {
+            EventReader {
+                reader_impl
+            }
+        }
+
+        pub fn read(&mut self) -> Event<Event> {
+            self.reader_impl.read()
         }
     }
 }

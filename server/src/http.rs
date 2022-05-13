@@ -19,15 +19,17 @@ impl HttpServer {
         HttpServer {addr, port, event_writer}
     }
 
-    pub async fn run(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>  {
-        let mut event_writer = Arc::clone(&self.event_writer);
-        let make_svc = make_service_fn(|socket: &AddrStream| async {
-            Ok::<_, Infallible>(service_fn(move |req: Request<Body>| {
-                async move {
+    pub async fn run(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>  {
+        let make_svc = make_service_fn(|socket: &AddrStream| {
+            let mut event_writer = Arc::clone(&self.event_writer);
+            async move {
+                Ok::<_, Infallible>(service_fn(move |req: Request<Body>| {
                     let mut event_writer = Arc::clone(&event_writer);
-                    handle_request(&event_writer, req).await
-                }
-            }))
+                    async move {
+                        return handle_request(&event_writer, req).await;
+                    }
+                }))
+            }
         });
 
         let host = (self.addr, self.port).into();

@@ -9,7 +9,7 @@ pub mod event {
         pub msg: String
     }
 
-    pub trait EventWriterImpl {
+    pub trait EventWriterImpl : Send + Sync {
         fn write(&mut self, event: Event) -> Result<(), ()>;
     }
 

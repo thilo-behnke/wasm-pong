@@ -1,6 +1,6 @@
 use std::time::Duration;
 use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage, MessageSet};
-use kafka::producer::{Producer, Record, RequiredAcks};
+use kafka::producer::{DefaultPartitioner, Producer, Record, RequiredAcks};
 use pong::event::event::{Event, EventReaderImpl, EventWriter, EventWriterImpl};
 
 pub struct KafkaEventWriterImpl {
@@ -67,13 +67,16 @@ impl EventReaderImpl for KafkaEventReaderImpl {
 
 impl KafkaEventReaderImpl {
     fn consume(&mut self, topic: Option<&str>, key: Option<&str>) -> Vec<Event> {
+        // TODO: How to best filter messages by key (= game session id?)
+        // E.g. https://docs.rs/kafka/latest/kafka/producer/struct.DefaultPartitioner.html - is it possible to read from partition by retrieving the hash of the key?
+        // Does it even make sense to hash the key if it already is a hash? Custom partitioner?
         let polled = self.consumer.poll().unwrap();
         let message_sets: Vec<MessageSet<'_>> = polled.iter().collect();
         let mut events = vec![];
         for ms in message_sets {
             let topic = ms.topic();
             let partition = ms.partition();
-            println!("topic={},partition={}", topic, partition);
+            println!("querying topic={} partition={}", topic, partition);
             for m in ms.messages() {
                 let event = Event {topic: String::from(topic), key: std::str::from_utf8(m.key).unwrap().parse().unwrap(), msg: std::str::from_utf8(m.value).unwrap().parse().unwrap() };
                 events.push(event);

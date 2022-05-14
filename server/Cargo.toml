@@ -10,7 +10,9 @@ kafka = { version = "0.8.0" }
 hyper = {version = "0.14.18", features = ["full"]}
 tokio = { version = "1", features = ["full"] }
 tokio-stream = {version = "0.1" }
+serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.79" }
+md5 = { version = "0.7.0" }
 pong = { path = "../pong", version = "0.1.0" }
 
 [dev-dependencies]

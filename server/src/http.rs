@@ -1,38 +1,44 @@
 use std::convert::Infallible;
 use std::io::ErrorKind::NotFound;
 use std::sync::Arc;
-use hyper::{Body, body, Method, Request, Response, Server};
+use hyper::{Body, body, Method, Request, Response, Server, StatusCode};
 use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
 use kafka::producer::Producer;
+use serde_json::json;
 use tokio::sync::Mutex;
 use pong::event::event::{Event, EventReader, EventWriter};
 use crate::kafka::{KafkaEventReaderImpl, KafkaEventWriterImpl};
+use crate::session::SessionManager;
 use crate::utils::http_utils::get_query_params;
 
 pub struct HttpServer {
     addr: [u8; 4],
     port: u16,
+    session_manager: Arc<Mutex<SessionManager>>,
     event_writer: Arc<Mutex<EventWriter>>,
     event_reader: Arc<Mutex<EventReader>>
 }
 impl HttpServer {
     pub fn new(addr: [u8; 4], port: u16) -> HttpServer {
+        let session_manager = Arc::new(Mutex::new(SessionManager::new()));
         let event_writer = Arc::new(Mutex::new(EventWriter::new(Box::new(KafkaEventWriterImpl::default()))));
         let event_reader = Arc::new(Mutex::new(EventReader::new(Box::new(KafkaEventReaderImpl::default()))));
-        HttpServer {addr, port, event_writer, event_reader}
+        HttpServer {addr, port, session_manager, event_writer, event_reader}
     }
 
     pub async fn run(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>  {
         let make_svc = make_service_fn(|socket: &AddrStream| {
+            let mut session_manager = Arc::clone(&self.session_manager);
             let mut event_writer = Arc::clone(&self.event_writer);
             let mut event_reader = Arc::clone(&self.event_reader);
             async move {
                 Ok::<_, Infallible>(service_fn(move |req: Request<Body>| {
+                    let mut session_manager = Arc::clone(&session_manager);
                     let mut event_writer = Arc::clone(&event_writer);
                     let mut event_reader = Arc::clone(&event_reader);
                     async move {
-                        return handle_request(&event_writer, &event_reader, req).await;
+                        return handle_request(&session_manager, &event_writer, &event_reader, req).await;
                     }
                 }))
             }
@@ -47,13 +53,24 @@ impl HttpServer {
     }
 }
 
-async fn handle_request(event_writer: &Arc<Mutex<EventWriter>>, event_reader: &Arc<Mutex<EventReader>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+async fn handle_request(session_manager: &Arc<Mutex<SessionManager>>, event_writer: &Arc<Mutex<EventWriter>>, event_reader: &Arc<Mutex<EventReader>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
     println!("req to {} with method {}", req.uri().path(), req.method());
     match (req.method(), req.uri().path()) {
+        (&Method::POST, "/create_session") => handle_session_create(session_manager, req).await,
         (&Method::POST, "/write") => handle_event_write(event_writer, req).await,
         (&Method::GET, "/show") => handle_event_read(event_reader, req).await,
         _ => Ok(Response::new("unknown".into()))
     }
+}
+
+async fn handle_session_create(session_manager: &Arc<Mutex<SessionManager>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+    let mut locked = session_manager.lock().await;
+    let session_create_res = locked.create_session().await;
+    if let Err(e) = session_create_res {
+        return Ok(Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::from(e)).unwrap());
+    }
+    let serialized = json!(session_create_res.unwrap());
+    return Ok(Response::new(Body::from(serialized.to_string())))
 }
 
 async fn handle_event_write(event_writer: &Arc<Mutex<EventWriter>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {

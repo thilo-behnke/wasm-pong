@@ -3,6 +3,8 @@ use crate::http::HttpServer;
 pub mod http;
 pub mod kafka;
 pub mod utils;
+mod hash;
+mod session;
 
 #[tokio::main]
 pub async fn main() {

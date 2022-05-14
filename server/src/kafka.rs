@@ -1,6 +1,10 @@
+use std::process::ExitStatus;
 use std::time::Duration;
+use kafka::client::KafkaClient;
+use kafka::client::metadata::Topic;
+use tokio::process::Command;
 use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage, MessageSet};
-use kafka::producer::{DefaultPartitioner, Producer, Record, RequiredAcks};
+use kafka::producer::{DefaultPartitioner, Producer, Record, RequiredAcks, Topics};
 use pong::event::event::{Event, EventReaderImpl, EventWriter, EventWriterImpl};
 
 pub struct KafkaEventWriterImpl {
@@ -85,5 +89,34 @@ impl KafkaEventReaderImpl {
         }
         self.consumer.commit_consumed().unwrap();
         events
+    }
+}
+
+#[derive(Debug)]
+pub struct KafkaTopicManager {}
+impl KafkaTopicManager {
+    pub async fn add_partition(&self) -> Result<u32, String> {
+        let topics = vec!["move", "status", "input"];
+        let mut client = KafkaClient::new(vec!["localhost:9092".to_owned()]);
+        client.load_metadata_all().unwrap();
+        let topic_metas: Vec<Topic> = client.topics().into_iter().filter(|t| topics.contains(&t.name())).collect();
+        if topic_metas.len() != 3 {
+            return Err(format!("Can't add_partition, unable to find matching topics: {:?}", topics));
+        }
+        let max_partition_count = topic_metas.into_iter().map(|t| t.partitions().len()).max().unwrap();
+        let next_partition = max_partition_count + 1;
+        println!("Will create next partition: {}", next_partition);
+        // TODO: What if creating one of the partitions fails?
+        for topic in topics {
+            let output = Command::new("/bin/bash").arg(format!("-c bin/kafka-topics.sh --bootstrap-server localhost:9092 --alter --topic {} --partitions {}", topic, next_partition)).output().await;
+            if let Err(e) = output {
+                return Err(format!("{}", e))
+            }
+            let output = output.unwrap();
+            if !output.status.success() {
+                return Err(format!("{:?}", std::str::from_utf8(&*output.stderr)))
+            }
+        }
+        Ok(next_partition as u32)
     }
 }

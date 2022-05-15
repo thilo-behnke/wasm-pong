@@ -9,7 +9,8 @@ services:
       - ALLOW_ANONYMOUS_LOGIN=yes
   kafka:
     container_name: pong_server_kafka
-    image: 'bitnami/kafka:latest'
+    build:
+      context: kafka
     ports:
       - '9092:9092'
     environment:

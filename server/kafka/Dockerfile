@@ -1,7 +1,7 @@
 FROM rust:latest as build-stage
 
-RUN mkdir -p /opt/pong/
-WORKDIR /opt/pong
+RUN mkdir -p /opt/pong/kafka-script-proxy
+WORKDIR /opt/pong/kafka-script-proxy
 ADD kafka-script-proxy ./
 RUN cargo build --release
 

@@ -13,6 +13,7 @@ services:
       context: kafka
     ports:
       - '9092:9092'
+      - '7243:7243'
     environment:
       - KAFKA_BROKER_ID=1
       - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=DOCKER

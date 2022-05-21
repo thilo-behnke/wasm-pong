@@ -1,4 +1,4 @@
-FROM rust:latest as build-stage
+FROM rust:1.54 as build-stage
 
 RUN mkdir -p /opt/pong/kafka-script-proxy
 WORKDIR /opt/pong/kafka-script-proxy
@@ -9,6 +9,9 @@ FROM bitnami/kafka:latest
 
 ADD custom-entrypoint.sh /
 COPY --from=build-stage /opt/pong/kafka-script-proxy/target/release/kafka-script-proxy /bin/
+
+USER root
+RUN mkdir -p /var/lib/kafka-script-proxy
 
 ENTRYPOINT []
 CMD [ "/custom-entrypoint.sh" ]

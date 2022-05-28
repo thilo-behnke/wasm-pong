@@ -63,6 +63,10 @@ async fn handle_request(session_manager: &Arc<Mutex<SessionManager>>, event_writ
     }
 }
 
+// TODO: Both for write and read session:
+// - use session id from req body
+// - pass event write / read to session manager that holds references to session specific readers/writers
+
 async fn handle_session_create(session_manager: &Arc<Mutex<SessionManager>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
     let mut locked = session_manager.lock().await;
     let session_create_res = locked.create_session().await;

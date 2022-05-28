@@ -20,10 +20,10 @@ pub struct HttpServer {
     event_reader: Arc<Mutex<EventReader>>
 }
 impl HttpServer {
-    pub fn new(addr: [u8; 4], port: u16) -> HttpServer {
+    pub fn new(addr: [u8; 4], port: u16, kafka_host: &str) -> HttpServer {
         let session_manager = Arc::new(Mutex::new(SessionManager::new()));
-        let event_writer = Arc::new(Mutex::new(EventWriter::new(Box::new(KafkaEventWriterImpl::default()))));
-        let event_reader = Arc::new(Mutex::new(EventReader::new(Box::new(KafkaEventReaderImpl::default()))));
+        let event_writer = Arc::new(Mutex::new(EventWriter::new(Box::new(KafkaEventWriterImpl::from(kafka_host)))));
+        let event_reader = Arc::new(Mutex::new(EventReader::new(Box::new(KafkaEventReaderImpl::from(kafka_host)))));
         HttpServer {addr, port, session_manager, event_writer, event_reader}
     }
 

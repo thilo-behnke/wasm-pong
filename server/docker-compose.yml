@@ -13,6 +13,7 @@ services:
       context: kafka
     ports:
       - '9092:9092'
+      - '9093:9093'
       - '7243:7243'
     environment:
       - KAFKA_BROKER_ID=1
@@ -24,13 +25,13 @@ services:
       - ALLOW_PLAINTEXT_LISTENER=yes
     depends_on:
       - zookeeper
-  kaka-rest-proxy:
-    container_name: pong_server_kafka_rest_proxy
-    image: 'confluentinc/cp-kafka-rest'
-    ports:
-      - '8082:8082'
-    environment:
-      - KAFKA_REST_BOOTSTRAP_SERVERS=kafka:9092
-    depends_on:
-      - kafka
+#  kaka-rest-proxy:
+#    container_name: pong_server_kafka_rest_proxy
+#    image: 'confluentinc/cp-kafka-rest'
+#    ports:
+#      - '8082:8082'
+#    environment:
+#      - KAFKA_REST_BOOTSTRAP_SERVERS=kafka:9092
+#    depends_on:
+#      - kafka
 

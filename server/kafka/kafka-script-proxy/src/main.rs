@@ -118,7 +118,7 @@ pub fn build_success_res(value: &str) -> Result<Response<Body>, Infallible> {
 }
 
 pub fn build_error_res(error: &str, status: StatusCode) -> Result<Response<Body>, Infallible> {
-    let json = format!("{{\"error\": {}}}", error);
+    let json = format!("{{\"error\": \"{}\"}}", error);
     let mut res = Response::new(Body::from(json));
     *res.status_mut() = status;
     return Ok(res);

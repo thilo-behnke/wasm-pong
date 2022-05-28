@@ -1,7 +1,7 @@
 use std::process::ExitStatus;
 use std::str::FromStr;
 use std::time::Duration;
-use hyper::{Client, Uri};
+use hyper::{Body, Client, Method, Request, Uri};
 use serde::{Deserialize};
 use kafka::client::KafkaClient;
 use kafka::client::metadata::Topic;
@@ -15,10 +15,15 @@ pub struct KafkaEventWriterImpl {
 }
 impl KafkaEventWriterImpl {
     pub fn default() -> KafkaEventWriterImpl {
-        KafkaEventWriterImpl::new("localhost:9092")
+        KafkaEventWriterImpl::new("localhost:9093")
+    }
+
+    pub fn from(host: &str) -> KafkaEventWriterImpl {
+        KafkaEventWriterImpl::new(host)
     }
 
     pub fn new(host: &str) -> KafkaEventWriterImpl {
+        println!("Connecting producer to kafka host: {}", host);
         let mut producer = Producer::from_hosts(vec![host.to_owned()])
             .with_ack_timeout(Duration::from_secs(1))
             .with_required_acks(RequiredAcks::One)
@@ -44,11 +49,16 @@ pub struct KafkaEventReaderImpl {
 }
 impl KafkaEventReaderImpl {
     pub fn default() -> KafkaEventReaderImpl {
-        KafkaEventReaderImpl::new("localhost:9092")
+        KafkaEventReaderImpl::new("localhost:9093")
+    }
+
+    pub fn from(host: &str) -> KafkaEventReaderImpl {
+        KafkaEventReaderImpl::new(host)
     }
 
     pub fn new(host: &str) -> KafkaEventReaderImpl {
-        let mut consumer = Consumer::from_hosts(vec![host.to_owned()])
+        println!("Connecting consumer to kafka host: {}", host);
+        let mut consumer = Consumer::from_hosts(vec!(host.to_owned()))
             .with_topic("move".to_owned())
             .with_topic("status".to_owned())
             .with_topic("input".to_owned())
@@ -102,17 +112,23 @@ pub struct KafkaTopicManager {
 impl KafkaTopicManager {
 
     pub fn default() -> KafkaTopicManager {
-        KafkaTopicManager {partition_management_endpoint: "kafka:7243/add_partition".to_owned()}
+        KafkaTopicManager {partition_management_endpoint: "http://localhost:7243/add_partition".to_owned()}
+    }
+
+    pub fn from(topic_manager_host: &str) -> KafkaTopicManager {
+        KafkaTopicManager {partition_management_endpoint: format!("http://{}/add_partition", topic_manager_host).to_owned()}
     }
 
     pub async fn add_partition(&self) -> Result<u32, String> {
         let mut client = Client::new();
-        let res = client.get(Uri::from_str(&self.partition_management_endpoint).unwrap()).await;
+        let request = Request::builder().method(Method::POST).uri(Uri::from_str(&self.partition_management_endpoint).unwrap()).body(Body::empty()).unwrap();
+        let res = client.request(request).await;
         if let Err(e) = res {
             let error = format!("Failed to add partition: {:?}", e);
             println!("{}", error);
             return Err(error);
         }
+        let status = res.as_ref().unwrap().status();
         let bytes = hyper::body::to_bytes(res.unwrap()).await;
         if let Err(e) = bytes {
             let error = format!("Failed to read bytes from response: {:?}", e);
@@ -126,13 +142,20 @@ impl KafkaTopicManager {
             println!("{}", error);
             return Err(error);
         }
-        let json = serde_json::from_str::<PartitionApiDTO>(res_str.unwrap());
-        if let Err(e) = json {
-            let error = format!("Failed to convert string to json: {:?}", e);
+        if status != 200 {
+            let error = format!("Failed to add partition: {}", res_str.unwrap());
             println!("{}", error);
             return Err(error);
         }
-        Ok(json.unwrap().data)
+        let json = serde_json::from_str::<PartitionApiDTO>(res_str.unwrap());
+        if let Err(e) = json {
+            let error = format!("Failed to convert string {} to json: {:?}", res_str.unwrap(), e);
+            println!("{}", error);
+            return Err(error);
+        }
+        let updated_partition_count = json.unwrap().data;
+        println!("Successfully created partition: {}", updated_partition_count);
+        Ok(updated_partition_count)
     }
 }
 

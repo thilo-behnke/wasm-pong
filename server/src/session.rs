@@ -12,7 +12,7 @@ impl SessionManager {
     pub fn new() -> SessionManager {
         SessionManager {
             sessions: vec![],
-            topic_manager: KafkaTopicManager::default()
+            topic_manager: KafkaTopicManager::from("localhost:7243")
         }
     }
 
@@ -25,6 +25,7 @@ impl SessionManager {
         let session_id = add_partition_res.unwrap();
         let session_hash = Hasher::hash(session_id);
         let session = Session {id: session_hash};
+        println!("Successfully created session: {:?}", session);
         self.sessions.push(session.clone());
         Ok(session)
     }

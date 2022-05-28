@@ -17,7 +17,7 @@ pub struct KafkaSessionEventWriterImpl {
     producer: Producer<SessionPartitioner>
 }
 impl KafkaSessionEventWriterImpl {
-    pub fn session_writer(host: &str) -> KafkaSessionEventWriterImpl {
+    pub fn new(host: &str) -> KafkaSessionEventWriterImpl {
         println!("Connecting session_writer producer to kafka host: {}", host);
         let mut producer = Producer::from_hosts(vec![host.to_owned()])
             .with_ack_timeout(Duration::from_secs(1))

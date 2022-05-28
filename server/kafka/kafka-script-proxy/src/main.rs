@@ -71,7 +71,7 @@ async fn handle_add_partition() -> Result<Response<Body>, Infallible> {
         }
     }
     write_to_log(&format!("Successfully updated partition count to {}", next_partition)).await;
-    return build_success_res(&next_partition.to_string());
+    return build_success_res(&current_count.to_string()); // current_count because count - 1 = max partition
 }
 
 async fn get_highest_partition_count() -> Result<u32, PartitionCountQueryError> {

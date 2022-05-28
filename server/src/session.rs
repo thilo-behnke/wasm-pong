@@ -45,14 +45,28 @@ impl SessionManager {
         Ok(session)
     }
 
-    pub fn get_session_reader(&self, session: Session) -> SessionReader {
+    pub fn get_session_reader(&self, session_id: &str) -> Result<SessionReader, String> {
+        let session = self.find_session(&session_id);
+        if let None = session {
+            return Err(format!("Unable to find session with hash {}", session_id))
+        }
+        let session = session.unwrap();
         let event_reader = EventReader::new(Box::new(KafkaSessionEventReaderImpl::new(&self.kafka_host, &session, &["move", "status", "input"])));
-        SessionReader {reader: event_reader, session}
+        Ok(SessionReader {reader: event_reader, session})
     }
 
-    pub fn get_session_writer(&self, session: Session) -> SessionWriter {
+    pub fn get_session_writer(&self, session_id: &str) -> Result<SessionWriter, String> {
+        let session = self.find_session(&session_id);
+        if let None = session {
+            return Err(format!("Unable to find session with hash {}", session_id))
+        }
+        let session = session.unwrap();
         let event_writer = EventWriter::new(Box::new(KafkaSessionEventWriterImpl::new(&self.kafka_host)));
-        SessionWriter {writer: event_writer, session}
+        Ok(SessionWriter {writer: event_writer, session})
+    }
+
+    fn find_session(&self, session_id: &str) -> Option<Session> {
+        self.sessions.iter().find(|s| session_id == s.hash).map(|s| s.clone())
     }
 }
 

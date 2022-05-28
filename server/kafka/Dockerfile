@@ -11,7 +11,7 @@ ADD custom-entrypoint.sh /
 COPY --from=build-stage /opt/pong/kafka-script-proxy/target/release/kafka-script-proxy /bin/
 
 USER root
-RUN mkdir -p /var/lib/kafka-script-proxy
+RUN mkdir -p /var/log/kafka-script-proxy
 
 ENTRYPOINT []
 CMD [ "/custom-entrypoint.sh" ]

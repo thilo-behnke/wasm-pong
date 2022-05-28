@@ -1,17 +1,20 @@
+use std::hash::{BuildHasher, Hash};
 use std::process::ExitStatus;
 use std::str::FromStr;
 use std::time::Duration;
 use hyper::{Body, Client, Method, Request, Uri};
 use serde::{Deserialize};
-use kafka::client::KafkaClient;
+use kafka::client::{KafkaClient, ProduceMessage};
 use kafka::client::metadata::Topic;
 use tokio::process::Command;
 use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage, MessageSet};
-use kafka::producer::{DefaultPartitioner, Producer, Record, RequiredAcks, Topics};
+use kafka::producer::{DefaultPartitioner, Partitioner, Producer, Record, RequiredAcks, Topics};
 use pong::event::event::{Event, EventReaderImpl, EventWriter, EventWriterImpl};
+use crate::hash::Hasher;
+use crate::session::Session;
 
 pub struct KafkaEventWriterImpl {
-    producer: Producer
+    producer: Producer<SessionPartitioner>
 }
 impl KafkaEventWriterImpl {
     pub fn default() -> KafkaEventWriterImpl {
@@ -27,6 +30,7 @@ impl KafkaEventWriterImpl {
         let mut producer = Producer::from_hosts(vec![host.to_owned()])
             .with_ack_timeout(Duration::from_secs(1))
             .with_required_acks(RequiredAcks::One)
+            .with_partitioner(SessionPartitioner {})
             .create()
             .unwrap();
         KafkaEventWriterImpl {
@@ -162,4 +166,19 @@ impl KafkaTopicManager {
 #[derive(Deserialize)]
 struct PartitionApiDTO {
     data: u32
+}
+
+pub struct SessionPartitioner {}
+
+impl Partitioner for SessionPartitioner {
+    fn partition(&mut self, topics: Topics, msg: &mut ProduceMessage) {
+        match msg.key {
+            Some(key) => {
+                let key = std::str::from_utf8(key).unwrap();
+                msg.partition = key.parse::<i32>().unwrap();
+                println!("Overriding message partition with key: {}", msg.partition);
+            },
+            None => panic!("Producing message without key not allowed!")
+        }
+    }
 }

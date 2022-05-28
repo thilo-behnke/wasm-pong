@@ -25,7 +25,7 @@ impl SessionManager {
         }
         let session_id = add_partition_res.unwrap();
         let session_hash = Hasher::hash(session_id);
-        let session = Session {id: session_hash};
+        let session = Session {id: session_id, hash: session_hash};
         println!("Successfully created session: {:?}", session);
         self.sessions.push(session.clone());
         Ok(session)
@@ -34,7 +34,8 @@ impl SessionManager {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Session {
-    id: String
+    id: u32,
+    hash: String
 }
 
 pub struct SessionWriter {
@@ -44,7 +45,7 @@ pub struct SessionWriter {
 
 impl SessionWriter {
     pub fn write_to_session(&mut self, topic: String, msg: String) -> Result<(), String> {
-        let event = Event {msg, key: self.session.id.clone(), topic};
+        let event = Event {msg, key: self.session.id.to_string(), topic};
         self.writer.write(event)
     }
 }
@@ -56,6 +57,6 @@ pub struct SessionReader {
 
 impl SessionReader {
     pub fn read_from_session(&mut self, topic: String) -> Result<Vec<Event>, String> {
-        self.reader.read_from_topic(topic.as_str(), self.session.id.as_str())
+        self.reader.read_from_topic(topic.as_str(), &self.session.id.to_string())
     }
 }

@@ -58,7 +58,7 @@ async fn handle_request(session_manager: &Arc<Mutex<SessionManager>>, event_writ
     match (req.method(), req.uri().path()) {
         (&Method::POST, "/create_session") => handle_session_create(session_manager, req).await,
         (&Method::POST, "/write") => handle_event_write(event_writer, req).await,
-        (&Method::GET, "/show") => handle_event_read(event_reader, req).await,
+        (&Method::POST, "/read") => handle_event_read(event_reader, req).await,
         _ => Ok(Response::new("unknown".into()))
     }
 }

@@ -45,8 +45,14 @@ impl SessionManager {
         Ok(session)
     }
 
-    pub fn get_session_consumer(&self, session: Session) -> EventReader {
-        EventReader::new(Box::new(KafkaSessionEventReaderImpl::new(&self.kafka_host, &session, &["move", "status", "input"])))
+    pub fn get_session_reader(&self, session: Session) -> SessionReader {
+        let event_reader = EventReader::new(Box::new(KafkaSessionEventReaderImpl::new(&self.kafka_host, &session, &["move", "status", "input"])));
+        SessionReader {reader: event_reader, session}
+    }
+
+    pub fn get_session_writer(&self, session: Session) -> SessionWriter {
+        let event_writer = EventWriter::new(Box::new(KafkaSessionEventWriterImpl::new(&self.kafka_host)));
+        SessionWriter {writer: event_writer, session}
     }
 }
 

@@ -96,7 +96,7 @@ pub mod pong_events {
                 PongEventType::GameObjUpdate(ref update) => {
                     Event {
                         topic: String::from("obj_update"),
-                        key: update.obj_id.clone().to_string(),
+                        key: Some(update.obj_id.clone().to_string()),
                         msg: serde_json::to_string(&event).unwrap()
                     }
                 }

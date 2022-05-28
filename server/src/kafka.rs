@@ -13,37 +13,80 @@ use pong::event::event::{Event, EventReaderImpl, EventWriter, EventWriterImpl};
 use crate::hash::Hasher;
 use crate::session::Session;
 
-pub struct KafkaEventWriterImpl {
+pub struct KafkaSessionEventWriterImpl {
     producer: Producer<SessionPartitioner>
 }
-impl KafkaEventWriterImpl {
-    pub fn default() -> KafkaEventWriterImpl {
-        KafkaEventWriterImpl::new("localhost:9093")
-    }
-
-    pub fn from(host: &str) -> KafkaEventWriterImpl {
-        KafkaEventWriterImpl::new(host)
-    }
-
-    pub fn new(host: &str) -> KafkaEventWriterImpl {
-        println!("Connecting producer to kafka host: {}", host);
+impl KafkaSessionEventWriterImpl {
+    pub fn session_writer(host: &str) -> KafkaSessionEventWriterImpl {
+        println!("Connecting session_writer producer to kafka host: {}", host);
         let mut producer = Producer::from_hosts(vec![host.to_owned()])
             .with_ack_timeout(Duration::from_secs(1))
             .with_required_acks(RequiredAcks::One)
             .with_partitioner(SessionPartitioner {})
             .create()
             .unwrap();
-        KafkaEventWriterImpl {
+        KafkaSessionEventWriterImpl {
             producer
         }
     }
 }
-impl EventWriterImpl for KafkaEventWriterImpl {
+
+pub struct KafkaDefaultEventWriterImpl {
+    producer: Producer
+}
+impl KafkaDefaultEventWriterImpl {
+    pub fn new(host: &str) -> KafkaDefaultEventWriterImpl {
+        println!("Connecting default producer to kafka host: {}", host);
+        let mut producer = Producer::from_hosts(vec![host.to_owned()])
+            .with_ack_timeout(Duration::from_secs(1))
+            .with_required_acks(RequiredAcks::One)
+            .create()
+            .unwrap();
+        KafkaDefaultEventWriterImpl {
+            producer
+        }
+    }
+}
+
+
+impl EventWriterImpl for KafkaSessionEventWriterImpl {
     fn write(&mut self, event: Event) -> Result<(), String> {
-        let record = Record::from_key_value(event.topic.as_str(), event.key.as_str(), event.msg.as_str());
-        match self.producer.send(&record) {
-            Ok(()) => Ok(()),
-            Err(e) => Err(format!("{}", e))
+        match event.key {
+            Some(key) => {
+                let record = Record::from_key_value(event.topic.as_str(), key, event.msg.as_str());
+                match self.producer.send(&record) {
+                    Ok(()) => Ok(()),
+                    Err(e) => Err(format!("{}", e))
+                }
+            },
+            None => {
+                let record = Record::from_value(event.topic.as_str(), event.msg.as_str());
+                match self.producer.send(&record) {
+                    Ok(()) => Ok(()),
+                    Err(e) => Err(format!("{}", e))
+                }
+            }
+        }
+    }
+}
+
+impl EventWriterImpl for KafkaDefaultEventWriterImpl {
+    fn write(&mut self, event: Event) -> Result<(), String> {
+        match event.key {
+            Some(key) => {
+                let record = Record::from_key_value(event.topic.as_str(), key, event.msg.as_str());
+                match self.producer.send(&record) {
+                    Ok(()) => Ok(()),
+                    Err(e) => Err(format!("{}", e))
+                }
+            },
+            None => {
+                let record = Record::from_value(event.topic.as_str(), event.msg.as_str());
+                match self.producer.send(&record) {
+                    Ok(()) => Ok(()),
+                    Err(e) => Err(format!("{}", e))
+                }
+            }
         }
     }
 }
@@ -99,7 +142,7 @@ impl KafkaEventReaderImpl {
             let partition = ms.partition();
             println!("querying topic={} partition={}", topic, partition);
             for m in ms.messages() {
-                let event = Event {topic: String::from(topic), key: std::str::from_utf8(m.key).unwrap().parse().unwrap(), msg: std::str::from_utf8(m.value).unwrap().parse().unwrap() };
+                let event = Event {topic: String::from(topic), key: Some(std::str::from_utf8(m.key).unwrap().parse().unwrap()), msg: std::str::from_utf8(m.value).unwrap().parse().unwrap() };
                 events.push(event);
             }
             self.consumer.consume_messageset(ms).unwrap();

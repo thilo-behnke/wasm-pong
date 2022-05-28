@@ -1,5 +1,6 @@
 
 pub mod event {
+    use std::fmt::Debug;
     use std::fs::OpenOptions;
     use std::io::Write;
     use serde::{Deserialize};
@@ -7,7 +8,7 @@ pub mod event {
     #[derive(Debug, Deserialize)]
     pub struct Event {
         pub topic: String,
-        pub key: String,
+        pub key: Option<String>,
         pub msg: String
     }
 

@@ -1,3 +1,5 @@
+extern crate core;
+
 use crate::http::HttpServer;
 
 pub mod http;

@@ -1,5 +1,8 @@
 use std::process::ExitStatus;
+use std::str::FromStr;
 use std::time::Duration;
+use hyper::{Client, Uri};
+use serde::{Deserialize};
 use kafka::client::KafkaClient;
 use kafka::client::metadata::Topic;
 use tokio::process::Command;
@@ -93,30 +96,47 @@ impl KafkaEventReaderImpl {
 }
 
 #[derive(Debug)]
-pub struct KafkaTopicManager {}
+pub struct KafkaTopicManager {
+    partition_management_endpoint: String
+}
 impl KafkaTopicManager {
-    pub async fn add_partition(&self) -> Result<u32, String> {
-        let topics = vec!["move", "status", "input"];
-        let mut client = KafkaClient::new(vec!["localhost:9092".to_owned()]);
-        client.load_metadata_all().unwrap();
-        let topic_metas: Vec<Topic> = client.topics().into_iter().filter(|t| topics.contains(&t.name())).collect();
-        if topic_metas.len() != 3 {
-            return Err(format!("Can't add_partition, unable to find matching topics: {:?}", topics));
-        }
-        let max_partition_count = topic_metas.into_iter().map(|t| t.partitions().len()).max().unwrap();
-        let next_partition = max_partition_count + 1;
-        println!("Will create next partition: {}", next_partition);
-        // TODO: What if creating one of the partitions fails?
-        for topic in topics {
-            let output = Command::new("/bin/bash").arg(format!("-c bin/kafka-topics.sh --bootstrap-server localhost:9092 --alter --topic {} --partitions {}", topic, next_partition)).output().await;
-            if let Err(e) = output {
-                return Err(format!("{}", e))
-            }
-            let output = output.unwrap();
-            if !output.status.success() {
-                return Err(format!("{:?}", std::str::from_utf8(&*output.stderr)))
-            }
-        }
-        Ok(next_partition as u32)
+
+    pub fn default() -> KafkaTopicManager {
+        KafkaTopicManager {partition_management_endpoint: "kafka:7243/add_partition".to_owned()}
     }
+
+    pub async fn add_partition(&self) -> Result<u32, String> {
+        let mut client = Client::new();
+        let res = client.get(Uri::from_str(&self.partition_management_endpoint).unwrap()).await;
+        if let Err(e) = res {
+            let error = format!("Failed to add partition: {:?}", e);
+            println!("{}", error);
+            return Err(error);
+        }
+        let bytes = hyper::body::to_bytes(res.unwrap()).await;
+        if let Err(e) = bytes {
+            let error = format!("Failed to read bytes from response: {:?}", e);
+            println!("{}", error);
+            return Err(error);
+        }
+        let bytes = bytes.unwrap().to_vec();
+        let res_str = std::str::from_utf8(&*bytes);
+        if let Err(e) = res_str {
+            let error = format!("Failed to deserialize bytes to string: {:?}", e);
+            println!("{}", error);
+            return Err(error);
+        }
+        let json = serde_json::from_str::<PartitionApiDTO>(res_str.unwrap());
+        if let Err(e) = json {
+            let error = format!("Failed to convert string to json: {:?}", e);
+            println!("{}", error);
+            return Err(error);
+        }
+        Ok(json.unwrap().data)
+    }
+}
+
+#[derive(Deserialize)]
+struct PartitionApiDTO {
+    data: u32
 }

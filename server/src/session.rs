@@ -12,7 +12,7 @@ impl SessionManager {
     pub fn new() -> SessionManager {
         SessionManager {
             sessions: vec![],
-            topic_manager: KafkaTopicManager {}
+            topic_manager: KafkaTopicManager::default()
         }
     }
 

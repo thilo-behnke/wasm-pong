@@ -93,7 +93,7 @@ async fn handle_event_read(event_reader: &Arc<Mutex<EventReader>>, req: Request<
     match (topic, key) {
         (Some(topic), Some(key)) => {
             let mut locked = event_reader.lock().await;
-            let events = locked.read();
+            let events = locked.read().unwrap();
             println!("read {} events", events.len());
             Ok(Response::new(format!("{:?}", events).into()))
         },

@@ -66,8 +66,8 @@ pub mod event {
     }
 
     pub trait EventReaderImpl : Send + Sync {
-        fn read(&mut self) -> Vec<Event>;
-        fn read_from_topic(&mut self, topic: &str, key: &str) -> Vec<Event>;
+        fn read(&mut self) -> Result<Vec<Event>, String>;
+        fn read_from_topic(&mut self, topic: &str, key: &str) -> Result<Vec<Event>, String>;
     }
 
     pub struct EventReader {
@@ -81,11 +81,11 @@ pub mod event {
             }
         }
 
-        pub fn read(&mut self) -> Vec<Event> {
+        pub fn read(&mut self) -> Result<Vec<Event>, String> {
             self.reader_impl.read()
         }
 
-        pub fn read_from_topic(&mut self, topic: &str, key: &str) -> Vec<Event> {
+        pub fn read_from_topic(&mut self, topic: &str, key: &str) -> Result<Vec<Event>, String> {
             self.reader_impl.read_from_topic(topic, key)
         }
     }

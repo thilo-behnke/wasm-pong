@@ -73,17 +73,17 @@ impl KafkaEventReaderImpl {
     }
 }
 impl EventReaderImpl for KafkaEventReaderImpl {
-    fn read(&mut self) -> Vec<Event> {
+    fn read(&mut self) -> Result<Vec<Event>, String> {
         self.consume(None, None)
     }
 
-    fn read_from_topic(&mut self, topic: &str, key: &str) -> Vec<Event> {
+    fn read_from_topic(&mut self, topic: &str, key: &str) -> Result<Vec<Event>, String> {
         self.consume(Some(topic), Some(key))
     }
 }
 
 impl KafkaEventReaderImpl {
-    fn consume(&mut self, topic: Option<&str>, key: Option<&str>) -> Vec<Event> {
+    fn consume(&mut self, topic: Option<&str>, key: Option<&str>) -> Result<Vec<Event>, String> {
         // TODO: How to best filter messages by key (= game session id?)
         // E.g. https://docs.rs/kafka/latest/kafka/producer/struct.DefaultPartitioner.html - is it possible to read from partition by retrieving the hash of the key?
         // Does it even make sense to hash the key if it already is a hash? Custom partitioner?
@@ -101,7 +101,7 @@ impl KafkaEventReaderImpl {
             self.consumer.consume_messageset(ms).unwrap();
         }
         self.consumer.commit_consumed().unwrap();
-        events
+        Ok(events)
     }
 }
 

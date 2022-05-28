@@ -1,6 +1,7 @@
 use crate::hash::Hasher;
 use crate::kafka::KafkaTopicManager;
 use serde::{Serialize};
+use pong::event::event::{Event, EventReader, EventWriter};
 
 #[derive(Debug)]
 pub struct SessionManager {
@@ -34,4 +35,27 @@ impl SessionManager {
 #[derive(Debug, Clone, Serialize)]
 pub struct Session {
     id: String
+}
+
+pub struct SessionWriter {
+    session: Session,
+    writer: EventWriter
+}
+
+impl SessionWriter {
+    pub fn write_to_session(&mut self, topic: String, msg: String) -> Result<(), String> {
+        let event = Event {msg, key: self.session.id.clone(), topic};
+        self.writer.write(event)
+    }
+}
+
+pub struct SessionReader {
+    session: Session,
+    reader: EventReader
+}
+
+impl SessionReader {
+    pub fn read_from_session(&mut self, topic: String) -> Result<Vec<Event>, String> {
+        self.reader.read_from_topic(topic.as_str(), self.session.id.as_str())
+    }
 }

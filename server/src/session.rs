@@ -1,19 +1,22 @@
 use kafka::producer::Producer;
 use crate::hash::Hasher;
-use crate::kafka::{KafkaDefaultEventWriterImpl, KafkaSessionEventWriterImpl, KafkaTopicManager};
+use crate::kafka::{KafkaDefaultEventWriterImpl, KafkaEventReaderImpl, KafkaSessionEventReaderImpl, KafkaSessionEventWriterImpl, KafkaTopicManager};
 use serde::{Serialize, Deserialize};
 use serde_json::json;
 use pong::event::event::{Event, EventReader, EventWriter};
 
 pub struct SessionManager {
+    kafka_host: String,
     sessions: Vec<Session>,
     session_producer: EventWriter,
     topic_manager: KafkaTopicManager
 }
 
+// TODO: On startup read the session events from kafka to restore the session id <-> hash mappings.
 impl SessionManager {
     pub fn new(kafka_host: &str) -> SessionManager {
         SessionManager {
+            kafka_host: kafka_host.to_owned(),
             sessions: vec![],
             topic_manager: KafkaTopicManager::from("localhost:7243"),
             session_producer: EventWriter::new(Box::new(KafkaDefaultEventWriterImpl::new(kafka_host)))
@@ -41,12 +44,16 @@ impl SessionManager {
         self.sessions.push(session.clone());
         Ok(session)
     }
+
+    pub fn get_session_consumer(&self, session: Session) -> EventReader {
+        EventReader::new(Box::new(KafkaSessionEventReaderImpl::new(&self.kafka_host, &session, &["move", "status", "input"])))
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Session {
-    id: u32,
-    hash: String
+    pub id: u16,
+    pub hash: String
 }
 
 pub struct SessionWriter {
@@ -67,8 +74,8 @@ pub struct SessionReader {
 }
 
 impl SessionReader {
-    pub fn read_from_session(&mut self, topic: String) -> Result<Vec<Event>, String> {
-        self.reader.read_from_topic(topic.as_str(), &self.session.id.to_string())
+    pub fn read_from_session(&mut self) -> Result<Vec<Event>, String> {
+        self.reader.read()
     }
 }
 

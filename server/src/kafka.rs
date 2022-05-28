@@ -118,19 +118,34 @@ impl KafkaEventReaderImpl {
             consumer
         }
     }
+
+    pub fn for_partitions(host: &str, partitions: &[i32], topics: &[&str]) -> KafkaEventReaderImpl {
+        println!("Connecting partition specific consumer to kafka host: {}", host);
+        let mut builder = Consumer::from_hosts(vec!(host.to_owned()));
+        for topic in topics.iter() {
+            builder = builder.with_topic_partitions(topic.parse().unwrap(), partitions);
+        }
+        builder = builder
+            .with_fallback_offset(FetchOffset::Earliest)
+            .with_group("group".to_owned())
+            .with_offset_storage(GroupOffsetStorage::Kafka);
+
+        let consumer = builder
+            .create()
+            .unwrap();
+        KafkaEventReaderImpl {
+            consumer
+        }
+    }
 }
 impl EventReaderImpl for KafkaEventReaderImpl {
     fn read(&mut self) -> Result<Vec<Event>, String> {
-        self.consume(None, None)
-    }
-
-    fn read_from_topic(&mut self, topic: &str, key: &str) -> Result<Vec<Event>, String> {
-        self.consume(Some(topic), Some(key))
+        self.consume()
     }
 }
 
 impl KafkaEventReaderImpl {
-    fn consume(&mut self, topic: Option<&str>, key: Option<&str>) -> Result<Vec<Event>, String> {
+    fn consume(&mut self) -> Result<Vec<Event>, String> {
         // TODO: How to best filter messages by key (= game session id?)
         // E.g. https://docs.rs/kafka/latest/kafka/producer/struct.DefaultPartitioner.html - is it possible to read from partition by retrieving the hash of the key?
         // Does it even make sense to hash the key if it already is a hash? Custom partitioner?
@@ -152,6 +167,26 @@ impl KafkaEventReaderImpl {
     }
 }
 
+pub struct KafkaSessionEventReaderImpl {
+    inner: KafkaEventReaderImpl
+}
+
+impl KafkaSessionEventReaderImpl {
+    pub fn new(host: &str, session: &Session, topics: &[&str]) -> KafkaSessionEventReaderImpl {
+        let partitions = [session.id as i32];
+        KafkaSessionEventReaderImpl {
+            inner: KafkaEventReaderImpl::for_partitions(host, &partitions, topics)
+        }
+    }
+}
+
+impl EventReaderImpl for KafkaSessionEventReaderImpl {
+    fn read(&mut self) -> Result<Vec<Event>, String> {
+        self.inner.read()
+    }
+}
+
+
 #[derive(Debug)]
 pub struct KafkaTopicManager {
     partition_management_endpoint: String
@@ -166,7 +201,7 @@ impl KafkaTopicManager {
         KafkaTopicManager {partition_management_endpoint: format!("http://{}/add_partition", topic_manager_host).to_owned()}
     }
 
-    pub async fn add_partition(&self) -> Result<u32, String> {
+    pub async fn add_partition(&self) -> Result<u16, String> {
         let mut client = Client::new();
         let request = Request::builder().method(Method::POST).uri(Uri::from_str(&self.partition_management_endpoint).unwrap()).body(Body::empty()).unwrap();
         let res = client.request(request).await;
@@ -208,7 +243,7 @@ impl KafkaTopicManager {
 
 #[derive(Deserialize)]
 struct PartitionApiDTO {
-    data: u32
+    data: u16
 }
 
 pub struct SessionPartitioner {}

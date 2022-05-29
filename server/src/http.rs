@@ -11,17 +11,17 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use pong::event::event::{Event, EventReader, EventWriter};
 use crate::kafka::{KafkaEventReaderImpl, KafkaSessionEventWriterImpl};
-use crate::session::SessionManager;
+use crate::session::{CachingSessionManager, SessionManager};
 use crate::utils::http_utils::{get_query_params, read_json_body};
 
 pub struct HttpServer {
     addr: [u8; 4],
     port: u16,
-    session_manager: Arc<Mutex<SessionManager>>
+    session_manager: Arc<Mutex<CachingSessionManager>>
 }
 impl HttpServer {
     pub fn new(addr: [u8; 4], port: u16, kafka_host: &str) -> HttpServer {
-        let session_manager = Arc::new(Mutex::new(SessionManager::new(kafka_host)));
+        let session_manager = Arc::new(Mutex::new(CachingSessionManager::new(kafka_host)));
         HttpServer {addr, port, session_manager}
     }
 
@@ -47,7 +47,7 @@ impl HttpServer {
     }
 }
 
-async fn handle_request(session_manager: &Arc<Mutex<SessionManager>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+async fn handle_request(session_manager: &Arc<Mutex<CachingSessionManager>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
     println!("req to {} with method {}", req.uri().path(), req.method());
     match (req.method(), req.uri().path()) {
         (&Method::POST, "/create_session") => handle_session_create(session_manager, req).await,
@@ -61,7 +61,7 @@ async fn handle_request(session_manager: &Arc<Mutex<SessionManager>>, req: Reque
 // - use session id from req body
 // - pass event write / read to session manager that holds references to session specific readers/writers
 
-async fn handle_session_create(session_manager: &Arc<Mutex<SessionManager>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+async fn handle_session_create(session_manager: &Arc<Mutex<CachingSessionManager>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
     let mut locked = session_manager.lock().await;
     let session_create_res = locked.create_session().await;
     if let Err(e) = session_create_res {
@@ -71,8 +71,8 @@ async fn handle_session_create(session_manager: &Arc<Mutex<SessionManager>>, req
     return Ok(Response::new(Body::from(serialized.to_string())))
 }
 
-async fn handle_event_write(session_manager: &Arc<Mutex<SessionManager>>, mut req: Request<Body>) -> Result<Response<Body>, Infallible> {
-    let locked = session_manager.lock().await;
+async fn handle_event_write(session_manager: &Arc<Mutex<CachingSessionManager>>, mut req: Request<Body>) -> Result<Response<Body>, Infallible> {
+    let mut locked = session_manager.lock().await;
     let event = read_json_body::<SessionEventWriteDTO>(&mut req).await;
     let writer = locked.get_session_writer(&event.session_id);
     if let Err(e) = writer {
@@ -83,8 +83,9 @@ async fn handle_event_write(session_manager: &Arc<Mutex<SessionManager>>, mut re
         return Ok(res);
     }
     let mut writer = writer.unwrap();
+    let mut writer_locked = writer.lock().await;
     println!("Writing session event to kafka: {:?}", event);
-    let write_res = writer.write_to_session(event.topic.clone(), event.msg.clone());
+    let write_res = writer_locked.write_to_session(event.topic.clone(), event.msg.clone());
     if let Err(e) = write_res {
         let err = format!("Failed to write event: {}", e);
         println!("{}", err);
@@ -96,8 +97,8 @@ async fn handle_event_write(session_manager: &Arc<Mutex<SessionManager>>, mut re
     build_success_res(&serde_json::to_string(&event).unwrap())
 }
 
-async fn handle_event_read(session_manager: &Arc<Mutex<SessionManager>>, mut req: Request<Body>) -> Result<Response<Body>, Infallible> {
-    let locked = session_manager.lock().await;
+async fn handle_event_read(session_manager: &Arc<Mutex<CachingSessionManager>>, mut req: Request<Body>) -> Result<Response<Body>, Infallible> {
+    let mut locked = session_manager.lock().await;
     let read_payload = read_json_body::<SessionReadDTO>(&mut req).await;
     let reader = locked.get_session_reader(&read_payload.session_id);
     if let Err(e) = reader {
@@ -108,8 +109,9 @@ async fn handle_event_read(session_manager: &Arc<Mutex<SessionManager>>, mut req
         return Ok(res);
     }
     let mut reader = reader.unwrap();
+    let mut reader_locked = reader.lock().await;
     println!("Reading session events from kafka for session: {}", read_payload.session_id);
-    let events = reader.read_from_session();
+    let events = reader_locked.read_from_session();
     if let Err(e) = events {
         let err = format!("Failed to read events: {}", e);
         println!("{}", err);

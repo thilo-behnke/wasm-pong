@@ -1,8 +1,12 @@
+use std::collections::HashMap;
+use std::rc::Rc;
+use std::sync::Arc;
 use kafka::producer::Producer;
 use crate::hash::Hasher;
 use crate::kafka::{KafkaDefaultEventWriterImpl, KafkaEventReaderImpl, KafkaSessionEventReaderImpl, KafkaSessionEventWriterImpl, KafkaTopicManager};
 use serde::{Serialize, Deserialize};
 use serde_json::json;
+use tokio::sync::Mutex;
 use pong::event::event::{Event, EventReader, EventWriter};
 
 pub struct SessionManager {
@@ -67,6 +71,56 @@ impl SessionManager {
 
     fn find_session(&self, session_id: &str) -> Option<Session> {
         self.sessions.iter().find(|s| session_id == s.hash).map(|s| s.clone())
+    }
+}
+
+pub struct CachingSessionManager {
+    inner: SessionManager,
+    reader_cache: HashMap<String, Arc<Mutex<SessionReader>>>,
+    writer_cache: HashMap<String, Arc<Mutex<SessionWriter>>>,
+}
+
+impl CachingSessionManager {
+    pub fn new(kafka_host: &str) -> CachingSessionManager {
+        CachingSessionManager {
+            inner: SessionManager::new(kafka_host),
+            reader_cache: HashMap::new(),
+            writer_cache: HashMap::new(),
+        }
+    }
+
+    pub async fn create_session(&mut self) -> Result<Session, String> {
+        self.inner.create_session().await
+    }
+
+    pub fn get_session_reader(&mut self, session_id: &str) -> Result<Arc<Mutex<SessionReader>>, String> {
+        let cached = self.reader_cache.get(session_id);
+        if let Some(reader) = cached {
+            println!("Reusing existing reader for session: {:?}", session_id);
+            return Ok(Arc::clone(reader));
+        }
+        let reader = self.inner.get_session_reader(session_id);
+        if let Err(e) = reader {
+            return Err(e);
+        }
+        let reader = Arc::new(Mutex::new(reader.unwrap()));
+        self.reader_cache.insert(session_id.to_string(), Arc::clone(&reader));
+        return Ok(Arc::clone(&reader));
+    }
+
+    pub fn get_session_writer(&mut self, session_id: &str) -> Result<Arc<Mutex<SessionWriter>>, String> {
+        let cached = self.writer_cache.get(session_id);
+        if let Some(writer) = cached {
+            println!("Reusing existing writer for session: {:?}", session_id);
+            return Ok(Arc::clone(writer));
+        }
+        let writer = self.inner.get_session_writer(session_id);
+        if let Err(e) = writer {
+            return Err(e);
+        }
+        let writer = Arc::new(Mutex::new(writer.unwrap()));
+        self.writer_cache.insert(session_id.to_string(), Arc::clone(&writer));
+        return Ok(Arc::clone(&writer));
     }
 }
 

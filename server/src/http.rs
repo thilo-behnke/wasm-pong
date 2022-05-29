@@ -50,6 +50,7 @@ impl HttpServer {
     }
 }
 
+// TODO: How to handle event writes/reads? This must be a websocket, but how to implement in hyper (if possible)?
 async fn handle_request(session_manager: &Arc<Mutex<CachingSessionManager>>, req: Request<Body>, addr: SocketAddr) -> Result<Response<Body>, Infallible> {
     println!("req to {} with method {}", req.uri().path(), req.method());
     match (req.method(), req.uri().path()) {

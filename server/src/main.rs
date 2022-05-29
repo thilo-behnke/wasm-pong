@@ -7,6 +7,7 @@ pub mod kafka;
 pub mod utils;
 mod hash;
 mod session;
+mod player;
 
 #[tokio::main]
 pub async fn main() {

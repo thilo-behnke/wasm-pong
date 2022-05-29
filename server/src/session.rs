@@ -5,9 +5,11 @@ use kafka::producer::Producer;
 use crate::hash::Hasher;
 use crate::kafka::{KafkaDefaultEventWriterImpl, KafkaEventReaderImpl, KafkaSessionEventReaderImpl, KafkaSessionEventWriterImpl, KafkaTopicManager};
 use serde::{Serialize, Deserialize};
+use serde::de::DeserializeOwned;
 use serde_json::json;
 use tokio::sync::Mutex;
 use pong::event::event::{Event, EventReader, EventWriter};
+use crate::player::Player;
 
 pub struct SessionManager {
     kafka_host: String,
@@ -27,7 +29,7 @@ impl SessionManager {
         }
     }
 
-    pub async fn create_session(&mut self) -> Result<Session, String> {
+    pub async fn create_session(&mut self, player: Player) -> Result<Session, String> {
         let add_partition_res = self.topic_manager.add_partition().await;
         if let Err(e) = add_partition_res {
             println!("Failed to create partition: {}", e);
@@ -35,9 +37,42 @@ impl SessionManager {
         }
         let session_id = add_partition_res.unwrap();
         let session_hash = Hasher::hash(session_id);
-        let session = Session {id: session_id, hash: session_hash};
+        let session = Session::new (session_id, session_hash, player.clone());
         println!("Successfully created session: {:?}", session);
-        let json_event = serde_json::to_string(&SessionEvent::created(session.clone())).unwrap();
+        self.write_to_producer(session_created(session.clone(), player.clone()));
+        self.sessions.push(session.clone());
+        Ok(session)
+    }
+
+    pub async fn join_session(&mut self, session_id: String, player: Player) -> Result<Session, String> {
+        let updated_session = {
+            let session = self.sessions.iter_mut().find(|s| s.hash == session_id);
+            if let None = session {
+                let error = format!("Can't join session that does not exist: {}", session_id);
+                return Err(error);
+            }
+            let mut session = session.unwrap();
+            if session.state != SessionState::PENDING {
+                let error = format!("Can't join session that is not PENDING: {}", session_id);
+                return Err(error);
+            }
+            if session.players.len() > 1 {
+                let error = format!("Can't join session with more than 1 player: {}", session_id);
+                return Err(error);
+            }
+            session.players.push(player.clone());
+            session.state = SessionState::RUNNING;
+            session.clone()
+        };
+        {
+            self.write_to_producer(session_joined(updated_session.clone(), player.clone()));
+        };
+        println!("sessions = {:?}", self.sessions);
+        Ok(updated_session.clone())
+    }
+
+    fn write_to_producer<T>(&mut self, session_event: T) -> Result<(), String> where T : Serialize {
+        let json_event = serde_json::to_string(&session_event).unwrap();
         let session_event_write = self.session_producer.write(Event {topic: "session".to_owned(), key: None, msg: json_event});
         if let Err(e) = session_event_write {
             let message = format!("Failed to write session create event to kafka: {:?}", e);
@@ -45,8 +80,7 @@ impl SessionManager {
             return Err(message.to_owned());
         }
         println!("Successfully produced session event.");
-        self.sessions.push(session.clone());
-        Ok(session)
+        return Ok(());
     }
 
     pub fn get_session_reader(&self, session_id: &str) -> Result<SessionReader, String> {
@@ -89,8 +123,12 @@ impl CachingSessionManager {
         }
     }
 
-    pub async fn create_session(&mut self) -> Result<Session, String> {
-        self.inner.create_session().await
+    pub async fn create_session(&mut self, player: Player) -> Result<Session, String> {
+        self.inner.create_session(player).await
+    }
+
+    pub async fn join_session(&mut self, session_id: String, player: Player) -> Result<Session, String> {
+        self.inner.join_session(session_id, player).await
     }
 
     pub fn get_session_reader(&mut self, session_id: &str) -> Result<Arc<Mutex<SessionReader>>, String> {
@@ -127,7 +165,39 @@ impl CachingSessionManager {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Session {
     pub id: u16,
-    pub hash: String
+    pub hash: String,
+    pub state: SessionState,
+    players: Vec<Player>
+}
+
+impl Session {
+    pub fn new(id: u16, hash: String, player: Player) -> Session {
+        Session {
+            players: vec!(player),
+            id,
+            hash,
+            state: SessionState::PENDING
+        }
+    }
+
+    pub fn can_be_joined(&self) -> bool {
+        self.players.len() == 1
+    }
+
+    pub fn join(&mut self, player: Player) -> bool {
+        if !self.can_be_joined() {
+            return false
+        }
+        self.players.push(player);
+        return true;
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub enum SessionState {
+    PENDING, // 1 player is missing
+    RUNNING, // game is playing
+    CLOSED // game is over
 }
 
 pub struct SessionWriter {
@@ -154,18 +224,48 @@ impl SessionReader {
 }
 
 #[derive(Deserialize, Serialize)]
-struct SessionEvent {
+struct SessionCreatedEvent {
     event_type: SessionEventType,
-    session: Session
+    session: Session,
+    player: Player
 }
 
-impl SessionEvent {
-    pub fn created(session: Session) -> SessionEvent {
-        SessionEvent {event_type: SessionEventType::CREATED, session}
+impl SessionCreatedEvent {
+    pub fn new(session: Session, player: Player) -> SessionCreatedEvent {
+        SessionCreatedEvent {
+            event_type: SessionEventType::CREATED,
+            session,
+            player
+        }
     }
 }
 
 #[derive(Deserialize, Serialize)]
+struct SessionJoinedEvent {
+    event_type: SessionEventType,
+    session: Session,
+    player: Player
+}
+
+impl SessionJoinedEvent {
+    pub fn new(session: Session, player: Player) -> SessionJoinedEvent {
+        SessionJoinedEvent {
+            event_type: SessionEventType::JOINED,
+            session,
+            player
+        }
+    }
+}
+
+fn session_created(session: Session, player: Player) -> SessionCreatedEvent {
+    SessionCreatedEvent::new(session, player)
+}
+
+fn session_joined(session: Session, player: Player) -> SessionJoinedEvent {
+    SessionJoinedEvent::new(session, player)
+}
+
+#[derive(Deserialize, Serialize)]
 enum SessionEventType {
-    CREATED
+    CREATED, JOINED
 }

@@ -1,6 +1,7 @@
 use std::convert::Infallible;
 use std::fs::read;
 use std::io::ErrorKind::NotFound;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use hyper::{Body, body, Method, Request, Response, Server, StatusCode};
 use hyper::server::conn::AddrStream;
@@ -11,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use pong::event::event::{Event, EventReader, EventWriter};
 use crate::kafka::{KafkaEventReaderImpl, KafkaSessionEventWriterImpl};
+use crate::player::Player;
 use crate::session::{CachingSessionManager, SessionManager};
 use crate::utils::http_utils::{get_query_params, read_json_body};
 
@@ -28,11 +30,12 @@ impl HttpServer {
     pub async fn run(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>  {
         let make_svc = make_service_fn(|socket: &AddrStream| {
             let mut session_manager = Arc::clone(&self.session_manager);
+            let addr = socket.remote_addr();
             async move {
                 Ok::<_, Infallible>(service_fn(move |req: Request<Body>| {
                     let mut session_manager = Arc::clone(&session_manager);
                     async move {
-                        return handle_request(&session_manager, req).await;
+                        return handle_request(&session_manager, req, addr).await;
                     }
                 }))
             }
@@ -47,27 +50,35 @@ impl HttpServer {
     }
 }
 
-async fn handle_request(session_manager: &Arc<Mutex<CachingSessionManager>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+async fn handle_request(session_manager: &Arc<Mutex<CachingSessionManager>>, req: Request<Body>, addr: SocketAddr) -> Result<Response<Body>, Infallible> {
     println!("req to {} with method {}", req.uri().path(), req.method());
     match (req.method(), req.uri().path()) {
-        (&Method::POST, "/create_session") => handle_session_create(session_manager, req).await,
+        (&Method::POST, "/create_session") => handle_session_create(session_manager, req, addr).await,
+        (&Method::POST, "/join_session") => handle_session_join(session_manager, req, addr).await,
         (&Method::POST, "/write") => handle_event_write(session_manager, req).await,
         (&Method::POST, "/read") => handle_event_read(session_manager, req).await,
         _ => Ok(Response::new("unknown".into()))
     }
 }
 
-// TODO: Both for write and read session:
-// - use session id from req body
-// - pass event write / read to session manager that holds references to session specific readers/writers
-
-async fn handle_session_create(session_manager: &Arc<Mutex<CachingSessionManager>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+async fn handle_session_create(session_manager: &Arc<Mutex<CachingSessionManager>>, req: Request<Body>, addr: SocketAddr) -> Result<Response<Body>, Infallible> {
     let mut locked = session_manager.lock().await;
-    let session_create_res = locked.create_session().await;
+    let session_create_res = locked.create_session(Player {id: addr.to_string()}).await;
     if let Err(e) = session_create_res {
         return Ok(Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::from(e)).unwrap());
     }
     let serialized = json!(session_create_res.unwrap());
+    return Ok(Response::new(Body::from(serialized.to_string())))
+}
+
+async fn handle_session_join(session_manager: &Arc<Mutex<CachingSessionManager>>, mut req: Request<Body>, addr: SocketAddr) -> Result<Response<Body>, Infallible> {
+    let mut locked = session_manager.lock().await;
+    let body = read_json_body::<SessionJoinDto>(&mut req).await;
+    let session_join_res = locked.join_session(body.session_id, Player {id: addr.to_string()}).await;
+    if let Err(e) = session_join_res {
+        return Ok(Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::from(e)).unwrap());
+    }
+    let serialized = json!(session_join_res.unwrap());
     return Ok(Response::new(Body::from(serialized.to_string())))
 }
 
@@ -145,5 +156,10 @@ struct SessionEventWriteDTO {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SessionReadDTO {
+    session_id: String
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct SessionJoinDto {
     session_id: String
 }

@@ -29,6 +29,10 @@ impl SessionManager {
         }
     }
 
+    pub fn get_session(&self, session_id: &str) -> Option<Session> {
+        self.sessions.iter().find(|s| s.hash == session_id).map_or_else(|| None, |s| Some(s.clone()))
+    }
+
     pub async fn create_session(&mut self, player: Player) -> Result<Session, String> {
         let add_partition_res = self.topic_manager.add_partition().await;
         if let Err(e) = add_partition_res {
@@ -121,6 +125,10 @@ impl CachingSessionManager {
             reader_cache: HashMap::new(),
             writer_cache: HashMap::new(),
         }
+    }
+
+    pub fn get_session(&self, session_id: &str) -> Option<Session> {
+        self.inner.get_session(session_id)
     }
 
     pub async fn create_session(&mut self, player: Player) -> Result<Session, String> {

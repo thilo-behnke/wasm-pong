@@ -53,12 +53,28 @@ impl HttpServer {
 async fn handle_request(session_manager: &Arc<Mutex<CachingSessionManager>>, req: Request<Body>, addr: SocketAddr) -> Result<Response<Body>, Infallible> {
     println!("req to {} with method {}", req.uri().path(), req.method());
     match (req.method(), req.uri().path()) {
+        (&Method::GET, "/session") => handle_get_session(session_manager, req).await,
         (&Method::POST, "/create_session") => handle_session_create(session_manager, req, addr).await,
         (&Method::POST, "/join_session") => handle_session_join(session_manager, req, addr).await,
         (&Method::POST, "/write") => handle_event_write(session_manager, req).await,
         (&Method::POST, "/read") => handle_event_read(session_manager, req).await,
         _ => Ok(Response::new("unknown".into()))
     }
+}
+
+async fn handle_get_session(session_manager: &Arc<Mutex<CachingSessionManager>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+    let mut locked = session_manager.lock().await;
+    let query_params = get_query_params(&req);
+    let session_id = query_params.get("session_id");
+    if let None = session_id {
+        return build_error_res("Please provide a valid session id", StatusCode::BAD_REQUEST);
+    }
+    let session_id = session_id.unwrap();
+    let session = locked.get_session(session_id);
+    if let None = session {
+        return build_error_res("Unable to find session for given id", StatusCode::NOT_FOUND);
+    }
+    return build_success_res(&serde_json::to_string(&session.unwrap()).unwrap());
 }
 
 async fn handle_session_create(session_manager: &Arc<Mutex<CachingSessionManager>>, req: Request<Body>, addr: SocketAddr) -> Result<Response<Body>, Infallible> {
@@ -138,6 +154,13 @@ async fn handle_event_read(session_manager: &Arc<Mutex<CachingSessionManager>>, 
 pub fn build_success_res(value: &str) -> Result<Response<Body>, Infallible> {
     let json = format!("{{\"data\": {}}}", value);
     return Ok(Response::new(Body::from(json)));
+}
+
+pub fn build_error_res(error: &str, status: StatusCode) -> Result<Response<Body>, Infallible> {
+    let json = format!("{{\"error\": \"{}\"}}", error);
+    let mut res = Response::new(Body::from(json));
+    *res.status_mut() = status;
+    return Ok(res);
 }
 
 async fn shutdown_signal() {

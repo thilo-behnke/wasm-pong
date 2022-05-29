@@ -1,6 +1,10 @@
 pub mod http_utils {
+    use std::borrow::BorrowMut;
     use std::collections::HashMap;
-    use hyper::{Body, Request};
+    use std::io::Read;
+    use hyper::{Body, body, Request};
+    use hyper::body::Buf;
+    use serde::Deserialize;
 
     pub fn get_query_params(req: &Request<Body>) -> HashMap<&str, &str> {
         let uri = req.uri();
@@ -12,6 +16,13 @@ pub mod http_utils {
                 query.split("&").map(|s| s.split_at(s.find("=").unwrap())).map(|(key, value)| (key, &value[1..])).collect()
             }
         }
+    }
+
+    pub async fn read_json_body<'a, T>(req: &'a mut Request<Body>) -> T where T : Deserialize<'a> {
+        let mut body = req.body_mut();
+        let bytes = body::to_bytes(body).await.unwrap();
+        let body_str = std::str::from_utf8(&*bytes).unwrap();
+        serde_json::from_str::<T>(body_str).unwrap()
     }
 }
 

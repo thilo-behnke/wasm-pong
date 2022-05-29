@@ -3,9 +3,9 @@ pub mod event {
     use std::fmt::Debug;
     use std::fs::OpenOptions;
     use std::io::Write;
-    use serde::{Deserialize};
+    use serde::{Deserialize, Serialize};
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Debug, Deserialize, Serialize)]
     pub struct Event {
         pub topic: String,
         pub key: Option<String>,

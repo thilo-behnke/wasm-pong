@@ -1,4 +1,5 @@
 use std::convert::Infallible;
+use std::fs::read;
 use std::io::ErrorKind::NotFound;
 use std::sync::Arc;
 use hyper::{Body, body, Method, Request, Response, Server, StatusCode};
@@ -6,40 +7,32 @@ use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
 use kafka::producer::Producer;
 use serde_json::json;
-use serde::{Deserialize};
+use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use pong::event::event::{Event, EventReader, EventWriter};
 use crate::kafka::{KafkaEventReaderImpl, KafkaSessionEventWriterImpl};
 use crate::session::SessionManager;
-use crate::utils::http_utils::get_query_params;
+use crate::utils::http_utils::{get_query_params, read_json_body};
 
 pub struct HttpServer {
     addr: [u8; 4],
     port: u16,
-    session_manager: Arc<Mutex<SessionManager>>,
-    event_writer: Arc<Mutex<EventWriter>>,
-    event_reader: Arc<Mutex<EventReader>>
+    session_manager: Arc<Mutex<SessionManager>>
 }
 impl HttpServer {
     pub fn new(addr: [u8; 4], port: u16, kafka_host: &str) -> HttpServer {
         let session_manager = Arc::new(Mutex::new(SessionManager::new(kafka_host)));
-        let event_writer = Arc::new(Mutex::new(EventWriter::new(Box::new(KafkaSessionEventWriterImpl::new(kafka_host)))));
-        let event_reader = Arc::new(Mutex::new(EventReader::new(Box::new(KafkaEventReaderImpl::from(kafka_host)))));
-        HttpServer {addr, port, session_manager, event_writer, event_reader}
+        HttpServer {addr, port, session_manager}
     }
 
     pub async fn run(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>  {
         let make_svc = make_service_fn(|socket: &AddrStream| {
             let mut session_manager = Arc::clone(&self.session_manager);
-            let mut event_writer = Arc::clone(&self.event_writer);
-            let mut event_reader = Arc::clone(&self.event_reader);
             async move {
                 Ok::<_, Infallible>(service_fn(move |req: Request<Body>| {
                     let mut session_manager = Arc::clone(&session_manager);
-                    let mut event_writer = Arc::clone(&event_writer);
-                    let mut event_reader = Arc::clone(&event_reader);
                     async move {
-                        return handle_request(&session_manager, &event_writer, &event_reader, req).await;
+                        return handle_request(&session_manager, req).await;
                     }
                 }))
             }
@@ -54,12 +47,12 @@ impl HttpServer {
     }
 }
 
-async fn handle_request(session_manager: &Arc<Mutex<SessionManager>>, event_writer: &Arc<Mutex<EventWriter>>, event_reader: &Arc<Mutex<EventReader>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+async fn handle_request(session_manager: &Arc<Mutex<SessionManager>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
     println!("req to {} with method {}", req.uri().path(), req.method());
     match (req.method(), req.uri().path()) {
         (&Method::POST, "/create_session") => handle_session_create(session_manager, req).await,
         (&Method::POST, "/write") => handle_event_write(session_manager, req).await,
-        (&Method::POST, "/read") => handle_event_read(event_reader, req).await,
+        (&Method::POST, "/read") => handle_event_read(session_manager, req).await,
         _ => Ok(Response::new("unknown".into()))
     }
 }
@@ -78,11 +71,9 @@ async fn handle_session_create(session_manager: &Arc<Mutex<SessionManager>>, req
     return Ok(Response::new(Body::from(serialized.to_string())))
 }
 
-async fn handle_event_write(session_manager: &Arc<Mutex<SessionManager>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+async fn handle_event_write(session_manager: &Arc<Mutex<SessionManager>>, mut req: Request<Body>) -> Result<Response<Body>, Infallible> {
     let locked = session_manager.lock().await;
-    let body = body::to_bytes(req.into_body()).await.unwrap();
-    let event_str = std::str::from_utf8(&*body).unwrap();
-    let event = serde_json::from_str::<SessionEventDTO>(event_str).unwrap();
+    let event = read_json_body::<SessionEventWriteDTO>(&mut req).await;
     let writer = locked.get_session_writer(&event.session_id);
     if let Err(e) = writer {
         let err = format!("Failed to write event: {}", e);
@@ -93,7 +84,7 @@ async fn handle_event_write(session_manager: &Arc<Mutex<SessionManager>>, req: R
     }
     let mut writer = writer.unwrap();
     println!("Writing session event to kafka: {:?}", event);
-    let write_res = writer.write_to_session(event.topic, event.msg);
+    let write_res = writer.write_to_session(event.topic.clone(), event.msg.clone());
     if let Err(e) = write_res {
         let err = format!("Failed to write event: {}", e);
         println!("{}", err);
@@ -102,23 +93,38 @@ async fn handle_event_write(session_manager: &Arc<Mutex<SessionManager>>, req: R
         return Ok(res);
     }
     println!("Successfully wrote event to kafka.");
-    return Ok(Response::new(Body::from("Event write successful")));
+    build_success_res(&serde_json::to_string(&event).unwrap())
 }
 
-async fn handle_event_read(event_reader: &Arc<Mutex<EventReader>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
-    let query_params = get_query_params(&req);
-    println!("{:?}", query_params);
-    let topic = query_params.get("topic");
-    let key = query_params.get("key");
-    match (topic, key) {
-        (Some(topic), Some(key)) => {
-            let mut locked = event_reader.lock().await;
-            let events = locked.read().unwrap();
-            println!("read {} events", events.len());
-            Ok(Response::new(format!("{:?}", events).into()))
-        },
-        _ => Ok(Response::new(format!("provide topic and key as query params").into())),
+async fn handle_event_read(session_manager: &Arc<Mutex<SessionManager>>, mut req: Request<Body>) -> Result<Response<Body>, Infallible> {
+    let locked = session_manager.lock().await;
+    let read_payload = read_json_body::<SessionReadDTO>(&mut req).await;
+    let reader = locked.get_session_reader(&read_payload.session_id);
+    if let Err(e) = reader {
+        let err = format!("Failed to read events: {}", e);
+        println!("{}", err);
+        let mut res = Response::new(Body::from(err));
+        *res.status_mut() = StatusCode::NOT_FOUND;
+        return Ok(res);
     }
+    let mut reader = reader.unwrap();
+    println!("Reading session events from kafka for session: {}", read_payload.session_id);
+    let events = reader.read_from_session();
+    if let Err(e) = events {
+        let err = format!("Failed to read events: {}", e);
+        println!("{}", err);
+        let mut res = Response::new(Body::from(err));
+        *res.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+        return Ok(res);
+    }
+    println!("Successfully read session events from kafka.");
+    let json = serde_json::to_string(&events.unwrap()).unwrap();
+    build_success_res(&json)
+}
+
+pub fn build_success_res(value: &str) -> Result<Response<Body>, Infallible> {
+    let json = format!("{{\"data\": {}}}", value);
+    return Ok(Response::new(Body::from(json)));
 }
 
 async fn shutdown_signal() {
@@ -128,9 +134,14 @@ async fn shutdown_signal() {
         .expect("failed to install CTRL+C signal handler");
 }
 
-#[derive(Debug, Deserialize)]
-struct SessionEventDTO {
+#[derive(Debug, Deserialize, Serialize)]
+struct SessionEventWriteDTO {
     session_id: String,
     topic: String,
     msg: String
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct SessionReadDTO {
+    session_id: String
 }

@@ -20,6 +20,7 @@ let actions = [];
 
 let networkSession = null;
 let websocket = null;
+let isHost = true;
 
 const renderLoop = () => {
     if (resetRequested) {
@@ -38,7 +39,7 @@ const renderLoop = () => {
 
 const tick = () => {
     field.tick(actions);
-    if (networkSession) {
+    if (networkSession && isHost) {
         sendEvents()
     }
     render();
@@ -46,7 +47,7 @@ const tick = () => {
 
 const sendEvents = () => {
     let objects = JSON.parse(field.objects());
-    let events = {session_id: networkSession.hash, events: objects.map(o => ({session_id: networkSession.hash, topic: 'move', msg: JSON.stringify(o)}))};
+    let events = {session_id: networkSession.hash, events: objects.map(o => ({session_id: networkSession.hash, topic: 'move', msg: JSON.stringify({...o, session_id: networkSession.hash})}))};
     websocket.send(JSON.stringify(events));
 }
 
@@ -62,6 +63,7 @@ const reset = () => {
     field = FieldWrapper.new();
 
     networkSession = null;
+    isHost = true;
     if (websocket) {
         websocket.close();
     }
@@ -81,6 +83,28 @@ window.WASM_PONG.createOnlineSession = () => {
         console.log("Created session:")
         console.log(session)
         networkSession = session
+        isHost = true;
+        const session_display_tag = document.getElementById("network_session");
+        session_display_tag.style.display = 'block';
+        session_display_tag.innerHTML = JSON.stringify(session)
+
+        websocket = new WebSocket("ws://localhost:4000")
+        websocket.onmessage = (event) => {
+            console.log(event)
+        }
+        waitForWebsocket(10, renderLoop)
+    }).catch(err => {
+        console.error(`Failed to create session: ${err}`)
+    })
+}
+
+window.WASM_PONG.joinOnlineSession = () => {
+    resetRequested = true;
+    const sessionId = document.getElementById('join-online-input').value
+    fetch(`http://localhost:4000/join_session`, {method: 'POST', body: JSON.stringify({session_id: sessionId})}).then(res => res.json()).then(({data: session}) => {
+        console.log("Joined session:")
+        console.log(session);
+        networkSession = session;
         const session_display_tag = document.getElementById("network_session");
         session_display_tag.style.display = 'block';
         session_display_tag.innerHTML = JSON.stringify(session)

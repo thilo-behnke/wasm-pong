@@ -160,10 +160,11 @@ async fn handle_session_join(session_manager: &Arc<Mutex<CachingSessionManager>>
     let body = read_json_body::<SessionJoinDto>(&mut req).await;
     let session_join_res = locked.join_session(body.session_id, Player {id: addr.to_string()}).await;
     if let Err(e) = session_join_res {
+        eprintln!("Failed to join session: {:?}", e);
         return Ok(Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::from(e)).unwrap());
     }
     let serialized = json!(session_join_res.unwrap());
-    return Ok(Response::new(Body::from(serialized.to_string())))
+    return build_success_res(&serialized.to_string());
 }
 
 async fn handle_event_write(session_manager: &Arc<Mutex<CachingSessionManager>>, mut req: Request<Body>) -> Result<Response<Body>, Infallible> {

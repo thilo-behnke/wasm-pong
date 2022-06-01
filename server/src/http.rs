@@ -6,11 +6,14 @@ use std::sync::Arc;
 use hyper::{Body, body, Method, Request, Response, Server, StatusCode};
 use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
+use hyper_tungstenite::HyperWebsocket;
+use hyper_tungstenite::tungstenite::{Error, Message};
 use kafka::producer::Producer;
 use serde_json::json;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use pong::event::event::{Event, EventReader, EventWriter};
+use futures::{sink::SinkExt, stream::StreamExt};
 use crate::kafka::{KafkaEventReaderImpl, KafkaSessionEventWriterImpl};
 use crate::player::Player;
 use crate::session::{CachingSessionManager, SessionManager};
@@ -35,6 +38,20 @@ impl HttpServer {
                 Ok::<_, Infallible>(service_fn(move |req: Request<Body>| {
                     let mut session_manager = Arc::clone(&session_manager);
                     async move {
+                        if hyper_tungstenite::is_upgrade_request(&req) {
+                            let (response, websocket) = hyper_tungstenite::upgrade(req, None).unwrap();
+
+                            // Spawn a task to handle the websocket connection.
+                            tokio::spawn(async move {
+                                if let Err(e) = serve_websocket(websocket).await {
+                                    eprintln!("Error in websocket connection: {}", e);
+                                }
+                            });
+
+                            // Return the response so the spawned future can continue.
+                            return Ok(response)
+                        }
+
                         return handle_request(&session_manager, req, addr).await;
                     }
                 }))
@@ -48,6 +65,41 @@ impl HttpServer {
         graceful.await?;
         Ok(())
     }
+}
+
+/// Handle a websocket connection.
+async fn serve_websocket(websocket: HyperWebsocket) -> Result<(), Error> {
+    let mut websocket = websocket.await?;
+    while let Some(message) = websocket.next().await {
+        match message? {
+            Message::Text(msg) => {
+                println!("Received text message: {}", msg);
+                websocket.send(Message::text("Thank you, come again.")).await?;
+            },
+            Message::Binary(msg) => {
+                println!("Received binary message: {:02X?}", msg);
+                websocket.send(Message::binary(b"Thank you, come again.".to_vec())).await?;
+            },
+            Message::Ping(msg) => {
+                // No need to send a reply: tungstenite takes care of this for you.
+                println!("Received ping message: {:02X?}", msg);
+            },
+            Message::Pong(msg) => {
+                println!("Received pong message: {:02X?}", msg);
+            }
+            Message::Close(msg) => {
+                // No need to send a reply: tungstenite takes care of this for you.
+                if let Some(msg) = &msg {
+                    println!("Received close message with code {} and message: {}", msg.code, msg.reason);
+                } else {
+                    println!("Received close message");
+                }
+            },
+            _ => {}
+        }
+    }
+
+    Ok(())
 }
 
 // TODO: How to handle event writes/reads? This must be a websocket, but how to implement in hyper (if possible)?

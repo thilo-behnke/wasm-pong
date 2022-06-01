@@ -3,7 +3,7 @@ mod utils;
 use std::cell::RefCell;
 use pong::collision::collision::{Collision, CollisionDetector};
 use pong::game_field::{Field, Input, InputType};
-use pong::game_object::game_object::GameObject;
+use pong::game_object::game_object::{DefaultGameObject, GameObject};
 use pong::geom::geom::Vector;
 use pong::geom::shape::ShapeType;
 use pong::utils::utils::{DefaultLoggerFactory, Logger};
@@ -12,6 +12,7 @@ use serde_json::json;
 use std::cmp::{max, min};
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
+use pong::pong::pong_events::DefaultPongEventWriter;
 
 extern crate serde_json;
 extern crate web_sys;
@@ -111,7 +112,7 @@ pub struct FieldWrapper {
 #[wasm_bindgen]
 impl FieldWrapper {
     pub fn new() -> FieldWrapper {
-        let field = Field::new(DefaultLoggerFactory::new(Box::new(WasmLogger::root())));
+        let field = Field::new(DefaultLoggerFactory::new(Box::new(WasmLogger::root())), DefaultPongEventWriter::new());
         FieldWrapper { field }
     }
 

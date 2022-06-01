@@ -214,8 +214,8 @@ pub struct SessionWriter {
 }
 
 impl SessionWriter {
-    pub fn write_to_session(&mut self, topic: String, msg: String) -> Result<(), String> {
-        let event = Event {msg, key: Some(self.session.id.to_string()), topic};
+    pub fn write_to_session(&mut self, topic: &str, msg: &str) -> Result<(), String> {
+        let event = Event {msg: msg.to_owned(), key: Some(self.session.id.to_string()), topic: topic.to_owned()};
         self.writer.write(event)
     }
 }

@@ -43,7 +43,7 @@ impl HttpServer {
 
                             // Spawn a task to handle the websocket connection.
                             tokio::spawn(async move {
-                                if let Err(e) = serve_websocket(websocket).await {
+                                if let Err(e) = serve_websocket(websocket, session_manager).await {
                                     eprintln!("Error in websocket connection: {}", e);
                                 }
                             });
@@ -68,25 +68,33 @@ impl HttpServer {
 }
 
 /// Handle a websocket connection.
-async fn serve_websocket(websocket: HyperWebsocket) -> Result<(), Error> {
+async fn serve_websocket(websocket: HyperWebsocket, session_manager: Arc<Mutex<CachingSessionManager>>) -> Result<(), Error> {
     let mut websocket = websocket.await?;
     while let Some(message) = websocket.next().await {
         match message? {
             Message::Text(msg) => {
-                println!("Received text message: {}", msg);
-                websocket.send(Message::text("Thank you, come again.")).await?;
+                let event = serde_json::from_str::<SessionEventWriteDTO>(&msg);
+                if let Err(e) = event {
+                    eprintln!("Failed to deserialize ws message to event {}: {}", msg, e);
+                    continue;
+                }
+                let event = event.unwrap();
+                let mut locked = session_manager.lock().await;
+                let writer = locked.get_session_writer(&event.session_id);
+                if let Err(e) = writer {
+                    eprintln!("Failed to retrieve session writer for session {}: {}", event.session_id, e);
+                    continue;
+                }
+                let writer = writer.unwrap();
+                let mut writer = writer.lock().await;
+                let write_res = writer.write_to_session(&event.topic, &event.msg);
+                if let Err(e) = write_res {
+                    eprintln!("Failed to write event {:?}: {}", event, e);
+                    websocket.send(Message::text("Failed to write message")).await?;
+                    continue;
+                }
+                websocket.send(Message::text("Message wrote successfully")).await?;
             },
-            Message::Binary(msg) => {
-                println!("Received binary message: {:02X?}", msg);
-                websocket.send(Message::binary(b"Thank you, come again.".to_vec())).await?;
-            },
-            Message::Ping(msg) => {
-                // No need to send a reply: tungstenite takes care of this for you.
-                println!("Received ping message: {:02X?}", msg);
-            },
-            Message::Pong(msg) => {
-                println!("Received pong message: {:02X?}", msg);
-            }
             Message::Close(msg) => {
                 // No need to send a reply: tungstenite takes care of this for you.
                 if let Some(msg) = &msg {
@@ -166,7 +174,7 @@ async fn handle_event_write(session_manager: &Arc<Mutex<CachingSessionManager>>,
     let mut writer = writer.unwrap();
     let mut writer_locked = writer.lock().await;
     println!("Writing session event to kafka: {:?}", event);
-    let write_res = writer_locked.write_to_session(event.topic.clone(), event.msg.clone());
+    let write_res = writer_locked.write_to_session(&event.topic, &event.msg);
     if let Err(e) = write_res {
         let err = format!("Failed to write event: {}", e);
         println!("{}", err);

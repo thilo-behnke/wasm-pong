@@ -1,10 +1,8 @@
-import * as wasm from "wasm-app";
 import { FieldWrapper, GameObject } from "wasm-app";
-import { memory } from "wasm-app/rust_wasm_bg";
 
 const GRID_COLOR = "#CCCCCC";
 
-const field = FieldWrapper.new();
+let field = FieldWrapper.new();
 const width = field.width();
 const height = field.height();
 
@@ -15,11 +13,20 @@ canvas.width = width
 const ctx = canvas.getContext('2d');
 
 let paused = false;
+let resetRequested = false;
 let debug = false;
 let keysDown = new Set();
 let actions = [];
 
+let networkSession = null;
+let websocket = null;
+
 const renderLoop = () => {
+    if (resetRequested) {
+        resetRequested = false;
+        reset();
+        return;
+    }
     actions = getInputActions();
     if (paused) {
         requestAnimationFrame(renderLoop);
@@ -39,9 +46,44 @@ const render = () => {
     drawObjects();
 }
 
+const reset = () => {
+    paused = false;
+    keysDown = new Set();
+    actions = [];
+    field = FieldWrapper.new();
+
+    networkSession = null;
+    if (websocket) {
+        websocket.close();
+    }
+    websocket = null;
+
+    const context = canvas.getContext('2d');
+    context.clearRect(0, 0, canvas.width, canvas.height);
+}
+
 window.WASM_PONG = {}
 window.WASM_PONG.width = width
 window.WASM_PONG.height = height
+
+window.WASM_PONG.createOnlineSession = () => {
+    resetRequested = true;
+    fetch("http://localhost:4000/create_session", {method: 'POST'}).then(res => res.json()).then(session => {
+        console.log("Created session:")
+        console.log(session)
+        networkSession = session
+        const session_display_tag = document.getElementById("network_session");
+        session_display_tag.style.display = 'block';
+        session_display_tag.innerHTML = JSON.stringify(session)
+
+        websocket = new WebSocket("ws://localhost:4000")
+        websocket.onmessage = (event) => {
+            console.log(event)
+        }
+    }).catch(err => {
+        console.error(`Failed to create session: ${err}`)
+    })
+}
 
 window.WASM_PONG.pauseGame = () => {
     paused = true;

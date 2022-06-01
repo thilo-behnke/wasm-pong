@@ -146,7 +146,7 @@ async fn handle_session_create(session_manager: &Arc<Mutex<CachingSessionManager
         return Ok(Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::from(e)).unwrap());
     }
     let serialized = json!(session_create_res.unwrap());
-    return Ok(Response::new(Body::from(serialized.to_string())))
+    return build_success_res(&serialized.to_string());
 }
 
 async fn handle_session_join(session_manager: &Arc<Mutex<CachingSessionManager>>, mut req: Request<Body>, addr: SocketAddr) -> Result<Response<Body>, Infallible> {
@@ -215,7 +215,11 @@ async fn handle_event_read(session_manager: &Arc<Mutex<CachingSessionManager>>, 
 
 pub fn build_success_res(value: &str) -> Result<Response<Body>, Infallible> {
     let json = format!("{{\"data\": {}}}", value);
-    return Ok(Response::new(Body::from(json)));
+    let mut res = Response::new(Body::from(json));
+    let headers = res.headers_mut();
+    headers.insert("Content-Type", "application/json".parse().unwrap());
+    headers.insert("Access-Control-Allow-Origin", "http://localhost:8080".parse().unwrap());
+    Ok(res)
 }
 
 pub fn build_error_res(error: &str, status: StatusCode) -> Result<Response<Body>, Infallible> {

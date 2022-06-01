@@ -20,7 +20,11 @@
   </head>
   <body>
     <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
-    <div>
+    <div id="network_session" style="display: none; margin-bottom: 20px"></div>
+    <div style="display: flex; align-items: center">
+      <button id="online-btn" onclick="WASM_PONG.createOnlineSession()">
+        Create Online Game
+      </button>
       <button id="pause-btn" onclick="WASM_PONG.pauseGame()">
         Pause
       </button>

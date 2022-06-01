@@ -1,0 +1,37 @@
+version: "3"
+services:
+  zookeeper:
+    container_name: pong_server_zookeeper
+    image: 'bitnami/zookeeper:latest'
+    ports:
+      - '2181:2181'
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+  kafka:
+    container_name: pong_server_kafka
+    build:
+      context: kafka
+    ports:
+      - '9092:9092'
+      - '9093:9093'
+      - '7243:7243'
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=DOCKER
+      - KAFKA_CFG_LISTENERS=LOCAL://:9093,DOCKER://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=LOCAL://127.0.0.1:9093,DOCKER://kafka:9092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=LOCAL:PLAINTEXT,DOCKER:PLAINTEXT
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    depends_on:
+      - zookeeper
+#  kaka-rest-proxy:
+#    container_name: pong_server_kafka_rest_proxy
+#    image: 'confluentinc/cp-kafka-rest'
+#    ports:
+#      - '8082:8082'
+#    environment:
+#      - KAFKA_REST_BOOTSTRAP_SERVERS=kafka:9092
+#    depends_on:
+#      - kafka
+

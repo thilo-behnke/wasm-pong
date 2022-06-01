@@ -70,49 +70,52 @@ impl HttpServer {
 /// Handle a websocket connection.
 async fn serve_websocket(websocket: HyperWebsocket, session_manager: Arc<Mutex<CachingSessionManager>>) -> Result<(), Error> {
     let mut websocket = websocket.await?;
-    while let Some(message) = websocket.next().await {
-        match message? {
-            Message::Text(msg) => {
-                let events = serde_json::from_str::<SessionEventListDTO>(&msg);
-                if let Err(e) = events {
-                    eprintln!("Failed to deserialize ws message to event {}: {}", msg, e);
-                    continue;
-                }
-                let event_wrapper = events.unwrap();
-                let mut locked = session_manager.lock().await;
-                let writer = locked.get_session_writer(&event_wrapper.session_id);
-                if let Err(e) = writer {
-                    eprintln!("Failed to retrieve session writer for session {}: {}", event_wrapper.session_id, e);
-                    continue;
-                }
-                let writer = writer.unwrap();
-                let mut writer = writer.lock().await;
-                let mut any_error = false;
-                for event in event_wrapper.events {
-                    let write_res = writer.write_to_session(&event.topic, &event.msg);
-                    if let Err(e) = write_res {
-                        any_error = true;
-                        eprintln!("Failed to write event {:?}: {}", event, e);
+    tokio::spawn(async move {
+        while let Some(message) = websocket.next().await {
+            match message.unwrap() {
+                Message::Text(msg) => {
+                    let events = serde_json::from_str::<SessionEventListDTO>(&msg);
+                    if let Err(e) = events {
+                        eprintln!("Failed to deserialize ws message to event {}: {}", msg, e);
+                        continue;
                     }
-                }
-                if any_error {
-                    websocket.send(Message::text("Failed to write message")).await?;
-                } else {
-                    websocket.send(Message::text("Messages wrote successfully")).await?;
-                }
-            },
-            Message::Close(msg) => {
-                // No need to send a reply: tungstenite takes care of this for you.
-                if let Some(msg) = &msg {
-                    println!("Received close message with code {} and message: {}", msg.code, msg.reason);
-                } else {
-                    println!("Received close message");
-                }
-            },
-            _ => {}
+                    let event_wrapper = events.unwrap();
+                    let mut locked = session_manager.lock().await;
+                    let writer = locked.get_session_writer(&event_wrapper.session_id);
+                    if let Err(e) = writer {
+                        eprintln!("Failed to retrieve session writer for session {}: {}", event_wrapper.session_id, e);
+                        continue;
+                    }
+                    let writer = writer.unwrap();
+                    let mut writer = writer.lock().await;
+                    let mut any_error = false;
+                    for event in event_wrapper.events {
+                        let write_res = writer.write_to_session(&event.topic, &event.msg);
+                        if let Err(e) = write_res {
+                            any_error = true;
+                            eprintln!("Failed to write event {:?}: {}", event, e);
+                        }
+                    }
+                    if any_error {
+                        eprintln!("Failed to write at least one message for session {}", event_wrapper.session_id);
+                    }
+                },
+                Message::Close(msg) => {
+                    // No need to send a reply: tungstenite takes care of this for you.
+                    if let Some(msg) = &msg {
+                        println!("Received close message with code {} and message: {}", msg.code, msg.reason);
+                    } else {
+                        println!("Received close message");
+                    }
+                },
+                _ => {}
+            }
         }
-    }
-
+    });
+    tokio::spawn(async move {
+        // TODO: Get session writer and query consumer
+        // TODO: Differentiate player1 (receives only input of player2 and session updates) vs player2 (receives all messages)
+    });
     Ok(())
 }
 

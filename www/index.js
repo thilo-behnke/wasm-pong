@@ -38,7 +38,16 @@ const renderLoop = () => {
 
 const tick = () => {
     field.tick(actions);
+    if (networkSession) {
+        sendEvents()
+    }
     render();
+}
+
+const sendEvents = () => {
+    let objects = JSON.parse(field.objects());
+    let events = {session_id: networkSession.hash, events: objects.map(o => ({session_id: networkSession.hash, topic: 'move', msg: JSON.stringify(o)}))};
+    websocket.send(JSON.stringify(events));
 }
 
 const render = () => {
@@ -68,7 +77,7 @@ window.WASM_PONG.height = height
 
 window.WASM_PONG.createOnlineSession = () => {
     resetRequested = true;
-    fetch("http://localhost:4000/create_session", {method: 'POST'}).then(res => res.json()).then(session => {
+    fetch("http://localhost:4000/create_session", {method: 'POST'}).then(res => res.json()).then(({data: session}) => {
         console.log("Created session:")
         console.log(session)
         networkSession = session
@@ -80,9 +89,24 @@ window.WASM_PONG.createOnlineSession = () => {
         websocket.onmessage = (event) => {
             console.log(event)
         }
+        waitForWebsocket(10, renderLoop)
     }).catch(err => {
         console.error(`Failed to create session: ${err}`)
     })
+}
+
+const waitForWebsocket = (retries, cb) => {
+    if (retries <= 0) {
+        console.error("Websocket not established successfully")
+        return
+    }
+    if(websocket.readyState !== 1) {
+        setTimeout(() => {
+            waitForWebsocket(retries - 1, cb)
+        }, 100)
+    } else {
+        cb()
+    }
 }
 
 window.WASM_PONG.pauseGame = () => {

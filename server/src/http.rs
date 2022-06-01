@@ -73,27 +73,33 @@ async fn serve_websocket(websocket: HyperWebsocket, session_manager: Arc<Mutex<C
     while let Some(message) = websocket.next().await {
         match message? {
             Message::Text(msg) => {
-                let event = serde_json::from_str::<SessionEventWriteDTO>(&msg);
-                if let Err(e) = event {
+                let events = serde_json::from_str::<SessionEventListDTO>(&msg);
+                if let Err(e) = events {
                     eprintln!("Failed to deserialize ws message to event {}: {}", msg, e);
                     continue;
                 }
-                let event = event.unwrap();
+                let event_wrapper = events.unwrap();
                 let mut locked = session_manager.lock().await;
-                let writer = locked.get_session_writer(&event.session_id);
+                let writer = locked.get_session_writer(&event_wrapper.session_id);
                 if let Err(e) = writer {
-                    eprintln!("Failed to retrieve session writer for session {}: {}", event.session_id, e);
+                    eprintln!("Failed to retrieve session writer for session {}: {}", event_wrapper.session_id, e);
                     continue;
                 }
                 let writer = writer.unwrap();
                 let mut writer = writer.lock().await;
-                let write_res = writer.write_to_session(&event.topic, &event.msg);
-                if let Err(e) = write_res {
-                    eprintln!("Failed to write event {:?}: {}", event, e);
-                    websocket.send(Message::text("Failed to write message")).await?;
-                    continue;
+                let mut any_error = false;
+                for event in event_wrapper.events {
+                    let write_res = writer.write_to_session(&event.topic, &event.msg);
+                    if let Err(e) = write_res {
+                        any_error = true;
+                        eprintln!("Failed to write event {:?}: {}", event, e);
+                    }
                 }
-                websocket.send(Message::text("Message wrote successfully")).await?;
+                if any_error {
+                    websocket.send(Message::text("Failed to write message")).await?;
+                } else {
+                    websocket.send(Message::text("Messages wrote successfully")).await?;
+                }
             },
             Message::Close(msg) => {
                 // No need to send a reply: tungstenite takes care of this for you.
@@ -234,6 +240,12 @@ async fn shutdown_signal() {
     tokio::signal::ctrl_c()
         .await
         .expect("failed to install CTRL+C signal handler");
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct SessionEventListDTO {
+    session_id: String,
+    events: Vec<SessionEventWriteDTO>
 }
 
 #[derive(Debug, Deserialize, Serialize)]

@@ -11,6 +11,7 @@ use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::rc::Rc;
+use crate::event::event::Event;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum InputType {

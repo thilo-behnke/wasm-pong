@@ -128,6 +128,26 @@ pub mod geom {
             let distance = self.x.powi(2) + self.y.powi(2);
             return (distance as f64).sqrt();
         }
+
+        pub fn multiply(&mut self, other: &Vector) {
+            self.x = self.x * other.x;
+            self.y = self.y * other.y;
+        }
+
+        pub fn max(&mut self, other: &Vector) {
+            self.x = self.x.max(other.x);
+            self.y = self.y.max(other.y);
+        }
+
+        pub fn min(&mut self, other: &Vector) {
+            self.x = self.x.min(other.x);
+            self.y = self.y.min(other.y);
+        }
+
+        pub fn abs(&mut self) {
+            self.x = self.x.abs();
+            self.y = self.y.abs();
+        }
     }
 
     impl PartialEq for Vector {

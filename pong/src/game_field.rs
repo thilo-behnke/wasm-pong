@@ -123,7 +123,7 @@ impl Field {
                 continue;
             }
             if *obj_mut.vel() == Vector::zero() {
-                obj_mut.vel_mut().add(&Vector::new(-200., 0.))
+                obj_mut.vel_mut().add(&Vector::new(-300., 0.))
             }
         }
 

@@ -32,7 +32,7 @@ let player = null;
 let websocket = null;
 let isHost = true;
 
-const renderLoop = (elapsed) => {
+const renderLoop = () => {
     if (resetRequested) {
         resetRequested = false;
         reset();
@@ -43,11 +43,11 @@ const renderLoop = (elapsed) => {
         requestAnimationFrame(renderLoop);
         return;
     }
-    tick(elapsed);
+    tick();
     requestAnimationFrame(renderLoop);
 }
 
-const tick = (elapsed) => {
+const tick = () => {
     const now = Date.now();
     let update;
     if (lastUpdate === 0) {

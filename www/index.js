@@ -64,9 +64,13 @@ const tick = () => {
         }
     }
 
-    field.tick(actions, update);
-    if (networkSession && isHost) {
-        sendEvents()
+    if (isHost) {
+        field.tick(actions, update);
+        if (networkSession && isHost) {
+            sendEvents()
+        }
+    } else {
+        // TODO: How to extract the correct messages from the last frame? Just e.g. the latest 10 move messages?
     }
     render();
 }
@@ -85,9 +89,16 @@ const render = () => {
 }
 
 const reset = () => {
+    framesLastSecond = [];
+    lastFpsUpdate = 0;
+    fps = 0;
+
+    lastUpdate = 0;
     paused = false;
+    debug = false;
     keysDown = new Set();
     actions = [];
+
     field = FieldWrapper.new();
 
     networkSession = null;
@@ -135,6 +146,7 @@ window.WASM_PONG.joinOnlineSession = () => {
         console.log(session);
         networkSession = session.session
         player = session.player
+        isHost = false
         const session_display_tag = document.getElementById("network_session");
         session_display_tag.style.display = 'block';
         session_display_tag.innerHTML = JSON.stringify(session)
@@ -174,6 +186,13 @@ window.WASM_PONG.resumeGame = () => {
     paused = false;
     document.getElementById("pause-btn").disabled = false;
     document.getElementById("resume-btn").disabled = true;
+    document.getElementById("tick-btn").disabled = true;
+}
+
+window.WASM_PONG.resetGame = () => {
+    reset()
+    document.getElementById("pause-btn").disabled = true;
+    document.getElementById("resume-btn").disabled = false;
     document.getElementById("tick-btn").disabled = true;
 }
 

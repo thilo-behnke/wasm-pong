@@ -157,7 +157,15 @@ async fn serve_websocket(websocket_session: WebSocketSession, websocket: HyperWe
         println!("Ready to read messages from kafka: {:?}", websocket_session_write_copy);
         loop {
             let messages = event_reader.read_from_session();
+            if let Err(_) = messages {
+                eprintln!("Failed to read messages from kafka for session: {:?}", websocket_session_write_copy);
+                continue;
+            }
             println!("Read messages for websocket_session {:?} from consumer: {:?}", websocket_session_write_copy, messages);
+            let messages = messages.unwrap();
+            let json = serde_json::to_string(&messages).unwrap();
+            let message = Message::from(json);
+            websocket_writer.send(message);
         }
     });
     Ok(())

@@ -12,9 +12,6 @@ canvas.width = width
 
 const ctx = canvas.getContext('2d');
 
-const FPS_GOAL = 60;
-const FRAME_THRESHOLD_MS = 1000 / FPS_GOAL;
-
 let framesLastSecond = [];
 let lastFpsUpdate = 0;
 const FPS_UPDATE_THRESHOLD = 1000;
@@ -55,10 +52,6 @@ const tick = () => {
         lastUpdate = now
     } else {
         const diff = now - lastUpdate;
-        if (diff <= FRAME_THRESHOLD_MS) {
-            render();
-            return;
-        }
         lastUpdate = now;
         update = diff / 1000;
     }

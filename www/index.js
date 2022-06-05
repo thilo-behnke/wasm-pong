@@ -12,7 +12,13 @@ canvas.width = width
 
 const ctx = canvas.getContext('2d');
 
-const FRAME_THRESHOLD_MS = 1000 / 144;
+const FPS_GOAL = 60;
+const FRAME_THRESHOLD_MS = 1000 / FPS_GOAL;
+
+let framesLastSecond = [];
+let lastFpsUpdate = 0;
+const FPS_UPDATE_THRESHOLD = 1000;
+let fps = 0;
 
 let lastUpdate = 0;
 let paused = false;
@@ -26,7 +32,7 @@ let player = null;
 let websocket = null;
 let isHost = true;
 
-const renderLoop = () => {
+const renderLoop = (elapsed) => {
     if (resetRequested) {
         resetRequested = false;
         reset();
@@ -37,11 +43,11 @@ const renderLoop = () => {
         requestAnimationFrame(renderLoop);
         return;
     }
-    tick();
+    tick(elapsed);
     requestAnimationFrame(renderLoop);
 }
 
-const tick = () => {
+const tick = (elapsed) => {
     const now = Date.now();
     let update;
     if (lastUpdate === 0) {
@@ -49,11 +55,20 @@ const tick = () => {
         lastUpdate = now
     } else {
         const diff = now - lastUpdate;
-        if (diff < FRAME_THRESHOLD_MS) {
+        if (diff <= FRAME_THRESHOLD_MS) {
+            render();
             return;
         }
         lastUpdate = now;
         update = diff / 1000;
+    }
+    if (debug) {
+        framesLastSecond.push(now)
+        framesLastSecond = framesLastSecond.filter(f => now - f <= 1000);
+        if (lastFpsUpdate === 0 || now - lastFpsUpdate >= FPS_UPDATE_THRESHOLD) {
+            lastFpsUpdate = now;
+            fps = framesLastSecond.length;
+        }
     }
 
     field.tick(actions, update);
@@ -213,6 +228,12 @@ const drawObjects = () => {
             ctx.fillText(`[x: ${obj.x}, y: ${obj_y}]`, obj.x + 10, obj_y)
         }
     })
+    if (debug) {
+        const fpsPosX = width - 50;
+        const fpsPosY = 20;
+        ctx.rect(fpsPosX, fpsPosY, 100, 20)
+        ctx.fillText(`fps: ${fps}`, fpsPosX, fpsPosY)
+    }
 }
 
 const drawLine = (ctx, from_x, from_y, to_x, to_y, color) => {

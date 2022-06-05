@@ -17,7 +17,7 @@ pub mod pong_collisions {
         // use vel of player obj
         if *player.vel() != Vector::zero() {
             let mut adjusted = player.vel().clone();
-            adjusted.normalize();
+            adjusted.scalar_multiplication(0.3);
             ball.vel_mut().add(&adjusted);
         }
         // move out of collision
@@ -36,6 +36,12 @@ pub mod pong_collisions {
         let mut ball = RefCell::borrow_mut(&ball);
         let bound = RefCell::borrow(&bound);
         ball.vel_mut().reflect(&bound.orientation());
+
+        // move out of collision
+        let mut b_to_a = ball.pos().clone();
+        b_to_a.sub(&bound.pos());
+        b_to_a.normalize();
+        ball.pos_mut().add(&b_to_a);
 
         ball.set_dirty(true);
     }

@@ -43,13 +43,20 @@ const renderLoop = () => {
 
 const tick = () => {
     const now = Date.now();
-    const diff = now - lastUpdate;
-    if (diff < FRAME_THRESHOLD_MS) {
-        return;
+    let update;
+    if (lastUpdate === 0) {
+        update = 0.01;
+        lastUpdate = now
+    } else {
+        const diff = now - lastUpdate;
+        if (diff < FRAME_THRESHOLD_MS) {
+            return;
+        }
+        lastUpdate = now;
+        update = diff / 1000;
     }
-    lastUpdate = now;
 
-    field.tick(actions, diff / 1000);
+    field.tick(actions, update);
     if (networkSession && isHost) {
         sendEvents()
     }

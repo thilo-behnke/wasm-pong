@@ -87,6 +87,20 @@ impl SessionManager {
         return Ok(());
     }
 
+    pub fn split(&self, session_id: &str, read_topics: &[&str]) -> Result<(SessionReader, SessionWriter), String> {
+        let reader = self.get_session_reader(session_id, read_topics);
+        if let Err(e) = reader {
+            println!("Failed to create session reader: {:?}", e);
+            return Err("Failed to create session reader".to_string())
+        }
+        let writer = self.get_session_writer(session_id);
+        if let Err(e) = writer {
+            println!("Failed to create session writer: {:?}", e);
+            return Err("Failed to create session writer".to_string())
+        }
+        return Ok((reader.unwrap(), writer.unwrap()))
+    }
+
     pub fn get_session_reader(&self, session_id: &str, topics: &[&str]) -> Result<SessionReader, String> {
         let session = self.find_session(&session_id);
         if let None = session {

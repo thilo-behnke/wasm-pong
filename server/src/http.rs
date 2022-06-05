@@ -99,19 +99,20 @@ impl HttpServer {
 /// Handle a websocket connection.
 async fn serve_websocket(websocket_session: WebSocketSession, websocket: HyperWebsocket, session_manager: Arc<Mutex<SessionManager>>) -> Result<(), Error> {
     let mut websocket = websocket.await?;
-    let (mut write, mut read) = websocket.split();
+    let (mut websocket_writer, mut websocket_reader) = websocket.split();
 
-    let session_manager_reader = Arc::clone(&session_manager);
+    let session_manager = session_manager.lock().await;
+    let event_handler_pair = session_manager.split(&websocket_session.session_id, websocket_session.connection_type.get_topics());
+    if let Err(_) = event_handler_pair {
+        eprintln!("Failed to create event reader/writer pair session: {:?}", websocket_session);
+        return Err(Error::ConnectionClosed) // TODO: Use proper error for this case to close the connection
+    }
+
+    let (mut event_reader, mut event_writer) = event_handler_pair.unwrap();
     let websocket_session_read_copy = websocket_session.clone();
     tokio::spawn(async move {
-        let mut locked = session_manager_reader.lock().await;
-        let writer = locked.get_session_writer(&websocket_session_read_copy.session_id);
-        if let Err(e) = writer {
-            eprintln!("Failed to retrieve session writer for session {}: {}", websocket_session_read_copy.session_id, e);
-            return
-        }
-        let mut writer = writer.unwrap();
-        while let Some(message) = read.next().await {
+        println!("Ready to read messages from ws connection: {:?}", websocket_session_read_copy);
+        while let Some(message) = websocket_reader.next().await {
             match message.unwrap() {
                 Message::Text(msg) => {
                     let events = serde_json::from_str::<SessionEventListDTO>(&msg);
@@ -127,7 +128,7 @@ async fn serve_websocket(websocket_session: WebSocketSession, websocket: HyperWe
                     let mut any_error = false;
                     let event_count = event_wrapper.events.len();
                     for event in event_wrapper.events {
-                        let write_res = writer.write_to_session(&event.topic, &event.msg);
+                        let write_res = event_writer.write_to_session(&event.topic, &event.msg);
                         if let Err(e) = write_res {
                             any_error = true;
                             eprintln!("Failed to write event {:?}: {}", event, e);
@@ -151,19 +152,11 @@ async fn serve_websocket(websocket_session: WebSocketSession, websocket: HyperWe
             }
         }
     });
-    let session_manager_writer = Arc::clone(&session_manager);
     let websocket_session_write_copy = websocket_session.clone();
     tokio::spawn(async move {
-        let consumer = {
-            let consumer_async = async {
-                let mut session_manager_writer_locked = session_manager_writer.lock().await;
-                return session_manager_writer_locked.get_session_reader(&websocket_session_write_copy.session_id, websocket_session_write_copy.connection_type.get_topics());
-            };
-            consumer_async.await
-        };
-        let mut consumer = consumer.unwrap();
+        println!("Ready to read messages from kafka: {:?}", websocket_session_write_copy);
         loop {
-            let messages = consumer.read_from_session();
+            let messages = event_reader.read_from_session();
             println!("Read messages for websocket_session {:?} from consumer: {:?}", websocket_session_write_copy, messages);
         }
     });

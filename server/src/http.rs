@@ -17,7 +17,7 @@ use pong::event::event::{Event, EventReader, EventWriter};
 use futures::{sink::SinkExt, stream::StreamExt};
 use crate::kafka::{KafkaEventReaderImpl, KafkaSessionEventWriterImpl};
 use crate::player::Player;
-use crate::session::{SessionManager};
+use crate::session::{Session, SessionManager};
 use crate::utils::http_utils::{get_query_params, read_json_body};
 
 pub struct HttpServer {
@@ -137,7 +137,7 @@ async fn serve_websocket(websocket_session: WebSocketSession, websocket: HyperWe
                     if any_error {
                         eprintln!("Failed to write at least one message for session {}", event_wrapper.session_id);
                     } else {
-                        println!("Successfully wrote {} messages to kafka for session {:?}", event_count, websocket_session_read_copy)
+                        // println!("Successfully wrote {} messages to kafka for session {:?}", event_count, websocket_session_read_copy)
                     }
                 },
                 Message::Close(msg) => {
@@ -161,11 +161,17 @@ async fn serve_websocket(websocket_session: WebSocketSession, websocket: HyperWe
                 eprintln!("Failed to read messages from kafka for session: {:?}", websocket_session_write_copy);
                 continue;
             }
-            println!("Read messages for websocket_session {:?} from consumer: {:?}", websocket_session_write_copy, messages);
+            // println!("Read messages for websocket_session {:?} from consumer: {:?}", websocket_session_write_copy, messages);
             let messages = messages.unwrap();
+            if messages.len() == 0 {
+                continue;
+            }
             let json = serde_json::to_string(&messages).unwrap();
             let message = Message::from(json);
-            websocket_writer.send(message);
+            let send_res = websocket_writer.send(message).await;
+            if let Err(e) = send_res {
+                eprintln!("Failed to send message to websocket for session {:?}: {:?}", websocket_session_write_copy, e)
+            }
         }
     });
     Ok(())
@@ -202,11 +208,13 @@ async fn handle_get_session(session_manager: &Arc<Mutex<SessionManager>>, req: R
 
 async fn handle_session_create(session_manager: &Arc<Mutex<SessionManager>>, req: Request<Body>, addr: SocketAddr) -> Result<Response<Body>, Infallible> {
     let mut locked = session_manager.lock().await;
-    let session_create_res = locked.create_session(Player {id: addr.to_string()}).await;
+    let player = Player {id: addr.to_string()};
+    let session_create_res = locked.create_session(player.clone()).await;
     if let Err(e) = session_create_res {
         return Ok(Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::from(e)).unwrap());
     }
-    let serialized = json!(session_create_res.unwrap());
+    let session_created = SessionCreatedDto {session: session_create_res.unwrap(), player};
+    let serialized = json!(session_created);
     return build_success_res(&serialized.to_string());
 }
 
@@ -214,14 +222,16 @@ async fn handle_session_join(session_manager: &Arc<Mutex<SessionManager>>, mut r
     println!("Received request to join session: {:?}", req);
     let mut locked = session_manager.lock().await;
     let body = read_json_body::<SessionJoinDto>(&mut req).await;
-    let session_join_res = locked.join_session(body.session_id, Player {id: addr.to_string()}).await;
+    let player = Player {id: addr.to_string()};
+    let session_join_res = locked.join_session(body.session_id, player.clone()).await;
     if let Err(e) = session_join_res {
         eprintln!("Failed to join session: {:?}", e);
         return Ok(Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::from(e)).unwrap());
     }
     let session = session_join_res.unwrap();
     println!("Successfully joined session: {:?}", session);
-    let serialized = json!(session);
+    let session_joined = SessionJoinedDto {session, player};
+    let serialized = json!(session_joined);
     return build_success_res(&serialized.to_string());
 }
 
@@ -320,6 +330,18 @@ struct SessionReadDTO {
 #[derive(Debug, Serialize, Deserialize)]
 struct SessionJoinDto {
     session_id: String
+}
+
+#[derive(Debug, Serialize)]
+struct SessionJoinedDto {
+    session: Session,
+    player: Player,
+}
+
+#[derive(Debug, Serialize)]
+struct SessionCreatedDto {
+    session: Session,
+    player: Player,
 }
 
 #[derive(Debug, Clone)]

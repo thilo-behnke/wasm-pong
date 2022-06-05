@@ -19,6 +19,7 @@ let keysDown = new Set();
 let actions = [];
 
 let networkSession = null;
+let player = null;
 let websocket = null;
 let isHost = true;
 
@@ -46,8 +47,10 @@ const tick = () => {
 }
 
 const sendEvents = () => {
-    let objects = JSON.parse(field.objects());
-    let events = {session_id: networkSession.hash, events: objects.map(o => ({session_id: networkSession.hash, topic: 'move', msg: JSON.stringify({...o, session_id: networkSession.hash})}))};
+    const objects = JSON.parse(field.objects());
+    const moveEvents = objects.map(o => ({session_id: networkSession.hash, topic: 'move', msg: JSON.stringify({...o, session_id: networkSession.hash})}));
+    const inputEvents = actions.map(({input}) => ({msg: JSON.stringify({input, player: player.id, session_id: networkSession.hash}), session_id: networkSession.hash, topic: 'input'}));
+    const events = {session_id: networkSession.hash, events: [...moveEvents, ...inputEvents]};
     websocket.send(JSON.stringify(events));
 }
 
@@ -82,13 +85,14 @@ window.WASM_PONG.createOnlineSession = () => {
     fetch("http://localhost:4000/create_session", {method: 'POST'}).then(res => res.json()).then(({data: session}) => {
         console.log("Created session:")
         console.log(session)
-        networkSession = session
+        networkSession = session.session
+        player = session.player
         isHost = true;
         const session_display_tag = document.getElementById("network_session");
         session_display_tag.style.display = 'block';
         session_display_tag.innerHTML = JSON.stringify(session)
 
-        websocket = new WebSocket(`ws://localhost:4000/ws?session_id=${session.hash}&connection_type=host`)
+        websocket = new WebSocket(`ws://localhost:4000/ws?session_id=${session.session.hash}&connection_type=host`)
         websocket.onmessage = (event) => {
             console.log(event)
         }
@@ -104,12 +108,13 @@ window.WASM_PONG.joinOnlineSession = () => {
     fetch(`http://localhost:4000/join_session`, {method: 'POST', body: JSON.stringify({session_id: sessionId})}).then(res => res.json()).then(({data: session}) => {
         console.log("Joined session:")
         console.log(session);
-        networkSession = session;
+        networkSession = session.session
+        player = session.player
         const session_display_tag = document.getElementById("network_session");
         session_display_tag.style.display = 'block';
         session_display_tag.innerHTML = JSON.stringify(session)
 
-        websocket = new WebSocket(`ws://localhost:4000/ws?session_id=${session.hash}&connection_type=peer`)
+        websocket = new WebSocket(`ws://localhost:4000/ws?session_id=${session.session.hash}&connection_type=peer`)
         websocket.onmessage = (event) => {
             console.log(event)
         }

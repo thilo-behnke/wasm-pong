@@ -87,13 +87,18 @@ impl SessionManager {
         return Ok(());
     }
 
-    pub fn get_session_reader(&self, session_id: &str) -> Result<SessionReader, String> {
+    pub fn get_session_reader(&self, session_id: &str, topics: &[&str]) -> Result<SessionReader, String> {
         let session = self.find_session(&session_id);
         if let None = session {
             return Err(format!("Unable to find session with hash {}", session_id))
         }
         let session = session.unwrap();
-        let event_reader = EventReader::new(Box::new(KafkaSessionEventReaderImpl::new(&self.kafka_host, &session, &["move", "status", "input"])));
+        let kafka_reader = KafkaSessionEventReaderImpl::new(&self.kafka_host, &session, topics);
+        if let Err(_) = kafka_reader {
+            return Err("Unable to create kafka reader.".to_string())
+        }
+        let kafka_reader = kafka_reader.unwrap();
+        let event_reader = EventReader::new(Box::new(kafka_reader));
         Ok(SessionReader {reader: event_reader, session})
     }
 
@@ -145,7 +150,7 @@ impl CachingSessionManager {
             println!("Reusing existing reader for session: {:?}", session_id);
             return Ok(Arc::clone(reader));
         }
-        let reader = self.inner.get_session_reader(session_id);
+        let reader = self.inner.get_session_reader(session_id, &["move", "input", "status", "session"]);
         if let Err(e) = reader {
             return Err(e);
         }

@@ -88,7 +88,7 @@ window.WASM_PONG.createOnlineSession = () => {
         session_display_tag.style.display = 'block';
         session_display_tag.innerHTML = JSON.stringify(session)
 
-        websocket = new WebSocket("ws://localhost:4000")
+        websocket = new WebSocket(`ws://localhost:4000/ws?session_id=${session.hash}&connection_type=host`)
         websocket.onmessage = (event) => {
             console.log(event)
         }
@@ -109,7 +109,7 @@ window.WASM_PONG.joinOnlineSession = () => {
         session_display_tag.style.display = 'block';
         session_display_tag.innerHTML = JSON.stringify(session)
 
-        websocket = new WebSocket("ws://localhost:4000")
+        websocket = new WebSocket(`ws://localhost:4000/ws?session_id=${session.hash}&connection_type=peer`)
         websocket.onmessage = (event) => {
             console.log(event)
         }

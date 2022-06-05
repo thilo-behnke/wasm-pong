@@ -119,8 +119,8 @@ impl KafkaEventReaderImpl {
         }
     }
 
-    pub fn for_partitions(host: &str, partitions: &[i32], topics: &[&str]) -> KafkaEventReaderImpl {
-        println!("Connecting partition specific consumer to kafka host: {}", host);
+    pub fn for_partitions(host: &str, partitions: &[i32], topics: &[&str]) -> Result<KafkaEventReaderImpl, String> {
+        println!("Connecting partition specific consumer to kafka host {} with topics {:?} / partitions {:?}", host, topics, partitions);
         let mut builder = Consumer::from_hosts(vec!(host.to_owned()));
         for topic in topics.iter() {
             builder = builder.with_topic_partitions(topic.parse().unwrap(), partitions);
@@ -131,11 +131,15 @@ impl KafkaEventReaderImpl {
             .with_offset_storage(GroupOffsetStorage::Kafka);
 
         let consumer = builder
-            .create()
-            .unwrap();
-        KafkaEventReaderImpl {
-            consumer
+            .create();
+        if let Err(e) = consumer {
+            eprintln!("Failed to connect consumer: {:?}", e);
+            return Err("Failed to connect consumer".to_string());
         }
+        let consumer = consumer.unwrap();
+        Ok(KafkaEventReaderImpl {
+            consumer
+        })
     }
 }
 impl EventReaderImpl for KafkaEventReaderImpl {
@@ -172,11 +176,16 @@ pub struct KafkaSessionEventReaderImpl {
 }
 
 impl KafkaSessionEventReaderImpl {
-    pub fn new(host: &str, session: &Session, topics: &[&str]) -> KafkaSessionEventReaderImpl {
+    pub fn new(host: &str, session: &Session, topics: &[&str]) -> Result<KafkaSessionEventReaderImpl, String> {
         let partitions = [session.id as i32];
-        KafkaSessionEventReaderImpl {
-            inner: KafkaEventReaderImpl::for_partitions(host, &partitions, topics)
+        let reader = KafkaEventReaderImpl::for_partitions(host, &partitions, topics);
+        if let Err(e) = reader {
+            return Err("Failed to create kafka session event reader".to_string());
         }
+        let reader = reader.unwrap();
+        Ok(KafkaSessionEventReaderImpl {
+            inner: reader
+        })
     }
 }
 
@@ -254,7 +263,7 @@ impl Partitioner for SessionPartitioner {
             Some(key) => {
                 let key = std::str::from_utf8(key).unwrap();
                 msg.partition = key.parse::<i32>().unwrap();
-                println!("Overriding message partition with key: {}", msg.partition);
+                // println!("Overriding message partition with key: {}", msg.partition);
             },
             None => panic!("Producing message without key not allowed!")
         }

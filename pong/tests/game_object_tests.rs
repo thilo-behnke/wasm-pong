@@ -5,7 +5,8 @@ use pong::geom::shape::Shape;
 use rstest::rstest;
 
 #[rstest]
-#[case(Vector::new(100., 100.), Vector::new(-1., 1.), Vector::new(99., 101.))]
+#[case(Vector::new(100., 100.), Vector::new(-1., 1.), Vector::new(99.9, 100.1))]
+#[case(Vector::new(300., 400.), Vector::new(-5., 0.), Vector::new(299.5, 400.))]
 pub fn should_update_pos(
     #[case] start_pos: Vector,
     #[case] vel: Vector,
@@ -22,6 +23,6 @@ pub fn should_update_pos(
         ))),
         Box::new(DefaultPhysicsComp::new(vel, false)),
     );
-    obj.update_pos();
+    obj.update_pos(0.1);
     assert_eq!(*obj.pos(), expected_pos);
 }

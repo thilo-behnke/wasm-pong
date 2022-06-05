@@ -116,14 +116,14 @@ impl Field {
         self.objs.push(Rc::new(RefCell::new(ball)));
     }
 
-    pub fn tick(&mut self, inputs: Vec<Input>) {
+    pub fn tick(&mut self, inputs: Vec<Input>, ms_diff: f64) {
         for obj in self.objs.iter() {
             let mut obj_mut = RefCell::borrow_mut(obj);
             if obj_mut.obj_type() != "ball" {
                 continue;
             }
             if *obj_mut.vel() == Vector::zero() {
-                obj_mut.vel_mut().add(&Vector::new(-2.0, 0.))
+                obj_mut.vel_mut().add(&Vector::new(-5.0, 0.))
             }
         }
 
@@ -141,11 +141,11 @@ impl Field {
                 let input = input_opt.unwrap();
                 match input.input {
                     InputType::UP => {
-                        let updated_vel_y = (obj_mut.vel().y + 1.).min(5.);
+                        let updated_vel_y = (obj_mut.vel().y + 30.).min(1000.);
                         obj_mut.vel_mut().y = updated_vel_y;
                     }
                     InputType::DOWN => {
-                        let updated_vel_y = (obj_mut.vel().y - 1.).max(-5.);
+                        let updated_vel_y = (obj_mut.vel().y - 30.).max(-1000.);
                         obj_mut.vel_mut().y = updated_vel_y;
                     }
                 };
@@ -155,7 +155,7 @@ impl Field {
         {
             for obj in self.objs.iter() {
                 let mut obj_mut = RefCell::borrow_mut(obj);
-                obj_mut.update_pos();
+                obj_mut.update_pos(ms_diff);
             }
         }
 

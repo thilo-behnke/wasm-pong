@@ -106,7 +106,7 @@ impl GameObject for MockGameObject {
         todo!()
     }
 
-    fn update_pos(&mut self) {
+    fn update_pos(&mut self, ms_diff: f64) {
         todo!()
     }
 

@@ -12,6 +12,9 @@ canvas.width = width
 
 const ctx = canvas.getContext('2d');
 
+const FRAME_THRESHOLD_MS = 1000 / 144;
+
+let lastUpdate = 0;
 let paused = false;
 let resetRequested = false;
 let debug = false;
@@ -39,7 +42,14 @@ const renderLoop = () => {
 }
 
 const tick = () => {
-    field.tick(actions);
+    const now = Date.now();
+    const diff = now - lastUpdate;
+    if (diff < FRAME_THRESHOLD_MS) {
+        return;
+    }
+    lastUpdate = now;
+
+    field.tick(actions, diff / 1000);
     if (networkSession && isHost) {
         sendEvents()
     }

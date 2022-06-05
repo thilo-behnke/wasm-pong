@@ -124,13 +124,14 @@ impl FieldWrapper {
         self.field.height
     }
 
-    pub fn tick(&mut self, inputs_js: &JsValue) {
+    pub fn tick(&mut self, inputs_js: &JsValue, ms_diff_js: JsValue) {
         let input_dtos: Vec<InputDTO> = inputs_js.into_serde().unwrap();
         let inputs = input_dtos
             .into_iter()
             .map(|i| i.to_input())
             .collect::<Vec<Input>>();
-        self.field.tick(inputs);
+        let ms_diff = ms_diff_js.as_f64();
+        self.field.tick(inputs, ms_diff.unwrap());
         // log!("{:?}", self.field.collisions);
     }
 

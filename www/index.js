@@ -38,7 +38,15 @@ const renderLoop = () => {
         reset();
         return;
     }
-    actions = getInputActions();
+    actions = getInputActions().filter(it => {
+        if (!networkSession) {
+            return it
+        }
+        if (networkSession && isHost) {
+            return it.player === 1;
+        }
+        return it.player === 2;
+    });
     if (paused) {
         requestAnimationFrame(renderLoop);
         return;
@@ -72,7 +80,14 @@ const tick = () => {
         field.tick(actions, update);
         objects = JSON.parse(field.objects());
     } else if (isHost) {
-        field.tick(actions, update);
+        // Would mean that input events would get lost if latency is higher than 100 ms.
+        const peerInputEvents = events.filter(e => e.topic === "input").filter(it => it.msg.player !== player.id)
+        const lastPeerInputEvents = peerInputEvents.length ? [peerInputEvents[peerInputEvents - 1]] : []
+        const allActions = [
+            ...actions, ...lastPeerInputEvents
+        ];
+        console.warn({allActions})
+        field.tick(allActions, update);
         objects = JSON.parse(field.objects());
         sendEvents([...getInputEvents(), ...getMoveEvents(objects)])
     } else {
@@ -87,22 +102,29 @@ const tick = () => {
         const latestMoveEvents = Object.entries(moveEventsByObj)
             .map(([_, moveEvents]) => moveEvents[moveEvents.length - 1]);
         objects = latestMoveEvents.map(({msg}) => msg);
-        sendEvents(getInputEvents())
+        // sendEvents(getInputEvents())
     }
     render(objects);
 }
 
 const getMoveEvents = objects => {
-    return objects.map(o => ({session_id: networkSession.hash, topic: 'move', msg: JSON.stringify({...o, session_id: networkSession.hash})}));
+    return objects.map(o => ({session_id: networkSession.hash, topic: 'move', msg: JSON.stringify({...o, session_id: networkSession.hash, ts: Date.now()})}));
 }
 
 const getInputEvents = () => {
-    return actions.map(({input}) => ({msg: JSON.stringify({input, player: player.id, session_id: networkSession.hash}), session_id: networkSession.hash, topic: 'input'}));
+    const inputEvents = actions.map(({input}) => ({msg: JSON.stringify({inputs: [input], player: player.id, session_id: networkSession.hash, ts: Date.now()}), session_id: networkSession.hash, topic: 'input'}));
+    if (inputEvents.length) {
+        return inputEvents;
+    }
+    const noInputs = {inputs: [], obj_id: isHost ? 0 : 1, player: isHost ? 1 : 2 }
+    return [{msg: JSON.stringify({input: noInputs, player: player.id, session_id: networkSession.hash, ts: Date.now()}), session_id: networkSession.hash, topic: 'input'}];
 }
 
 const sendEvents = events => {
     const eventWrapper = {session_id: networkSession.hash, events};
-    websocket.send(JSON.stringify(eventWrapper));
+    if (eventWrapper.events.length) {
+        websocket.send(JSON.stringify(eventWrapper));
+    }
 }
 
 const render = objects => {
@@ -316,13 +338,13 @@ const getInputActions = () => {
     return [...keysDown].map(key => {
         switch(key) {
             case 'KeyW':
-                return {input: 'UP', obj_id: 0}
+                return {input: 'UP', obj_id: 0, player: 1}
             case 'KeyS':
-                return {input: 'DOWN', obj_id: 0}
+                return {input: 'DOWN', obj_id: 0, player: 1}
             case 'ArrowUp':
-                return {input: 'UP', obj_id: 1}
+                return {input: 'UP', obj_id: 1, player: 2}
             case 'ArrowDown':
-                return {input: 'DOWN', obj_id: 1}
+                return {input: 'DOWN', obj_id: 1, player: 2}
             default:
                 return null
         }

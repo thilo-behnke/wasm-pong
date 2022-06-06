@@ -93,6 +93,7 @@ impl InputTypeDTO {
 pub struct InputDTO {
     pub input: InputTypeDTO,
     pub obj_id: u16,
+    pub player: u16
 }
 
 impl InputDTO {
@@ -100,6 +101,7 @@ impl InputDTO {
         return Input {
             input: self.input.to_input_type(),
             obj_id: self.obj_id,
+            player: self.player
         };
     }
 }

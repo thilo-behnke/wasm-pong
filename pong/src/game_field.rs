@@ -19,10 +19,11 @@ pub enum InputType {
     DOWN,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Input {
     pub input: InputType,
     pub obj_id: u16,
+    pub player: u16
 }
 
 pub struct Field {

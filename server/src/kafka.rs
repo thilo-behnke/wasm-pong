@@ -157,13 +157,16 @@ impl KafkaEventReaderImpl {
         let message_sets: Vec<MessageSet<'_>> = polled.iter().collect();
         let mut events = vec![];
         for ms in message_sets {
+            let mut topic_event_count = 0;
             let topic = ms.topic();
             let partition = ms.partition();
             println!("querying topic={} partition={}", topic, partition);
             for m in ms.messages() {
                 let event = Event {topic: String::from(topic), key: Some(std::str::from_utf8(m.key).unwrap().parse().unwrap()), msg: std::str::from_utf8(m.value).unwrap().parse().unwrap() };
+                topic_event_count += 1;
                 events.push(event);
             }
+            println!("returned {:?} events for topic={} partition={}", topic_event_count, topic, partition);
             self.consumer.consume_messageset(ms).unwrap();
         }
         self.consumer.commit_consumed().unwrap();

@@ -4,6 +4,7 @@ use std::io::ErrorKind::NotFound;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 use hyper::{Body, body, Method, Request, Response, Server, StatusCode};
 use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
@@ -15,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use pong::event::event::{Event, EventReader, EventWriter};
 use futures::{sink::SinkExt, stream::StreamExt};
+use tokio::time::sleep;
 use crate::kafka::{KafkaEventReaderImpl, KafkaSessionEventWriterImpl};
 use crate::player::Player;
 use crate::session::{Session, SessionManager};
@@ -116,6 +118,7 @@ async fn serve_websocket(websocket_session: WebSocketSession, websocket: HyperWe
             match message.unwrap() {
                 Message::Text(msg) => {
                     let events = serde_json::from_str::<SessionEventListDTO>(&msg);
+                    println!("Received ws message to persist events to kafka");
                     if let Err(e) = events {
                         eprintln!("Failed to deserialize ws message to event {}: {}", msg, e);
                         continue;
@@ -137,7 +140,7 @@ async fn serve_websocket(websocket_session: WebSocketSession, websocket: HyperWe
                     if any_error {
                         eprintln!("Failed to write at least one message for session {}", event_wrapper.session_id);
                     } else {
-                        // println!("Successfully wrote {} messages to kafka for session {:?}", event_count, websocket_session_read_copy)
+                        println!("Successfully wrote {} messages to kafka for session {:?}", event_count, websocket_session_read_copy)
                     }
                 },
                 Message::Close(msg) => {
@@ -151,11 +154,13 @@ async fn serve_websocket(websocket_session: WebSocketSession, websocket: HyperWe
                 _ => {}
             }
         }
+        println!("!!!! Exit websocket receiver !!!!")
     });
     let websocket_session_write_copy = websocket_session.clone();
     tokio::spawn(async move {
         println!("Ready to read messages from kafka: {:?}", websocket_session_write_copy);
         loop {
+            println!("Reading messages from kafka.");
             let messages = event_reader.read_from_session();
             if let Err(_) = messages {
                 eprintln!("Failed to read messages from kafka for session: {:?}", websocket_session_write_copy);
@@ -164,14 +169,18 @@ async fn serve_websocket(websocket_session: WebSocketSession, websocket: HyperWe
             // println!("Read messages for websocket_session {:?} from consumer: {:?}", websocket_session_write_copy, messages);
             let messages = messages.unwrap();
             if messages.len() == 0 {
+                println!("No new messages from kafka.");
                 continue;
             }
+            println!("{} new messages from kafka.", messages.len());
             let json = serde_json::to_string(&messages).unwrap();
             let message = Message::from(json);
+            println!("Sending kafka messages through websocket.");
             let send_res = websocket_writer.send(message).await;
             if let Err(e) = send_res {
                 eprintln!("Failed to send message to websocket for session {:?}: {:?}", websocket_session_write_copy, e)
             }
+            sleep(Duration::from_millis(2000));
         }
     });
     Ok(())

@@ -156,33 +156,33 @@ async fn serve_websocket(websocket_session: WebSocketSession, websocket: HyperWe
         }
         println!("!!!! Exit websocket receiver !!!!")
     });
-    let websocket_session_write_copy = websocket_session.clone();
-    tokio::spawn(async move {
-        println!("Ready to read messages from kafka: {:?}", websocket_session_write_copy);
-        loop {
-            println!("Reading messages from kafka.");
-            let messages = event_reader.read_from_session();
-            if let Err(_) = messages {
-                eprintln!("Failed to read messages from kafka for session: {:?}", websocket_session_write_copy);
-                continue;
-            }
-            // println!("Read messages for websocket_session {:?} from consumer: {:?}", websocket_session_write_copy, messages);
-            let messages = messages.unwrap();
-            if messages.len() == 0 {
-                println!("No new messages from kafka.");
-                continue;
-            }
-            println!("{} new messages from kafka.", messages.len());
-            let json = serde_json::to_string(&messages).unwrap();
-            let message = Message::from(json);
-            println!("Sending kafka messages through websocket.");
-            let send_res = websocket_writer.send(message).await;
-            if let Err(e) = send_res {
-                eprintln!("Failed to send message to websocket for session {:?}: {:?}", websocket_session_write_copy, e)
-            }
-            sleep(Duration::from_millis(2000));
-        }
-    });
+    // let websocket_session_write_copy = websocket_session.clone();
+    // tokio::spawn(async move {
+    //     println!("Ready to read messages from kafka: {:?}", websocket_session_write_copy);
+    //     loop {
+    //         println!("Reading messages from kafka.");
+    //         let messages = event_reader.read_from_session();
+    //         if let Err(_) = messages {
+    //             eprintln!("Failed to read messages from kafka for session: {:?}", websocket_session_write_copy);
+    //             continue;
+    //         }
+    //         // println!("Read messages for websocket_session {:?} from consumer: {:?}", websocket_session_write_copy, messages);
+    //         let messages = messages.unwrap();
+    //         if messages.len() == 0 {
+    //             println!("No new messages from kafka.");
+    //             continue;
+    //         }
+    //         println!("{} new messages from kafka.", messages.len());
+    //         let json = serde_json::to_string(&messages).unwrap();
+    //         let message = Message::from(json);
+    //         println!("Sending kafka messages through websocket.");
+    //         let send_res = websocket_writer.send(message).await;
+    //         if let Err(e) = send_res {
+    //             eprintln!("Failed to send message to websocket for session {:?}: {:?}", websocket_session_write_copy, e)
+    //         }
+    //         sleep(Duration::from_millis(2000));
+    //     }
+    // });
     Ok(())
 }
 

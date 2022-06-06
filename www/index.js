@@ -17,6 +17,7 @@ let lastFpsUpdate = 0;
 const FPS_UPDATE_THRESHOLD = 1000;
 let fps = 0;
 
+let isInitial = true;
 let lastUpdate = 0;
 let paused = false;
 let resetRequested = false;
@@ -28,6 +29,8 @@ let networkSession = null;
 let player = null;
 let websocket = null;
 let isHost = true;
+
+let events = [];
 
 const renderLoop = () => {
     if (resetRequested) {
@@ -64,28 +67,47 @@ const tick = () => {
         }
     }
 
-    if (isHost) {
+    let objects;
+    if (!networkSession) {
         field.tick(actions, update);
-        if (networkSession && isHost) {
-            sendEvents()
-        }
+        objects = JSON.parse(field.objects());
+    } else if (isHost) {
+        field.tick(actions, update);
+        objects = JSON.parse(field.objects());
+        sendEvents([...getInputEvents(), ...getMoveEvents(objects)])
     } else {
-        // TODO: How to extract the correct messages from the last frame? Just e.g. the latest 10 move messages?
+        const moveEventsByObj = events.filter(e => e.topic === "move").reduce((acc, moveEvent) => {
+            const {id: objId} = moveEvent.msg;
+            if (!acc[objId]) {
+                acc[objId] = [];
+            }
+            acc[objId].push(moveEvent);
+            return acc;
+        }, {});
+        const latestMoveEvents = Object.entries(moveEventsByObj)
+            .map(([_, moveEvents]) => moveEvents[moveEvents.length - 1]);
+        objects = latestMoveEvents.map(({msg}) => msg);
+        sendEvents(getInputEvents())
     }
-    render();
+    render(objects);
 }
 
-const sendEvents = () => {
-    const objects = JSON.parse(field.objects());
-    const moveEvents = objects.map(o => ({session_id: networkSession.hash, topic: 'move', msg: JSON.stringify({...o, session_id: networkSession.hash})}));
-    const inputEvents = actions.map(({input}) => ({msg: JSON.stringify({input, player: player.id, session_id: networkSession.hash}), session_id: networkSession.hash, topic: 'input'}));
-    const events = {session_id: networkSession.hash, events: [...moveEvents, ...inputEvents]};
-    websocket.send(JSON.stringify(events));
+const getMoveEvents = objects => {
+    return objects.map(o => ({session_id: networkSession.hash, topic: 'move', msg: JSON.stringify({...o, session_id: networkSession.hash})}));
 }
 
-const render = () => {
+const getInputEvents = () => {
+    return actions.map(({input}) => ({msg: JSON.stringify({input, player: player.id, session_id: networkSession.hash}), session_id: networkSession.hash, topic: 'input'}));
+}
+
+const sendEvents = events => {
+    const eventWrapper = {session_id: networkSession.hash, events};
+    websocket.send(JSON.stringify(eventWrapper));
+}
+
+const render = objects => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawObjects();
+    drawObjects(objects);
 }
 
 const reset = () => {
@@ -93,6 +115,8 @@ const reset = () => {
     lastFpsUpdate = 0;
     fps = 0;
 
+    resetRequested = false;
+    isInitial = true;
     lastUpdate = 0;
     paused = false;
     debug = false;
@@ -130,7 +154,7 @@ window.WASM_PONG.createOnlineSession = () => {
 
         websocket = new WebSocket(`ws://localhost:4000/ws?session_id=${session.session.hash}&connection_type=host`)
         websocket.onmessage = (event) => {
-            console.log(event)
+            addEvents(event);
         }
         waitForWebsocket(10, renderLoop)
     }).catch(err => {
@@ -139,7 +163,14 @@ window.WASM_PONG.createOnlineSession = () => {
 }
 
 window.WASM_PONG.joinOnlineSession = () => {
-    resetRequested = true;
+    if (!isInitial) {
+        resetRequested = true;
+        setTimeout(() => {
+            window.WASM_PONG.joinOnlineSession()
+        })
+        return;
+    }
+
     const sessionId = document.getElementById('join-online-input').value
     fetch(`http://localhost:4000/join_session`, {method: 'POST', body: JSON.stringify({session_id: sessionId})}).then(res => res.json()).then(({data: session}) => {
         console.log("Joined session:")
@@ -150,10 +181,12 @@ window.WASM_PONG.joinOnlineSession = () => {
         const session_display_tag = document.getElementById("network_session");
         session_display_tag.style.display = 'block';
         session_display_tag.innerHTML = JSON.stringify(session)
+        // Field will be instrumented by only drawing the objects for the peer, e.g. collision detection will happen at the host.
+        field = null;
 
         websocket = new WebSocket(`ws://localhost:4000/ws?session_id=${session.session.hash}&connection_type=peer`)
         websocket.onmessage = (event) => {
-            console.log(event)
+            addEvents(event);
         }
         waitForWebsocket(10, renderLoop)
     }).catch(err => {
@@ -173,6 +206,15 @@ const waitForWebsocket = (retries, cb) => {
     } else {
         cb()
     }
+}
+
+const addEvents = wsEvent => {
+    const gameEvents = JSON.parse(wsEvent.data);
+    gameEvents.forEach(gameEvent => {
+        const deserialized = {...gameEvent, msg: JSON.parse(gameEvent.msg)};
+        events.push(deserialized);
+        events.slice(events.length - 100, events.length)
+    })
 }
 
 window.WASM_PONG.pauseGame = () => {
@@ -208,9 +250,7 @@ window.WASM_PONG.toggleDebug = () => {
     debug = !debug
 }
 
-const drawObjects = () => {
-    const objects = getObjects();
-
+const drawObjects = objects => {
     objects.forEach(obj => {
         ctx.beginPath();
         ctx.strokeStyle = GRID_COLOR;
@@ -256,10 +296,6 @@ const drawLine = (ctx, from_x, from_y, to_x, to_y, color) => {
     ctx.stroke();
 }
 
-const getObjects = () => {
-    return JSON.parse(field.objects());
-}
-
 const listenToKeys = () => {
     const relevantKeys = ['ArrowUp', 'ArrowDown', 'KeyW', 'KeyS']
     document.addEventListener('keydown', (e) => {
@@ -294,5 +330,5 @@ const getInputActions = () => {
 }
 
 listenToKeys();
-render();
+render(JSON.parse(field.objects()));
 requestAnimationFrame(renderLoop);

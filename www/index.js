@@ -102,7 +102,7 @@ const tick = () => {
         const latestMoveEvents = Object.entries(moveEventsByObj)
             .map(([_, moveEvents]) => moveEvents[moveEvents.length - 1]);
         objects = latestMoveEvents.map(({msg}) => msg);
-        // sendEvents(getInputEvents())
+        sendEvents(getInputEvents())
     }
     render(objects);
 }

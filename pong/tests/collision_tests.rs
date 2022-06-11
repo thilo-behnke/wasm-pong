@@ -2,10 +2,10 @@ use pong::collision::collision::{Collision, CollisionDetector, CollisionGroup};
 use pong::game_object::game_object::GameObject;
 use pong::geom::geom::{BoundingBox, Vector};
 use pong::geom::shape::ShapeType;
+use pong::utils::utils::DefaultLoggerFactory;
 use rstest::rstest;
 use std::cell::{Ref, RefCell};
 use std::rc::Rc;
-use pong::utils::utils::DefaultLoggerFactory;
 
 #[rstest]
 #[case(vec![], vec![])]
@@ -67,7 +67,11 @@ pub struct MockGameObject {
 }
 
 impl MockGameObject {
-    pub fn new(id: u16, obj_type: &str, bounding_box: BoundingBox) -> Rc<RefCell<Box<dyn GameObject>>> {
+    pub fn new(
+        id: u16,
+        obj_type: &str,
+        bounding_box: BoundingBox,
+    ) -> Rc<RefCell<Box<dyn GameObject>>> {
         Rc::new(RefCell::new(Box::new(MockGameObject {
             id,
             obj_type: String::from(obj_type),
@@ -106,7 +110,7 @@ impl GameObject for MockGameObject {
         todo!()
     }
 
-    fn update_pos(&mut self) {
+    fn update_pos(&mut self, ms_diff: f64) {
         todo!()
     }
 

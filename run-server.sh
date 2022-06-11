@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+cd server
+
 source .env
 
 docker-compose down

@@ -4,7 +4,7 @@ pub mod utils {
     }
 
     pub struct DefaultLoggerFactory {
-        proto: Box<dyn Logger>
+        proto: Box<dyn Logger>,
     }
 
     impl LoggerFactory for DefaultLoggerFactory {
@@ -17,10 +17,12 @@ pub mod utils {
 
     impl DefaultLoggerFactory {
         pub fn new(proto: Box<dyn Logger>) -> Box<dyn LoggerFactory> {
-            Box::new(DefaultLoggerFactory {proto})
+            Box::new(DefaultLoggerFactory { proto })
         }
         pub fn noop() -> Box<dyn LoggerFactory> {
-            Box::new(DefaultLoggerFactory {proto: Box::new(NoopLogger {})})
+            Box::new(DefaultLoggerFactory {
+                proto: Box::new(NoopLogger {}),
+            })
         }
     }
 

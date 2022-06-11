@@ -1,11 +1,11 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-use rstest::rstest;
 use pong::game_field::{Bound, Field};
 use pong::game_object::game_object::{DefaultGameObject, GameObject};
 use pong::geom::geom::Vector;
 use pong::pong::pong_collisions::handle_player_bound_collision;
 use pong::utils::utils::{DefaultLoggerFactory, NoopLogger};
+use rstest::rstest;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[rstest]
 #[case(
@@ -44,7 +44,7 @@ pub fn should_correctly_handle_player_bounds_collision(
     #[case] mut player: Rc<RefCell<Box<dyn GameObject>>>,
     #[case] mut bounds: Rc<RefCell<Box<dyn GameObject>>>,
     #[case] mut player_expected: Rc<RefCell<Box<dyn GameObject>>>,
-    #[case] mut bounds_expected: Rc<RefCell<Box<dyn GameObject>>>
+    #[case] mut bounds_expected: Rc<RefCell<Box<dyn GameObject>>>,
 ) {
     handle_player_bound_collision(player.clone(), bounds.clone());
     assert_eq!(player_expected.borrow().pos(), player.borrow().pos());
@@ -65,7 +65,7 @@ fn get_bound(bound: Bound) -> Rc<RefCell<Box<dyn GameObject>>> {
     let logger = DefaultLoggerFactory::noop();
     let field = Field::new(logger);
     let bounds = DefaultGameObject::bounds(field.width, field.height);
-    return Rc::new(RefCell::new(bounds.into_iter().find(|b| {
-        b.0 == bound
-    }).unwrap().inner()));
+    return Rc::new(RefCell::new(
+        bounds.into_iter().find(|b| b.0 == bound).unwrap().inner(),
+    ));
 }

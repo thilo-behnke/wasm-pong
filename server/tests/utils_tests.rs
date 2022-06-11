@@ -1,6 +1,6 @@
 pub mod tests {
-    use std::collections::HashMap;
     use rstest::rstest;
+    use std::collections::HashMap;
 
     #[rstest]
     #[case(

@@ -1,6 +1,6 @@
 pkg
 tests
-www/dist
-www/node_modules
+dist
+node_modules
 Dockerfile
 .dockerignore

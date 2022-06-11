@@ -1,4 +1,7 @@
 .idea
 .github
-/pkg
-/target
+pkg
+target
+dist
+**/node_modules
+tests

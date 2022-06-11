@@ -5,20 +5,22 @@ RUN apt-get install curl
 
 RUN curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
-RUN mkdir /build
+RUN mkdir -p /build/client/wasm
 ADD ./pong /build/pong
-ADD ./client /build/client
-WORKDIR /build/client
+ADD ./client/wasm /build/client/wasm
+WORKDIR /build/client/wasm
 RUN wasm-pack build
 
 FROM node:12 as www_build_stage
 
 RUN mkdir /build
+
 ADD ./client/www /build/www
-RUN mkdir /node_modules
+RUN ls /build/www
+RUN mkdir /build/www/node_modules
 WORKDIR /build/www
 
-COPY --from=rust_build_stage /build/client/pkg/ /build/pkg/
+COPY --from=rust_build_stage /build/client/wasm/pkg/ /build/wasm/pkg/
 
 RUN npm install
 RUN npm run build

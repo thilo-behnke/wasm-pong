@@ -1,23 +1,21 @@
 pub mod collision {
     use crate::game_object::game_object::GameObject;
     use crate::geom::geom::Vector;
+    use crate::utils::utils::{Logger, LoggerFactory};
     use std::alloc::handle_alloc_error;
     use std::any::Any;
     use std::cell::{Ref, RefCell, RefMut};
     use std::collections::HashMap;
     use std::fmt::Debug;
     use std::rc::Rc;
-    use crate::utils::utils::{Logger, LoggerFactory};
 
     pub struct CollisionDetectorConfig {
-        groups: Vec<CollisionGroup>
+        groups: Vec<CollisionGroup>,
     }
 
     impl CollisionDetectorConfig {
         pub fn new() -> CollisionDetectorConfig {
-            CollisionDetectorConfig {
-                groups: vec![]
-            }
+            CollisionDetectorConfig { groups: vec![] }
         }
 
         pub fn matches_any_group(&self, type_a: &str, type_b: &str) -> bool {
@@ -36,7 +34,7 @@ pub mod collision {
 
     pub struct CollisionDetector {
         config: CollisionDetectorConfig,
-        logger: Box<dyn Logger>
+        logger: Box<dyn Logger>,
     }
 
     impl CollisionDetector {
@@ -44,7 +42,7 @@ pub mod collision {
             let logger = logger_factory.get("collision_detector");
             CollisionDetector {
                 config: CollisionDetectorConfig::new(),
-                logger
+                logger,
             }
         }
 
@@ -68,7 +66,10 @@ pub mod collision {
 
                 let rest = &objs[i..];
                 for other in rest.iter().map(|o| o.borrow()) {
-                    if !self.config.matches_any_group(obj.obj_type(), other.obj_type()) {
+                    if !self
+                        .config
+                        .matches_any_group(obj.obj_type(), other.obj_type())
+                    {
                         // self.logger.log(&*format!("objs {} and {} do not match any group: {:?}", obj.obj_type(), other.obj_type(), self.config.groups));
                         continue;
                     }
@@ -116,14 +117,19 @@ pub mod collision {
     }
 
     pub struct CollisionHandlerRegistry {
-        handlers: HashMap<(String, String), fn(Rc<RefCell<Box<dyn GameObject>>>, Rc<RefCell<Box<dyn GameObject>>>)>
+        handlers: HashMap<
+            (String, String),
+            fn(Rc<RefCell<Box<dyn GameObject>>>, Rc<RefCell<Box<dyn GameObject>>>),
+        >,
     }
 
     type CollisionCallback = fn(Rc<RefCell<Box<dyn GameObject>>>, Rc<RefCell<Box<dyn GameObject>>>);
 
     impl CollisionHandlerRegistry {
         pub fn new() -> CollisionHandlerRegistry {
-            CollisionHandlerRegistry {handlers: HashMap::new()}
+            CollisionHandlerRegistry {
+                handlers: HashMap::new(),
+            }
         }
 
         pub fn add(&mut self, mapping: (String, String), callback: CollisionCallback) {
@@ -136,7 +142,14 @@ pub mod collision {
             self.handlers.insert(mapping, callback);
         }
 
-        pub fn call(&self, mapping: &(String, String), values: (Rc<RefCell<Box<dyn GameObject>>>, Rc<RefCell<Box<dyn GameObject>>>)) -> bool {
+        pub fn call(
+            &self,
+            mapping: &(String, String),
+            values: (
+                Rc<RefCell<Box<dyn GameObject>>>,
+                Rc<RefCell<Box<dyn GameObject>>>,
+            ),
+        ) -> bool {
             let regular = self.handlers.get(&mapping);
             if let Some(callback) = regular {
                 callback(values.0, values.1);
@@ -156,7 +169,7 @@ pub mod collision {
 
     pub struct CollisionHandler {
         logger: Box<dyn Logger>,
-        handlers: CollisionHandlerRegistry
+        handlers: CollisionHandlerRegistry,
     }
 
     impl CollisionHandler {
@@ -181,10 +194,14 @@ pub mod collision {
             obj_a: Rc<RefCell<Box<dyn GameObject>>>,
             obj_b: Rc<RefCell<Box<dyn GameObject>>>,
         ) -> bool {
-            let key = (RefCell::borrow(&obj_a).obj_type().to_string(), RefCell::borrow(&obj_b).obj_type().to_string());
+            let key = (
+                RefCell::borrow(&obj_a).obj_type().to_string(),
+                RefCell::borrow(&obj_b).obj_type().to_string(),
+            );
             let handler_res = self.handlers.call(&key, (obj_a, obj_b));
             if !handler_res {
-                self.logger.log(&*format!("Found no matching collision handler: {:?}", key));
+                self.logger
+                    .log(&*format!("Found no matching collision handler: {:?}", key));
                 return false;
             }
             return true;

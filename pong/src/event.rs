@@ -1,32 +1,35 @@
-
 pub mod event {
+    use serde::{Deserialize, Serialize};
     use std::fmt::Debug;
     use std::fs::OpenOptions;
     use std::io::Write;
-    use serde::{Deserialize, Serialize};
 
     #[derive(Debug, Deserialize, Serialize)]
     pub struct Event {
         pub topic: String,
         pub key: Option<String>,
-        pub msg: String
+        pub msg: String,
     }
 
-    pub trait EventWriterImpl : Send + Sync {
+    pub trait EventWriterImpl: Send + Sync {
         fn write(&mut self, event: Event) -> Result<(), String>;
     }
 
     pub struct FileEventWriterImpl {}
     impl EventWriterImpl for FileEventWriterImpl {
         fn write(&mut self, event: Event) -> Result<(), String> {
-            let options = OpenOptions::new().read(true).create(true).write(true).open("events.log");
+            let options = OpenOptions::new()
+                .read(true)
+                .create(true)
+                .write(true)
+                .open("events.log");
             if let Err(e) = options {
                 return Err(format!("{}", e));
             }
             let mut file = options.unwrap();
             match file.write(event.msg.as_bytes()) {
                 Ok(_) => Ok(()),
-                Err(e) => Err(format!("{}", e))
+                Err(e) => Err(format!("{}", e)),
             }
         }
     }
@@ -39,46 +42,42 @@ pub mod event {
     }
 
     pub struct EventWriter {
-        writer_impl: Box<dyn EventWriterImpl>
+        writer_impl: Box<dyn EventWriterImpl>,
     }
 
     impl EventWriter {
         pub fn new(writer_impl: Box<dyn EventWriterImpl>) -> EventWriter {
-            EventWriter {
-                writer_impl
-            }
+            EventWriter { writer_impl }
         }
 
         pub fn noop() -> EventWriter {
             EventWriter {
-                writer_impl: Box::new(NoopEventWriterImpl {})
+                writer_impl: Box::new(NoopEventWriterImpl {}),
             }
         }
 
         pub fn file() -> EventWriter {
             EventWriter {
-                writer_impl: Box::new(FileEventWriterImpl {})
+                writer_impl: Box::new(FileEventWriterImpl {}),
             }
         }
 
         pub fn write(&mut self, event: Event) -> Result<(), String> {
-           self.writer_impl.write(event)
+            self.writer_impl.write(event)
         }
     }
 
-    pub trait EventReaderImpl : Send + Sync {
+    pub trait EventReaderImpl: Send + Sync {
         fn read(&mut self) -> Result<Vec<Event>, String>;
     }
 
     pub struct EventReader {
-        reader_impl: Box<dyn EventReaderImpl>
+        reader_impl: Box<dyn EventReaderImpl>,
     }
 
     impl EventReader {
         pub fn new(reader_impl: Box<dyn EventReaderImpl>) -> EventReader {
-            EventReader {
-                reader_impl
-            }
+            EventReader { reader_impl }
         }
 
         pub fn read(&mut self) -> Result<Vec<Event>, String> {

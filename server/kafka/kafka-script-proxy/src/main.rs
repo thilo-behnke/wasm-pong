@@ -8,7 +8,7 @@ use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
-const TOPICS: [&str; 3] = ["move", "status", "input"];
+const TOPICS: [&str; 4] = ["move", "status", "input", "session"];
 
 #[tokio::main]
 pub async fn main() {

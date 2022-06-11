@@ -415,10 +415,7 @@ pub fn build_success_res(value: &str) -> Result<Response<Body>, Infallible> {
     let mut res = Response::new(Body::from(json));
     let headers = res.headers_mut();
     headers.insert("Content-Type", "application/json".parse().unwrap());
-    headers.insert(
-        "Access-Control-Allow-Origin",
-        "*".parse().unwrap(),
-    );
+    headers.insert("Access-Control-Allow-Origin", "*".parse().unwrap());
     Ok(res)
 }
 

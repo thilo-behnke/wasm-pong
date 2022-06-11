@@ -77,7 +77,10 @@ impl SessionManager {
                 return Err(error);
             }
             if session.players[0] == player {
-                let error = format!("Can't join session, because player {:?} is already in session: {}", player, session_id);
+                let error = format!(
+                    "Can't join session, because player {:?} is already in session: {}",
+                    player, session_id
+                );
                 return Err(error);
             }
             session.players.push(player.clone());

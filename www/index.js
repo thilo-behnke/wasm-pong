@@ -181,7 +181,7 @@ window.WASM_PONG.height = height
 
 window.WASM_PONG.createOnlineSession = () => {
     resetRequested = true;
-    fetch("http://localhost:4000/create_session", {method: 'POST'}).then(res => res.json()).then(({data: session}) => {
+    fetch("/api/create_session", {method: 'POST'}).then(res => res.json()).then(({data: session}) => {
         console.log("Created session:")
         console.log(session)
         networkSession = session.session

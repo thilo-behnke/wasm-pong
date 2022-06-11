@@ -10,7 +10,7 @@ services:
   kafka:
     container_name: pong_server_kafka
     build:
-      context: kafka
+      context: ./server/kafka
     ports:
       - '9092:9092'
       - '9093:9093'
@@ -25,6 +25,14 @@ services:
       - ALLOW_PLAINTEXT_LISTENER=yes
     depends_on:
       - zookeeper
+  nginx:
+    container_name: pong_nginx
+    build:
+      context: ./nginx
+    ports:
+      - '80:80'
+    network_mode: 'host'
+#    command: [ nginx-debug, '-g', 'daemon off;' ]
 #  kaka-rest-proxy:
 #    container_name: pong_server_kafka_rest_proxy
 #    image: 'confluentinc/cp-kafka-rest'

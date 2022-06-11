@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-cd server
+set -e
+
+cd server || exit
 
 source .env
 

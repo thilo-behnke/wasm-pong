@@ -10,7 +10,7 @@ services:
   kafka:
     container_name: pong_server_kafka
     build:
-      context: ./server/kafka
+      context: ./kafka
     ports:
       - '9092:9092'
       - '9093:9093'
@@ -28,7 +28,8 @@ services:
   nginx:
     container_name: pong_nginx
     build:
-      context: ./nginx
+      context: ./
+      dockerfile: ./client/Dockerfile
     ports:
       - '80:80'
     network_mode: 'host'

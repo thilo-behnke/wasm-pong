@@ -417,7 +417,7 @@ pub fn build_success_res(value: &str) -> Result<Response<Body>, Infallible> {
     headers.insert("Content-Type", "application/json".parse().unwrap());
     headers.insert(
         "Access-Control-Allow-Origin",
-        "http://localhost:8080".parse().unwrap(),
+        "*".parse().unwrap(),
     );
     Ok(res)
 }

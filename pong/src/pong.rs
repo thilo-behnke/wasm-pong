@@ -1,10 +1,10 @@
 pub mod pong_collisions {
-    use std::cell::{RefCell, RefMut};
-    use std::ops::Add;
-    use std::rc::Rc;
     use crate::game_object::game_object::GameObject;
     use crate::geom::geom::Vector;
     use crate::geom::shape::ShapeType;
+    use std::cell::{RefCell, RefMut};
+    use std::ops::Add;
+    use std::rc::Rc;
 
     pub fn handle_player_ball_collision(
         ball: Rc<RefCell<Box<dyn GameObject>>>,
@@ -81,14 +81,14 @@ pub mod pong_collisions {
 }
 
 pub mod pong_events {
-    use serde_json::json;
-    use serde::{Serialize};
     use crate::event::event::{Event, EventWriter};
     use crate::geom::geom::Vector;
+    use serde::Serialize;
+    use serde_json::json;
 
     #[derive(Serialize)]
     pub enum PongEventType<'a> {
-        GameObjUpdate(GameObjUpdate<'a>)
+        GameObjUpdate(GameObjUpdate<'a>),
     }
 
     #[derive(Serialize)]
@@ -96,7 +96,7 @@ pub mod pong_events {
         pub obj_id: &'a str,
         pub pos: &'a Vector,
         pub vel: &'a Vector,
-        pub orientation: &'a Vector
+        pub orientation: &'a Vector,
     }
 
     pub trait PongEventWriter {
@@ -104,19 +104,17 @@ pub mod pong_events {
     }
 
     pub struct DefaultPongEventWriter {
-        writer: EventWriter
+        writer: EventWriter,
     }
 
     impl PongEventWriter for DefaultPongEventWriter {
         fn write(&mut self, event: PongEventType) -> Result<(), String> {
             let out_event = match event {
-                PongEventType::GameObjUpdate(ref update) => {
-                    Event {
-                        topic: String::from("obj_update"),
-                        key: Some(update.obj_id.clone().to_string()),
-                        msg: serde_json::to_string(&event).unwrap()
-                    }
-                }
+                PongEventType::GameObjUpdate(ref update) => Event {
+                    topic: String::from("obj_update"),
+                    key: Some(update.obj_id.clone().to_string()),
+                    msg: serde_json::to_string(&event).unwrap(),
+                },
             };
             self.writer.write(out_event)
         }
@@ -126,7 +124,7 @@ pub mod pong_events {
     impl NoopPongEventWriter {
         pub fn new() -> Box<dyn PongEventWriter> {
             Box::new(DefaultPongEventWriter {
-                writer: EventWriter::noop()
+                writer: EventWriter::noop(),
             })
         }
     }
@@ -134,7 +132,7 @@ pub mod pong_events {
     impl DefaultPongEventWriter {
         pub fn new() -> Box<dyn PongEventWriter> {
             Box::new(DefaultPongEventWriter {
-                writer: EventWriter::file()
+                writer: EventWriter::file(),
             })
         }
     }

@@ -1,20 +1,20 @@
+use crate::hash::Hasher;
+use crate::session::Session;
+use hyper::{Body, Client, Method, Request, Uri};
+use kafka::client::metadata::Topic;
+use kafka::client::{KafkaClient, ProduceMessage};
+use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage, MessageSet};
+use kafka::producer::{DefaultPartitioner, Partitioner, Producer, Record, RequiredAcks, Topics};
+use pong::event::event::{Event, EventReaderImpl, EventWriter, EventWriterImpl};
+use serde::Deserialize;
 use std::hash::{BuildHasher, Hash};
 use std::process::ExitStatus;
 use std::str::FromStr;
 use std::time::Duration;
-use hyper::{Body, Client, Method, Request, Uri};
-use serde::{Deserialize};
-use kafka::client::{KafkaClient, ProduceMessage};
-use kafka::client::metadata::Topic;
 use tokio::process::Command;
-use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage, MessageSet};
-use kafka::producer::{DefaultPartitioner, Partitioner, Producer, Record, RequiredAcks, Topics};
-use pong::event::event::{Event, EventReaderImpl, EventWriter, EventWriterImpl};
-use crate::hash::Hasher;
-use crate::session::Session;
 
 pub struct KafkaSessionEventWriterImpl {
-    producer: Producer<SessionPartitioner>
+    producer: Producer<SessionPartitioner>,
 }
 impl KafkaSessionEventWriterImpl {
     pub fn new(host: &str) -> KafkaSessionEventWriterImpl {
@@ -25,14 +25,12 @@ impl KafkaSessionEventWriterImpl {
             .with_partitioner(SessionPartitioner {})
             .create()
             .unwrap();
-        KafkaSessionEventWriterImpl {
-            producer
-        }
+        KafkaSessionEventWriterImpl { producer }
     }
 }
 
 pub struct KafkaDefaultEventWriterImpl {
-    producer: Producer
+    producer: Producer,
 }
 impl KafkaDefaultEventWriterImpl {
     pub fn new(host: &str) -> KafkaDefaultEventWriterImpl {
@@ -42,12 +40,9 @@ impl KafkaDefaultEventWriterImpl {
             .with_required_acks(RequiredAcks::One)
             .create()
             .unwrap();
-        KafkaDefaultEventWriterImpl {
-            producer
-        }
+        KafkaDefaultEventWriterImpl { producer }
     }
 }
-
 
 impl EventWriterImpl for KafkaSessionEventWriterImpl {
     fn write(&mut self, event: Event) -> Result<(), String> {
@@ -56,14 +51,14 @@ impl EventWriterImpl for KafkaSessionEventWriterImpl {
                 let record = Record::from_key_value(event.topic.as_str(), key, event.msg.as_str());
                 match self.producer.send(&record) {
                     Ok(()) => Ok(()),
-                    Err(e) => Err(format!("{}", e))
+                    Err(e) => Err(format!("{}", e)),
                 }
-            },
+            }
             None => {
                 let record = Record::from_value(event.topic.as_str(), event.msg.as_str());
                 match self.producer.send(&record) {
                     Ok(()) => Ok(()),
-                    Err(e) => Err(format!("{}", e))
+                    Err(e) => Err(format!("{}", e)),
                 }
             }
         }
@@ -77,14 +72,14 @@ impl EventWriterImpl for KafkaDefaultEventWriterImpl {
                 let record = Record::from_key_value(event.topic.as_str(), key, event.msg.as_str());
                 match self.producer.send(&record) {
                     Ok(()) => Ok(()),
-                    Err(e) => Err(format!("{}", e))
+                    Err(e) => Err(format!("{}", e)),
                 }
-            },
+            }
             None => {
                 let record = Record::from_value(event.topic.as_str(), event.msg.as_str());
                 match self.producer.send(&record) {
                     Ok(()) => Ok(()),
-                    Err(e) => Err(format!("{}", e))
+                    Err(e) => Err(format!("{}", e)),
                 }
             }
         }
@@ -92,7 +87,7 @@ impl EventWriterImpl for KafkaDefaultEventWriterImpl {
 }
 
 pub struct KafkaEventReaderImpl {
-    consumer: Consumer
+    consumer: Consumer,
 }
 impl KafkaEventReaderImpl {
     pub fn default() -> KafkaEventReaderImpl {
@@ -105,7 +100,7 @@ impl KafkaEventReaderImpl {
 
     pub fn new(host: &str) -> KafkaEventReaderImpl {
         println!("Connecting consumer to kafka host: {}", host);
-        let mut consumer = Consumer::from_hosts(vec!(host.to_owned()))
+        let mut consumer = Consumer::from_hosts(vec![host.to_owned()])
             .with_topic("move".to_owned())
             .with_topic("status".to_owned())
             .with_topic("input".to_owned())
@@ -114,14 +109,16 @@ impl KafkaEventReaderImpl {
             .with_offset_storage(GroupOffsetStorage::Kafka)
             .create()
             .unwrap();
-        KafkaEventReaderImpl {
-            consumer
-        }
+        KafkaEventReaderImpl { consumer }
     }
 
-    pub fn for_partitions(host: &str, partitions: &[i32], topics: &[&str]) -> Result<KafkaEventReaderImpl, String> {
+    pub fn for_partitions(
+        host: &str,
+        partitions: &[i32],
+        topics: &[&str],
+    ) -> Result<KafkaEventReaderImpl, String> {
         println!("Connecting partition specific consumer to kafka host {} with topics {:?} / partitions {:?}", host, topics, partitions);
-        let mut builder = Consumer::from_hosts(vec!(host.to_owned()));
+        let mut builder = Consumer::from_hosts(vec![host.to_owned()]);
         for topic in topics.iter() {
             builder = builder.with_topic_partitions(topic.parse().unwrap(), partitions);
         }
@@ -130,16 +127,13 @@ impl KafkaEventReaderImpl {
             .with_group("group".to_owned())
             .with_offset_storage(GroupOffsetStorage::Kafka);
 
-        let consumer = builder
-            .create();
+        let consumer = builder.create();
         if let Err(e) = consumer {
             eprintln!("Failed to connect consumer: {:?}", e);
             return Err("Failed to connect consumer".to_string());
         }
         let consumer = consumer.unwrap();
-        Ok(KafkaEventReaderImpl {
-            consumer
-        })
+        Ok(KafkaEventReaderImpl { consumer })
     }
 }
 impl EventReaderImpl for KafkaEventReaderImpl {
@@ -162,11 +156,18 @@ impl KafkaEventReaderImpl {
             let partition = ms.partition();
             println!("querying topic={} partition={}", topic, partition);
             for m in ms.messages() {
-                let event = Event {topic: String::from(topic), key: Some(std::str::from_utf8(m.key).unwrap().parse().unwrap()), msg: std::str::from_utf8(m.value).unwrap().parse().unwrap() };
+                let event = Event {
+                    topic: String::from(topic),
+                    key: Some(std::str::from_utf8(m.key).unwrap().parse().unwrap()),
+                    msg: std::str::from_utf8(m.value).unwrap().parse().unwrap(),
+                };
                 topic_event_count += 1;
                 events.push(event);
             }
-            println!("returned {:?} events for topic={} partition={}", topic_event_count, topic, partition);
+            println!(
+                "returned {:?} events for topic={} partition={}",
+                topic_event_count, topic, partition
+            );
             self.consumer.consume_messageset(ms).unwrap();
         }
         self.consumer.commit_consumed().unwrap();
@@ -175,20 +176,22 @@ impl KafkaEventReaderImpl {
 }
 
 pub struct KafkaSessionEventReaderImpl {
-    inner: KafkaEventReaderImpl
+    inner: KafkaEventReaderImpl,
 }
 
 impl KafkaSessionEventReaderImpl {
-    pub fn new(host: &str, session: &Session, topics: &[&str]) -> Result<KafkaSessionEventReaderImpl, String> {
+    pub fn new(
+        host: &str,
+        session: &Session,
+        topics: &[&str],
+    ) -> Result<KafkaSessionEventReaderImpl, String> {
         let partitions = [session.id as i32];
         let reader = KafkaEventReaderImpl::for_partitions(host, &partitions, topics);
         if let Err(e) = reader {
             return Err("Failed to create kafka session event reader".to_string());
         }
         let reader = reader.unwrap();
-        Ok(KafkaSessionEventReaderImpl {
-            inner: reader
-        })
+        Ok(KafkaSessionEventReaderImpl { inner: reader })
     }
 }
 
@@ -198,24 +201,31 @@ impl EventReaderImpl for KafkaSessionEventReaderImpl {
     }
 }
 
-
 #[derive(Debug)]
 pub struct KafkaTopicManager {
-    partition_management_endpoint: String
+    partition_management_endpoint: String,
 }
 impl KafkaTopicManager {
-
     pub fn default() -> KafkaTopicManager {
-        KafkaTopicManager {partition_management_endpoint: "http://localhost:7243/add_partition".to_owned()}
+        KafkaTopicManager {
+            partition_management_endpoint: "http://localhost:7243/add_partition".to_owned(),
+        }
     }
 
     pub fn from(topic_manager_host: &str) -> KafkaTopicManager {
-        KafkaTopicManager {partition_management_endpoint: format!("http://{}/add_partition", topic_manager_host).to_owned()}
+        KafkaTopicManager {
+            partition_management_endpoint: format!("http://{}/add_partition", topic_manager_host)
+                .to_owned(),
+        }
     }
 
     pub async fn add_partition(&self) -> Result<u16, String> {
         let mut client = Client::new();
-        let request = Request::builder().method(Method::POST).uri(Uri::from_str(&self.partition_management_endpoint).unwrap()).body(Body::empty()).unwrap();
+        let request = Request::builder()
+            .method(Method::POST)
+            .uri(Uri::from_str(&self.partition_management_endpoint).unwrap())
+            .body(Body::empty())
+            .unwrap();
         let res = client.request(request).await;
         if let Err(e) = res {
             let error = format!("Failed to add partition: {:?}", e);
@@ -243,19 +253,26 @@ impl KafkaTopicManager {
         }
         let json = serde_json::from_str::<PartitionApiDTO>(res_str.unwrap());
         if let Err(e) = json {
-            let error = format!("Failed to convert string {} to json: {:?}", res_str.unwrap(), e);
+            let error = format!(
+                "Failed to convert string {} to json: {:?}",
+                res_str.unwrap(),
+                e
+            );
             println!("{}", error);
             return Err(error);
         }
         let updated_partition_count = json.unwrap().data;
-        println!("Successfully created partition: {}", updated_partition_count);
+        println!(
+            "Successfully created partition: {}",
+            updated_partition_count
+        );
         Ok(updated_partition_count)
     }
 }
 
 #[derive(Deserialize)]
 struct PartitionApiDTO {
-    data: u16
+    data: u16,
 }
 
 pub struct SessionPartitioner {}
@@ -267,8 +284,8 @@ impl Partitioner for SessionPartitioner {
                 let key = std::str::from_utf8(key).unwrap();
                 msg.partition = key.parse::<i32>().unwrap();
                 // println!("Overriding message partition with key: {}", msg.partition);
-            },
-            None => panic!("Producing message without key not allowed!")
+            }
+            None => panic!("Producing message without key not allowed!"),
         }
     }
 }

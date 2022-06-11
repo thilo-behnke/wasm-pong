@@ -28,7 +28,7 @@ pub mod game_object {
         pub obj_type: String,
         geom: Box<dyn GeomComp>,
         physics: Box<dyn PhysicsComp>,
-        dirty: bool
+        dirty: bool,
     }
 
     impl DefaultGameObject {
@@ -43,7 +43,7 @@ pub mod game_object {
                 obj_type,
                 geom,
                 physics,
-                dirty: false
+                dirty: false,
             }
         }
     }
@@ -112,7 +112,7 @@ pub mod game_object {
         }
 
         fn is_dirty(&self) -> bool {
-            return self.dirty
+            return self.dirty;
         }
 
         fn set_dirty(&mut self, is_dirty: bool) {

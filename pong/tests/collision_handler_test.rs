@@ -3,11 +3,11 @@ use pong::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
 use pong::game_object::game_object::{DefaultGameObject, GameObject};
 use pong::geom::geom::Vector;
 use pong::geom::shape::Shape;
+use pong::utils::utils::DefaultLoggerFactory;
 use rstest::rstest;
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::RefCell;
 use std::rc::Rc;
-use pong::utils::utils::DefaultLoggerFactory;
 
 #[rstest]
 #[case(

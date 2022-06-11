@@ -12,7 +12,7 @@ pub fn should_update_pos(
     #[case] start_pos: Vector,
     #[case] vel: Vector,
     #[case] expected_pos: Vector,
-    #[case] ms_diff: f64
+    #[case] ms_diff: f64,
 ) {
     let mut obj = DefaultGameObject::new(
         1,

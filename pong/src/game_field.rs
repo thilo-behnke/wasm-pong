@@ -1,17 +1,23 @@
-use crate::collision::collision::{Collision, CollisionDetector, CollisionGroup, CollisionHandler, CollisionRegistry, Collisions};
+use crate::collision::collision::{
+    Collision, CollisionDetector, CollisionGroup, CollisionHandler, CollisionRegistry, Collisions,
+};
+use crate::event::event::Event;
 use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
 use crate::game_object::game_object::{DefaultGameObject, GameObject};
 use crate::geom::geom::Vector;
 use crate::geom::shape::{Shape, ShapeType};
-use crate::pong::pong_collisions::{handle_ball_bounds_collision, handle_player_ball_collision, handle_player_bound_collision};
-use crate::pong::pong_events::{PongEventWriter, DefaultPongEventWriter, NoopPongEventWriter, PongEventType, GameObjUpdate};
+use crate::pong::pong_collisions::{
+    handle_ball_bounds_collision, handle_player_ball_collision, handle_player_bound_collision,
+};
+use crate::pong::pong_events::{
+    DefaultPongEventWriter, GameObjUpdate, NoopPongEventWriter, PongEventType, PongEventWriter,
+};
 use crate::utils::utils::{DefaultLoggerFactory, Logger, LoggerFactory, NoopLogger};
 use std::borrow::{Borrow, BorrowMut};
 use std::cell::{Cell, Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::rc::Rc;
-use crate::event::event::Event;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum InputType {
@@ -23,7 +29,7 @@ pub enum InputType {
 pub struct Input {
     pub input: InputType,
     pub obj_id: u16,
-    pub player: u16
+    pub player: u16,
 }
 
 pub struct Field {
@@ -39,7 +45,10 @@ pub struct Field {
 }
 
 impl Field {
-    pub fn new(logger_factory: Box<dyn LoggerFactory>, event_writer: Box<dyn PongEventWriter>) -> Field {
+    pub fn new(
+        logger_factory: Box<dyn LoggerFactory>,
+        event_writer: Box<dyn PongEventWriter>,
+    ) -> Field {
         let width = 800;
         let height = 600;
 
@@ -55,7 +64,7 @@ impl Field {
             collision_detector: CollisionDetector::new(&logger_factory),
             collision_handler: CollisionHandler::new(&logger_factory),
             event_writer,
-            logger_factory
+            logger_factory,
         };
 
         field.add_player(0, 0 + width / 20, height / 2);
@@ -77,19 +86,17 @@ impl Field {
             handle_player_bound_collision,
         );
 
-        field.collision_detector.set_groups(
-            vec![
-                CollisionGroup(String::from("player"), String::from("ball")),
-                CollisionGroup(String::from("player"), String::from("bound")),
-                CollisionGroup(String::from("ball"), String::from("bound")),
-            ]
-        );
+        field.collision_detector.set_groups(vec![
+            CollisionGroup(String::from("player"), String::from("ball")),
+            CollisionGroup(String::from("player"), String::from("bound")),
+            CollisionGroup(String::from("ball"), String::from("bound")),
+        ]);
 
         return field;
     }
 
     pub fn mock(width: u16, height: u16) -> Field {
-        let logger_factory = DefaultLoggerFactory::new(Box::new(NoopLogger{}));
+        let logger_factory = DefaultLoggerFactory::new(Box::new(NoopLogger {}));
         let event_writer = NoopPongEventWriter::new();
         Field {
             logger: logger_factory.get("game_field"),
@@ -164,18 +171,36 @@ impl Field {
 
         let collision_handler = &self.collision_handler;
         let registered_collisions = collisions.get_collisions();
-        self.logger.log(&*format!("Found {} collisions: {:?}", registered_collisions.len(), registered_collisions));
+        self.logger.log(&*format!(
+            "Found {} collisions: {:?}",
+            registered_collisions.len(),
+            registered_collisions
+        ));
         for collision in registered_collisions.iter() {
             let objs = &self.objs;
-            let obj_a = objs.iter().find(|o| RefCell::borrow(o).id() == collision.0).unwrap().clone();
-            let obj_b = objs.iter().find(|o| RefCell::borrow(o).id() == collision.1).unwrap().clone();
+            let obj_a = objs
+                .iter()
+                .find(|o| RefCell::borrow(o).id() == collision.0)
+                .unwrap()
+                .clone();
+            let obj_b = objs
+                .iter()
+                .find(|o| RefCell::borrow(o).id() == collision.1)
+                .unwrap()
+                .clone();
             collision_handler.handle(obj_a, obj_b);
         }
 
         {
             for obj in self.objs.iter().filter(|o| RefCell::borrow(o).is_dirty()) {
                 let mut obj = RefCell::borrow_mut(obj);
-                self.event_writer.write(PongEventType::GameObjUpdate(GameObjUpdate{obj_id: &obj.id().to_string(), vel: obj.vel(), orientation: obj.orientation(), pos: obj.pos()}));
+                self.event_writer
+                    .write(PongEventType::GameObjUpdate(GameObjUpdate {
+                        obj_id: &obj.id().to_string(),
+                        vel: obj.vel(),
+                        orientation: obj.orientation(),
+                        pos: obj.pos(),
+                    }));
                 obj.set_dirty(false);
             }
         }
@@ -231,62 +256,74 @@ impl DefaultGameObject {
 impl DefaultGameObject {
     pub fn bounds(width: u16, height: u16) -> Vec<Bounds> {
         let bounds = vec![
-            Bounds(Bound::BOTTOM, Box::new(DefaultGameObject::new(
-                90,
-                "bound".to_string(),
-                Box::new(DefaultGeomComp::new(Shape::rect(
-                    Vector {
-                        x: (width / 2) as f64,
-                        y: 0 as f64,
-                    },
-                    Vector::new(1., 0.),
-                    width as f64,
-                    2.,
-                ))),
-                Box::new(DefaultPhysicsComp::new_static()),
-            ))),
-            Bounds(Bound::TOP, Box::new(DefaultGameObject::new(
-                91,
-                "bound".to_string(),
-                Box::new(DefaultGeomComp::new(Shape::rect(
-                    Vector {
-                        x: (width / 2) as f64,
-                        y: height as f64,
-                    },
-                    Vector::new(-1., 0.),
-                    width as f64,
-                    2.,
-                ))),
-                Box::new(DefaultPhysicsComp::new_static()),
-            ))),
-            Bounds(Bound::LEFT, Box::new(DefaultGameObject::new(
-                92,
-                "bound".to_string(),
-                Box::new(DefaultGeomComp::new(Shape::rect(
-                    Vector {
-                        x: 0 as f64,
-                        y: (height / 2) as f64,
-                    },
-                    Vector::new(0., 1.),
-                    2.,
-                    height as f64,
-                ))),
-                Box::new(DefaultPhysicsComp::new_static()),
-            ))),
-            Bounds(Bound::RIGHT, Box::new(DefaultGameObject::new(
-                93,
-                "bound".to_string(),
-                Box::new(DefaultGeomComp::new(Shape::rect(
-                    Vector {
-                        x: width as f64,
-                        y: (height / 2) as f64,
-                    },
-                    Vector::new(0., -1.),
-                    2.,
-                    height as f64,
-                ))),
-                Box::new(DefaultPhysicsComp::new_static()),
-            ))),
+            Bounds(
+                Bound::BOTTOM,
+                Box::new(DefaultGameObject::new(
+                    90,
+                    "bound".to_string(),
+                    Box::new(DefaultGeomComp::new(Shape::rect(
+                        Vector {
+                            x: (width / 2) as f64,
+                            y: 0 as f64,
+                        },
+                        Vector::new(1., 0.),
+                        width as f64,
+                        2.,
+                    ))),
+                    Box::new(DefaultPhysicsComp::new_static()),
+                )),
+            ),
+            Bounds(
+                Bound::TOP,
+                Box::new(DefaultGameObject::new(
+                    91,
+                    "bound".to_string(),
+                    Box::new(DefaultGeomComp::new(Shape::rect(
+                        Vector {
+                            x: (width / 2) as f64,
+                            y: height as f64,
+                        },
+                        Vector::new(-1., 0.),
+                        width as f64,
+                        2.,
+                    ))),
+                    Box::new(DefaultPhysicsComp::new_static()),
+                )),
+            ),
+            Bounds(
+                Bound::LEFT,
+                Box::new(DefaultGameObject::new(
+                    92,
+                    "bound".to_string(),
+                    Box::new(DefaultGeomComp::new(Shape::rect(
+                        Vector {
+                            x: 0 as f64,
+                            y: (height / 2) as f64,
+                        },
+                        Vector::new(0., 1.),
+                        2.,
+                        height as f64,
+                    ))),
+                    Box::new(DefaultPhysicsComp::new_static()),
+                )),
+            ),
+            Bounds(
+                Bound::RIGHT,
+                Box::new(DefaultGameObject::new(
+                    93,
+                    "bound".to_string(),
+                    Box::new(DefaultGeomComp::new(Shape::rect(
+                        Vector {
+                            x: width as f64,
+                            y: (height / 2) as f64,
+                        },
+                        Vector::new(0., -1.),
+                        2.,
+                        height as f64,
+                    ))),
+                    Box::new(DefaultPhysicsComp::new_static()),
+                )),
+            ),
         ];
         bounds
     }

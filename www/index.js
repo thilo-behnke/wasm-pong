@@ -77,16 +77,15 @@ const tick = () => {
 
     let objects;
     if (!networkSession) {
+        renderActions(actions)
         field.tick(actions, update);
         objects = JSON.parse(field.objects());
     } else if (isHost) {
-        // Would mean that input events would get lost if latency is higher than 100 ms.
-        const peerInputEvents = events.filter(e => e.topic === "input").filter(it => it.msg.player !== player.id)
-        const lastPeerInputEvents = peerInputEvents.length ? [peerInputEvents[peerInputEvents - 1]] : []
+        const otherPlayerActions = getOtherPlayerInputActions();
         const allActions = [
-            ...actions, ...lastPeerInputEvents
+            ...actions, ...otherPlayerActions
         ];
-        console.warn({allActions})
+        renderActions(allActions);
         field.tick(allActions, update);
         objects = JSON.parse(field.objects());
         sendEvents([...getInputEvents(), ...getMoveEvents(objects)])
@@ -99,6 +98,8 @@ const tick = () => {
             acc[objId].push(moveEvent);
             return acc;
         }, {});
+        const otherPlayerActions = getOtherPlayerInputActions();
+        renderActions([...actions, ...otherPlayerActions]);
         const latestMoveEvents = Object.entries(moveEventsByObj)
             .map(([_, moveEvents]) => moveEvents[moveEvents.length - 1]);
         objects = latestMoveEvents.map(({msg}) => msg);
@@ -107,17 +108,22 @@ const tick = () => {
     render(objects);
 }
 
+const getOtherPlayerInputActions = () => {
+    const peerInputEvents = events.filter(e => e.topic === "input").filter(it => it.msg.player !== player.id).map(it => it.msg)
+    const lastPeerInputEvent = peerInputEvents.length ? peerInputEvents[peerInputEvents.length - 1] : null
+    return lastPeerInputEvent ? lastPeerInputEvent.inputs : []
+}
+
 const getMoveEvents = objects => {
     return objects.map(o => ({session_id: networkSession.hash, topic: 'move', msg: JSON.stringify({...o, session_id: networkSession.hash, ts: Date.now()})}));
 }
 
 const getInputEvents = () => {
-    const inputEvents = actions.map(({input}) => ({msg: JSON.stringify({inputs: [input], player: player.id, session_id: networkSession.hash, ts: Date.now()}), session_id: networkSession.hash, topic: 'input'}));
-    if (inputEvents.length) {
-        return inputEvents;
+    if (actions.length) {
+        const inputEvent = {msg: JSON.stringify({inputs: actions, player: player.id, session_id: networkSession.hash, ts: Date.now()}), session_id: networkSession.hash, topic: 'input'}
+        return [inputEvent]
     }
-    const noInputs = {inputs: [], obj_id: isHost ? 0 : 1, player: isHost ? 1 : 2 }
-    return [{msg: JSON.stringify({input: noInputs, player: player.id, session_id: networkSession.hash, ts: Date.now()}), session_id: networkSession.hash, topic: 'input'}];
+    return [{msg: JSON.stringify({inputs: [], player: player.id, session_id: networkSession.hash, ts: Date.now()}), session_id: networkSession.hash, topic: 'input'}];
 }
 
 const sendEvents = events => {
@@ -130,6 +136,17 @@ const sendEvents = events => {
 const render = objects => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawObjects(objects);
+}
+
+const renderActions = actions => {
+    [...document.getElementsByClassName("game_input")].forEach(el => {
+        el.className = "game_input game_input--inactive"
+    })
+    actions.forEach(action => {
+        const id = `game_inputs__player_${action.player}__${action.input.toLowerCase()}`
+        const el = document.getElementById(id);
+        el.className = "game_input game_input--active";
+    })
 }
 
 const reset = () => {

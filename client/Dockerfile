@@ -14,13 +14,11 @@ RUN wasm-pack build
 FROM node:12 as www_build_stage
 
 RUN mkdir /build
-ADD ./client/www /build
-WORKDIR /build
+ADD ./client/www /build/www
+RUN mkdir /node_modules
+WORKDIR /build/www
 
 COPY --from=rust_build_stage /build/client/pkg/ /build/pkg/
-
-RUN ls /build
-RUN ls /build/pkg
 
 RUN npm install
 RUN npm run build

@@ -4,11 +4,11 @@ use std::io::ErrorKind::NotFound;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use hyper::{Body, body, Method, Request, Response, Server, StatusCode};
 use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
-use hyper_tungstenite::HyperWebsocket;
+use hyper_tungstenite::{HyperWebsocket, tungstenite};
 use hyper_tungstenite::tungstenite::{Error, Message};
 use kafka::producer::Producer;
 use serde_json::json;
@@ -16,11 +16,14 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use pong::event::event::{Event, EventReader, EventWriter};
 use futures::{sink::SinkExt, stream::StreamExt};
+use tokio::io::Sink;
+use tokio::task;
 use tokio::time::sleep;
 use crate::kafka::{KafkaEventReaderImpl, KafkaSessionEventWriterImpl};
 use crate::player::Player;
 use crate::session::{Session, SessionManager};
 use crate::utils::http_utils::{get_query_params, read_json_body};
+use crate::utils::time_utils::now;
 
 pub struct HttpServer {
     addr: [u8; 4],
@@ -62,12 +65,14 @@ impl HttpServer {
                                 eprintln!("{}", error);
                                 return build_error_res(error.as_str(), StatusCode::BAD_REQUEST);
                             }
-                            if let None = session_manager.lock().await.get_session(session_id) {
+                            let session = session_manager.lock().await.get_session(session_id);
+                            if let None = session {
                                 let error = format!("Session does not exist: {}", session_id);
                                 eprintln!("{}", error);
                                 return build_error_res(error.as_str(), StatusCode::NOT_FOUND);
                             }
-                            let websocket_session = WebSocketSession {session_id: session_id.to_string(), connection_type: connection_type.unwrap()};
+                            let session = session.unwrap();
+                            let websocket_session = WebSocketSession {session: session.clone(), connection_type: connection_type.unwrap()};
                             println!("Websocket upgrade request is valid, will now upgrade to websocket: {:?}", req);
 
                             let (response, websocket) = hyper_tungstenite::upgrade(req, None).unwrap();
@@ -104,7 +109,8 @@ async fn serve_websocket(websocket_session: WebSocketSession, websocket: HyperWe
     let (mut websocket_writer, mut websocket_reader) = websocket.split();
 
     let session_manager = session_manager.lock().await;
-    let event_handler_pair = session_manager.split(&websocket_session.session_id, websocket_session.connection_type.get_topics());
+    let session = session_manager.get_session(&websocket_session.session.hash);
+    let event_handler_pair = session_manager.split(&websocket_session.session.hash, websocket_session.connection_type.get_topics());
     if let Err(_) = event_handler_pair {
         eprintln!("Failed to create event reader/writer pair session: {:?}", websocket_session);
         return Err(Error::ConnectionClosed) // TODO: Use proper error for this case to close the connection
@@ -124,7 +130,7 @@ async fn serve_websocket(websocket_session: WebSocketSession, websocket: HyperWe
                         continue;
                     }
                     let event_wrapper = events.unwrap();
-                    if event_wrapper.session_id != websocket_session_read_copy.session_id {
+                    if event_wrapper.session_id != websocket_session_read_copy.session.hash {
                         eprintln!("Websocket has session {:?} but was asked to write to session {} - skip.", websocket_session_read_copy, event_wrapper.session_id);
                         continue;
                     }
@@ -150,6 +156,17 @@ async fn serve_websocket(websocket_session: WebSocketSession, websocket: HyperWe
                     } else {
                         println!("Received close message");
                     }
+
+                    let session_closed_event = SessionClosedDto {
+                        session: websocket_session_read_copy.session.clone(),
+                        reason: "ws closed".to_owned()
+                    };
+                    let msg = json!(session_closed_event).to_string();
+                    let session_event_write_res = event_writer.write_to_session("session", &msg);
+                    if let Err(e) = session_event_write_res {
+                        eprintln!("Failed to write session closed event: {0}", e)
+                    }
+                    break;
                 },
                 _ => {}
             }
@@ -178,11 +195,18 @@ async fn serve_websocket(websocket_session: WebSocketSession, websocket: HyperWe
             println!("Sending kafka messages through websocket.");
             let send_res = websocket_writer.send(message).await;
             if let Err(e) = send_res {
-                eprintln!("Failed to send message to websocket for session {:?}: {:?}", websocket_session_write_copy, e)
+                eprintln!("Failed to send message to websocket for session {:?}: {:?}", websocket_session_write_copy, e);
+                match e {
+                    tungstenite::error::Error::ConnectionClosed | tungstenite::error::Error::AlreadyClosed => {
+                        println!("Websocket Connection for session {:?} is closed. Exiting kafka consumer.", websocket_session_write_copy);
+                        break;
+                    },
+                    _ => {}
+                }
             }
             // Avoid starvation of read thread (?)
             // TODO: How to avoid this? This is very bad for performance.
-            sleep(Duration::from_millis(10)).await;
+            sleep(Duration::from_millis(100)).await;
         }
     });
     Ok(())
@@ -218,6 +242,7 @@ async fn handle_get_session(session_manager: &Arc<Mutex<SessionManager>>, req: R
 }
 
 async fn handle_session_create(session_manager: &Arc<Mutex<SessionManager>>, req: Request<Body>, addr: SocketAddr) -> Result<Response<Body>, Infallible> {
+    println!("Called to create new session: {:?}", req);
     let mut locked = session_manager.lock().await;
     let player = Player {id: addr.to_string()};
     let session_create_res = locked.create_session(player.clone()).await;
@@ -355,7 +380,13 @@ struct SessionCreatedDto {
     player: Player,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Serialize)]
+struct SessionClosedDto {
+    session: Session,
+    reason: String
+}
+
+#[derive(Debug, Clone, PartialEq)]
 enum WebSocketConnectionType {
     HOST, PEER, OBSERVER
 }
@@ -376,7 +407,7 @@ impl FromStr for WebSocketConnectionType {
 #[derive(Debug, Clone)]
 struct WebSocketSession {
     pub connection_type: WebSocketConnectionType,
-    pub session_id: String
+    pub session: Session
 }
 
 impl WebSocketConnectionType {

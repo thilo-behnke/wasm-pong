@@ -25,6 +25,13 @@ services:
       - ALLOW_PLAINTEXT_LISTENER=yes
     depends_on:
       - zookeeper
+  server:
+    container_name: pong_server
+    build:
+      context: ./
+      dockerfile: ./server/Dockerfile
+    ports:
+      - '4000:4000'
   nginx:
     container_name: pong_nginx
     build:

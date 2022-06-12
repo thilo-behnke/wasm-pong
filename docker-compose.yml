@@ -32,6 +32,10 @@ services:
       dockerfile: ./server/Dockerfile
     ports:
       - '4000:4000'
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_HOST: 'kafka:9092'
   nginx:
     container_name: pong_nginx
     build:

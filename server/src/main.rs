@@ -11,7 +11,13 @@ pub mod utils;
 
 #[tokio::main]
 pub async fn main() {
-    HttpServer::new([0, 0, 0, 0], 4000, "localhost:9093")
+    let kafka_host_env = std::env::var("KAFKA_HOST");
+    let kafka_host = match kafka_host_env {
+        Ok(val) => val,
+        Err(_) => "localhost:9093".to_owned()
+    };
+
+    HttpServer::new([0, 0, 0, 0], 4000, &kafka_host)
         .run()
         .await
         .expect("failed to run server");

@@ -25,6 +25,11 @@ services:
       - ALLOW_PLAINTEXT_LISTENER=yes
     depends_on:
       - zookeeper
+    healthcheck:
+      test: [ "CMD", "/opt/bitnami/kafka/bin/kafka-topics.sh", "--bootstrap-server", "localhost:9093", "--describe"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
   server:
     container_name: pong_server
     build:
@@ -32,6 +37,7 @@ services:
       dockerfile: ./server/Dockerfile
     ports:
       - '4000:4000'
+    restart: on-failure
     depends_on:
       - kafka
     environment:

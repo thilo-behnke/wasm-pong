@@ -1,4 +1,4 @@
-import { FieldWrapper, GameObject } from "wasm-app";
+import { FieldWrapper } from "wasm-app";
 
 const GRID_COLOR = "#CCCCCC";
 

@@ -11,4 +11,9 @@ module.exports = {
   plugins: [
     new CopyWebpackPlugin(['index.html'])
   ],
+  devServer: {
+    publicPath: '/pong/web/',
+    openPage: 'pong/web/',
+    open: true
+  }
 };

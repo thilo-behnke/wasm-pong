@@ -27,7 +27,7 @@ RUN npm run build
 
 FROM nginx:latest
 
-COPY --from=www_build_stage /build/www/dist/ /usr/share/pong/
+COPY --from=www_build_stage /build/www/dist/ /usr/share/nginx/pong/web
 
 COPY ./client/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY ./client/nginx/nginx.conf /etc/nginx/nginx.conf

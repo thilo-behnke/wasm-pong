@@ -181,7 +181,7 @@ window.WASM_PONG.height = height
 
 window.WASM_PONG.createOnlineSession = () => {
     resetRequested = true;
-    fetch("/api/create_session", {method: 'POST'}).then(res => res.json()).then(({data: session}) => {
+    fetch("/pong/api/create_session", {method: 'POST'}).then(res => res.json()).then(({data: session}) => {
         console.log("Created session:")
         console.log(session)
         networkSession = session.session
@@ -211,7 +211,7 @@ window.WASM_PONG.joinOnlineSession = () => {
     }
 
     const sessionId = document.getElementById('join-online-input').value
-    fetch(`http://localhost:4000/join_session`, {method: 'POST', body: JSON.stringify({session_id: sessionId})}).then(res => res.json()).then(({data: session}) => {
+    fetch(`/pong/api/join_session`, {method: 'POST', body: JSON.stringify({session_id: sessionId})}).then(res => res.json()).then(({data: session}) => {
         console.log("Joined session:")
         console.log(session);
         networkSession = session.session
@@ -252,8 +252,8 @@ const addEvents = wsEvent => {
     gameEvents.forEach(gameEvent => {
         const deserialized = {...gameEvent, msg: JSON.parse(gameEvent.msg)};
         events.push(deserialized);
-        events.slice(events.length - 100, events.length)
     })
+    events = events.slice(events.length - 100, events.length)
 }
 
 window.WASM_PONG.pauseGame = () => {

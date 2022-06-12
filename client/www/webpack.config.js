@@ -14,6 +14,12 @@ module.exports = {
   devServer: {
     publicPath: '/pong/web/',
     openPage: 'pong/web/',
-    open: true
-  }
+    open: true,
+    proxy: {
+      '/pong/api': {
+        target: 'http://localhost:4000',
+        pathRewrite: { '^/pong/api': '' }
+      }
+    }
+  },
 };

@@ -57,7 +57,7 @@ async fn handle_add_partition() -> Result<Response<Body>, Infallible> {
     let next_partition = current_count + 1;
     write_to_log(&format!("Updating partition count to {} for the following topics: {}", next_partition, TOPICS.join(","))).await;
     for topic in TOPICS {
-        let output = run_command(&format!("/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --alter --topic {} --partitions {}", topic, next_partition)).await;
+        let output = run_command(&format!("/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9093 --alter --topic {} --partitions {}", topic, next_partition)).await;
         if let Err(e) = output {
             let error = format!("Failed to update the partition count: {}", e);
             write_to_log(&error).await;
@@ -75,7 +75,7 @@ async fn handle_add_partition() -> Result<Response<Body>, Infallible> {
 }
 
 async fn get_highest_partition_count() -> Result<u32, PartitionCountQueryError> {
-    let output = run_command("/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe | grep -Po '(?<=PartitionCount: )(\\d+)' | sort -r | head -1").await.unwrap();
+    let output = run_command("/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9093 --describe | grep -Po '(?<=PartitionCount: )(\\d+)' | sort -r | head -1").await.unwrap();
     let output_str = std::str::from_utf8(&*output.stdout);
     if let Err(e) = output_str {
         let message = format!("Failed to convert command output to string: {:?}", e);

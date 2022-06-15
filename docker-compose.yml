@@ -42,6 +42,7 @@ services:
       - kafka
     environment:
       KAFKA_HOST: 'kafka:9092'
+      KAFKA_TOPIC_MANAGER_HOST: 'kafka:7243'
   nginx:
     container_name: pong_nginx
     build:

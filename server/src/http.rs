@@ -31,8 +31,8 @@ pub struct HttpServer {
     session_manager: Arc<Mutex<SessionManager>>,
 }
 impl HttpServer {
-    pub fn new(addr: [u8; 4], port: u16, kafka_host: &str) -> HttpServer {
-        let session_manager = Arc::new(Mutex::new(SessionManager::new(kafka_host)));
+    pub fn new(addr: [u8; 4], port: u16, kafka_host: &str, kafka_topic_manager_host: &str) -> HttpServer {
+        let session_manager = Arc::new(Mutex::new(SessionManager::new(kafka_host, kafka_topic_manager_host)));
         HttpServer {
             addr,
             port,

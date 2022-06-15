@@ -1,0 +1,8 @@
+.idea
+.github
+pkg
+target
+dist
+**/node_modules
+tests
+Dockerfile

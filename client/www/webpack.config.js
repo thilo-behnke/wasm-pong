@@ -11,4 +11,15 @@ module.exports = {
   plugins: [
     new CopyWebpackPlugin(['index.html'])
   ],
+  devServer: {
+    publicPath: '/pong/web/',
+    openPage: 'pong/web/',
+    open: true,
+    proxy: {
+      '/pong/api': {
+        target: 'http://localhost:4000',
+        pathRewrite: { '^/pong/api': '' }
+      }
+    }
+  },
 };

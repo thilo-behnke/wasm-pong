@@ -210,7 +210,11 @@ window.WASM_PONG.joinOnlineSession = () => {
         return;
     }
 
-    const sessionId = document.getElementById('join-online-input').value
+    const sessionId = document.getElementById('join-online-input').value;
+    executeJoinSession(sessionId);
+}
+
+const executeJoinSession = (sessionId) => {
     fetch(`/pong/api/join_session`, {method: 'POST', body: JSON.stringify({session_id: sessionId})}).then(res => res.json()).then(({data: session}) => {
         console.log("Joined session:")
         console.log(session);
@@ -371,3 +375,9 @@ const getInputActions = () => {
 listenToKeys();
 render(JSON.parse(field.objects()));
 requestAnimationFrame(renderLoop);
+
+const queryParams = location.search ? location.search.slice(1).split("&").map(it => it.split("=")) : [];
+const joinSession = queryParams.find(([name,]) => name === "join_session");
+if (joinSession) {
+    executeJoinSession(joinSession[1])
+}

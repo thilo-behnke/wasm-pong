@@ -10,7 +10,7 @@ services:
   kafka:
     container_name: pong_server_kafka
     build:
-      context: kafka
+      context: ./kafka
     ports:
       - '9092:9092'
       - '9093:9093'
@@ -18,13 +18,40 @@ services:
     environment:
       - KAFKA_BROKER_ID=1
       - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=DOCKER
-      - KAFKA_CFG_LISTENERS=LOCAL://:9093,DOCKER://:9092
+      - KAFKA_CFG_LISTENERS=LOCAL://:9093,DOCKER://kafka:9092
       - KAFKA_CFG_ADVERTISED_LISTENERS=LOCAL://127.0.0.1:9093,DOCKER://kafka:9092
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=LOCAL:PLAINTEXT,DOCKER:PLAINTEXT
       - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
       - ALLOW_PLAINTEXT_LISTENER=yes
     depends_on:
       - zookeeper
+    healthcheck:
+      test: [ "CMD", "/opt/bitnami/kafka/bin/kafka-topics.sh", "--bootstrap-server", "localhost:9093", "--describe"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+  server:
+    container_name: pong_server
+    build:
+      context: ./
+      dockerfile: ./server/Dockerfile
+    ports:
+      - '4000:4000'
+    restart: on-failure
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_HOST: 'kafka:9092'
+      KAFKA_TOPIC_MANAGER_HOST: 'kafka:7243'
+  nginx:
+    container_name: pong_nginx
+    build:
+      context: ./
+      dockerfile: ./client/Dockerfile
+    ports:
+      - '80:80'
+    network_mode: 'host'
+#    command: [ nginx-debug, '-g', 'daemon off;' ]
 #  kaka-rest-proxy:
 #    container_name: pong_server_kafka_rest_proxy
 #    image: 'confluentinc/cp-kafka-rest'

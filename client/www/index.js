@@ -1,4 +1,4 @@
-import { FieldWrapper, GameObject } from "wasm-app";
+import { FieldWrapper } from "wasm-app";
 
 const GRID_COLOR = "#CCCCCC";
 
@@ -181,7 +181,7 @@ window.WASM_PONG.height = height
 
 window.WASM_PONG.createOnlineSession = () => {
     resetRequested = true;
-    fetch("http://localhost:4000/create_session", {method: 'POST'}).then(res => res.json()).then(({data: session}) => {
+    fetch("/pong/api/create_session", {method: 'POST'}).then(res => res.json()).then(({data: session}) => {
         console.log("Created session:")
         console.log(session)
         networkSession = session.session
@@ -191,7 +191,7 @@ window.WASM_PONG.createOnlineSession = () => {
         session_display_tag.style.display = 'block';
         session_display_tag.innerHTML = JSON.stringify(session)
 
-        websocket = new WebSocket(`ws://localhost:4000/ws?session_id=${session.session.hash}&connection_type=host`)
+        websocket = new WebSocket(`ws://${location.host}/pong/ws?session_id=${session.session.hash}&connection_type=host`)
         websocket.onmessage = (event) => {
             addEvents(event);
         }
@@ -210,8 +210,12 @@ window.WASM_PONG.joinOnlineSession = () => {
         return;
     }
 
-    const sessionId = document.getElementById('join-online-input').value
-    fetch(`http://localhost:4000/join_session`, {method: 'POST', body: JSON.stringify({session_id: sessionId})}).then(res => res.json()).then(({data: session}) => {
+    const sessionId = document.getElementById('join-online-input').value;
+    executeJoinSession(sessionId);
+}
+
+const executeJoinSession = (sessionId) => {
+    fetch(`/pong/api/join_session`, {method: 'POST', body: JSON.stringify({session_id: sessionId})}).then(res => res.json()).then(({data: session}) => {
         console.log("Joined session:")
         console.log(session);
         networkSession = session.session
@@ -223,7 +227,7 @@ window.WASM_PONG.joinOnlineSession = () => {
         // Field will be instrumented by only drawing the objects for the peer, e.g. collision detection will happen at the host.
         field = null;
 
-        websocket = new WebSocket(`ws://localhost:4000/ws?session_id=${session.session.hash}&connection_type=peer`)
+        websocket = new WebSocket(`ws://${location.host}/pong/ws?session_id=${session.session.hash}&connection_type=peer`)
         websocket.onmessage = (event) => {
             addEvents(event);
         }
@@ -252,8 +256,8 @@ const addEvents = wsEvent => {
     gameEvents.forEach(gameEvent => {
         const deserialized = {...gameEvent, msg: JSON.parse(gameEvent.msg)};
         events.push(deserialized);
-        events.slice(events.length - 100, events.length)
     })
+    events = events.slice(events.length - 100, events.length)
 }
 
 window.WASM_PONG.pauseGame = () => {
@@ -371,3 +375,9 @@ const getInputActions = () => {
 listenToKeys();
 render(JSON.parse(field.objects()));
 requestAnimationFrame(renderLoop);
+
+const queryParams = location.search ? location.search.slice(1).split("&").map(it => it.split("=")) : [];
+const joinSession = queryParams.find(([name,]) => name === "join_session");
+if (joinSession) {
+    executeJoinSession(joinSession[1])
+}

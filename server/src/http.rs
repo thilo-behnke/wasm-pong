@@ -31,8 +31,8 @@ pub struct HttpServer {
     session_manager: Arc<Mutex<SessionManager>>,
 }
 impl HttpServer {
-    pub fn new(addr: [u8; 4], port: u16, kafka_host: &str) -> HttpServer {
-        let session_manager = Arc::new(Mutex::new(SessionManager::new(kafka_host)));
+    pub fn new(addr: [u8; 4], port: u16, kafka_host: &str, kafka_topic_manager_host: &str) -> HttpServer {
+        let session_manager = Arc::new(Mutex::new(SessionManager::new(kafka_host, kafka_topic_manager_host)));
         HttpServer {
             addr,
             port,
@@ -415,10 +415,7 @@ pub fn build_success_res(value: &str) -> Result<Response<Body>, Infallible> {
     let mut res = Response::new(Body::from(json));
     let headers = res.headers_mut();
     headers.insert("Content-Type", "application/json".parse().unwrap());
-    headers.insert(
-        "Access-Control-Allow-Origin",
-        "*".parse().unwrap(),
-    );
+    headers.insert("Access-Control-Allow-Origin", "*".parse().unwrap());
     Ok(res)
 }
 

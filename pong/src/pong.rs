@@ -6,8 +6,8 @@ pub mod pong_collisions {
     use std::rc::Rc;
 
     pub fn handle_player_ball_collision(
-        ball: Rc<RefCell<Box<dyn GameObject>>>,
-        player: Rc<RefCell<Box<dyn GameObject>>>,
+        ball: &Rc<RefCell<Box<dyn GameObject>>>,
+        player: &Rc<RefCell<Box<dyn GameObject>>>,
     ) {
         // reflect
         let mut ball = RefCell::borrow_mut(&ball);
@@ -40,8 +40,8 @@ pub mod pong_collisions {
     }
 
     pub fn handle_ball_bounds_collision(
-        ball: Rc<RefCell<Box<dyn GameObject>>>,
-        bound: Rc<RefCell<Box<dyn GameObject>>>,
+        ball: &Rc<RefCell<Box<dyn GameObject>>>,
+        bound: &Rc<RefCell<Box<dyn GameObject>>>,
     ) {
         let mut ball = RefCell::borrow_mut(&ball);
         let bound = RefCell::borrow(&bound);
@@ -57,8 +57,8 @@ pub mod pong_collisions {
     }
 
     pub fn handle_player_bound_collision(
-        player: Rc<RefCell<Box<dyn GameObject>>>,
-        bound: Rc<RefCell<Box<dyn GameObject>>>,
+        player: &Rc<RefCell<Box<dyn GameObject>>>,
+        bound: &Rc<RefCell<Box<dyn GameObject>>>,
     ) {
         let mut player = RefCell::borrow_mut(&player);
         let bound = RefCell::borrow(&bound);

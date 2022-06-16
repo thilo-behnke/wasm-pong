@@ -1,8 +1,9 @@
 pub mod game_object {
     use crate::game_object::components::{GeomComp, PhysicsComp};
-    use crate::geom::geom::{BoundingBox, Vector};
+    use crate::geom::geom::{BoundingBox};
     use crate::geom::shape::{ShapeType};
     use std::fmt::Debug;
+    use crate::geom::vector::Vector;
 
     pub trait GameObject: Debug {
         fn id(&self) -> u16;
@@ -122,12 +123,13 @@ pub mod game_object {
 }
 
 pub mod components {
-    use crate::geom::geom::{BoundingBox, Vector};
+    use crate::geom::geom::{BoundingBox};
     use crate::geom::shape::{
         get_bounding_box, get_center, get_center_mut, get_orientation, get_orientation_mut,
         ShapeType,
     };
     use std::fmt::Debug;
+    use crate::geom::vector::Vector;
 
     pub trait GeomComp: Debug {
         fn shape(&self) -> &ShapeType;

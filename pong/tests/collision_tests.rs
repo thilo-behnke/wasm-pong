@@ -1,11 +1,12 @@
 use pong::collision::collision::{Collision, CollisionDetector, CollisionGroup};
 use pong::game_object::game_object::GameObject;
-use pong::geom::geom::{BoundingBox, Vector};
+use pong::geom::geom::{BoundingBox};
 use pong::geom::shape::ShapeType;
 use pong::utils::utils::DefaultLoggerFactory;
 use rstest::rstest;
 use std::cell::{RefCell};
 use std::rc::Rc;
+use pong::geom::vector::Vector;
 
 #[rstest]
 #[case(vec![], vec![])]

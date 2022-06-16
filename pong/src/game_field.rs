@@ -6,8 +6,8 @@ use crate::collision::collision::{
 };
 use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
 use crate::game_object::game_object::{DefaultGameObject, GameObject};
-use crate::geom::geom::Vector;
 use crate::geom::shape::{Shape};
+use crate::geom::vector::Vector;
 use crate::pong::pong_collisions::{
     handle_ball_bounds_collision, handle_player_ball_collision, handle_player_bound_collision,
 };

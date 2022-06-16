@@ -2,13 +2,19 @@
 
 set -e
 
-cd server || exit
+echo "Environment prepared."
 
-source .env
+echo "Copy local dependencies into components."
+cp -r ./pong ./client/wasm/
+cp -r ./pong ./server/
 
+echo "Start docker containers."
 docker-compose down
 docker-compose up -d --build --force-recreate
-docker exec pong_server_kafka /opt/bitnami/kafka/bin/kafka-topics.sh --create --topic session --bootstrap-server "$KAFKA_HOST:$KAFKA_PORT"
-docker exec pong_server_kafka /opt/bitnami/kafka/bin/kafka-topics.sh --create --topic move --bootstrap-server "$KAFKA_HOST:$KAFKA_PORT"
-docker exec pong_server_kafka /opt/bitnami/kafka/bin/kafka-topics.sh --create --topic status --bootstrap-server "$KAFKA_HOST:$KAFKA_PORT"
-docker exec pong_server_kafka /opt/bitnami/kafka/bin/kafka-topics.sh --create --topic input --bootstrap-server "$KAFKA_HOST:$KAFKA_PORT"
+
+echo "Remove temporary local dependencies from components."
+rm -rf ./client/wasm/pong
+rm -rf ./server/pong
+
+echo "Initialize kafka."
+./init-kafka.sh

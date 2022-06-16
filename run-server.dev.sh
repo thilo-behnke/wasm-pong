@@ -2,11 +2,15 @@
 
 set -e
 
-cd server || exit
+echo "Environment prepared."
 
-source .env
+echo "Copy local dependencies into components."
+cp -r ./pong ./client/wasm/
+cp -r ./pong ./server/
 
+echo "Start docker containers."
 docker-compose down
 docker-compose up -d --build --force-recreate kafka zookeeper nginx
 
+echo "Initialize kafka."
 ./init-kafka.sh

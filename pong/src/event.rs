@@ -37,7 +37,7 @@ pub mod event {
     pub struct NoopEventWriterImpl {}
     impl EventWriterImpl for NoopEventWriterImpl {
         fn write(&mut self, _event: Event) -> Result<(), String> {
-            todo!()
+            Ok(())
         }
     }
 

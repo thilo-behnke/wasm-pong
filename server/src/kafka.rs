@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use hyper::{Body, Client, Method, Request, Uri};
-use kafka::client::{ProduceMessage};
+use kafka::client::ProduceMessage;
 use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage, MessageSet};
 use kafka::producer::{Partitioner, Producer, Record, RequiredAcks, Topics};
 use serde::Deserialize;

@@ -1,9 +1,8 @@
-pub mod collision {
+pub mod detection {
+    use crate::collision::collision::{Collision, CollisionRegistry, Collisions};
     use crate::game_object::game_object::GameObject;
     use crate::utils::utils::{Logger, LoggerFactory};
-    use std::cell::{RefCell};
-    use std::collections::HashMap;
-    use std::fmt::Debug;
+    use std::cell::RefCell;
     use std::rc::Rc;
 
     pub struct CollisionDetectorConfig {
@@ -86,84 +85,157 @@ pub mod collision {
         }
     }
 
-    pub trait CollisionRegistry: Debug {
-        fn get_collisions(&self) -> Vec<&Collision>;
-        fn get_collisions_by_id(&self, id: u16) -> Vec<&Collision>;
-    }
+    #[cfg(test)]
+    mod tests {
+        use crate::collision::collision::Collision;
+        use crate::collision::detection::{CollisionDetector, CollisionGroup};
+        use crate::game_object::game_object::GameObject;
+        use crate::geom::shape::ShapeType;
+        use crate::geom::utils::BoundingBox;
+        use crate::geom::vector::Vector;
+        use crate::utils::utils::DefaultLoggerFactory;
+        use rstest::rstest;
+        use std::cell::RefCell;
+        use std::rc::Rc;
 
-    #[derive(Debug)]
-    pub struct Collisions {
-        pub state: Vec<Collision>,
-    }
-
-    impl Collisions {
-        pub fn new(collisions: Vec<Collision>) -> Collisions {
-            Collisions { state: collisions }
+        #[rstest]
+        #[case(vec![], vec![])]
+        #[case(
+        vec![
+        MockGameObject::new(1, "a", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
+        MockGameObject::new(2, "b", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.))
+        ],
+        vec![Collision(1, 2)]
+        )]
+        #[case(
+        vec![
+        MockGameObject::new(1, "a", BoundingBox::create(&Vector{x: 60., y: 65.}, 20., 20.)),
+        MockGameObject::new(2, "b", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
+        ],
+        vec![Collision(1, 2)]
+        )]
+        #[case(
+        vec![
+        MockGameObject::new(1, "a", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
+        MockGameObject::new(2, "b", BoundingBox::create(&Vector{x: 80., y: 80.}, 20., 20.)),
+        ],
+        vec![]
+        )]
+        #[case(
+        vec![
+        MockGameObject::new(1, "a", BoundingBox::create(&Vector{x: 50., y: 50.}, 50., 50.)),
+        MockGameObject::new(2, "b", BoundingBox::create(&Vector{x: 500., y: 50.}, 50., 50.)),
+        ],
+        vec![]
+        )]
+        #[case(
+        vec![
+        MockGameObject::new(1, "a", BoundingBox::create(&Vector{x: 60., y: 65.}, 20., 20.)),
+        MockGameObject::new(2, "c", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
+        ],
+        vec![]
+        )]
+        pub fn should_detect_collisions(
+            #[case] objs: Vec<Rc<RefCell<Box<dyn GameObject>>>>,
+            #[case] expected_collisions: Vec<Collision>,
+        ) {
+            let logger = DefaultLoggerFactory::noop();
+            let mut detector = CollisionDetector::new(&logger);
+            detector.set_groups(vec![CollisionGroup(String::from("a"), String::from("b"))]);
+            let res = detector.detect_collisions(objs);
+            assert_eq!(
+                res.get_collisions(),
+                expected_collisions.iter().collect::<Vec<&Collision>>()
+            );
         }
-    }
 
-    impl CollisionRegistry for Collisions {
-        fn get_collisions(&self) -> Vec<&Collision> {
-            self.state.iter().collect()
+        #[derive(Debug)]
+        pub struct MockGameObject {
+            id: u16,
+            obj_type: String,
+            bounding_box: BoundingBox,
         }
-        fn get_collisions_by_id(&self, id: u16) -> Vec<&Collision> {
-            self.state
-                .iter()
-                .filter(|c| c.0 == id || c.1 == id)
-                .collect()
-        }
-    }
 
-    pub struct CollisionHandlerRegistry {
-        handlers: HashMap<
-            (String, String),
-            fn(&Rc<RefCell<Box<dyn GameObject>>>, &Rc<RefCell<Box<dyn GameObject>>>),
-        >,
-    }
-
-    type CollisionCallback = fn(&Rc<RefCell<Box<dyn GameObject>>>, &Rc<RefCell<Box<dyn GameObject>>>);
-
-    impl CollisionHandlerRegistry {
-        pub fn new() -> CollisionHandlerRegistry {
-            CollisionHandlerRegistry {
-                handlers: HashMap::new(),
+        impl MockGameObject {
+            pub fn new(
+                id: u16,
+                obj_type: &str,
+                bounding_box: BoundingBox,
+            ) -> Rc<RefCell<Box<dyn GameObject>>> {
+                Rc::new(RefCell::new(Box::new(MockGameObject {
+                    id,
+                    obj_type: String::from(obj_type),
+                    bounding_box,
+                })))
             }
         }
 
-        pub fn add(&mut self, mapping: (String, String), callback: CollisionCallback) {
-            if self.handlers.contains_key(&mapping) {
-                panic!(
-                    "Collision handler for mapping {:?} is already registered.",
-                    mapping
-                )
+        impl GameObject for MockGameObject {
+            fn id(&self) -> u16 {
+                self.id
             }
-            self.handlers.insert(mapping, callback);
-        }
 
-        pub fn call(
-            &self,
-            mapping: &(String, String),
-            values: (
-                &Rc<RefCell<Box<dyn GameObject>>>,
-                &Rc<RefCell<Box<dyn GameObject>>>,
-            ),
-        ) -> bool {
-            let regular = self.handlers.get(&mapping);
-            if let Some(callback) = regular {
-                callback(values.0, values.1);
-                return true;
+            fn obj_type(&self) -> &str {
+                &*self.obj_type
             }
-            let inverse = self.handlers.get(&(mapping.clone().1, mapping.clone().0));
-            if let Some(callback) = inverse {
-                callback(values.1, values.0);
-                return true;
+
+            fn shape(&self) -> &ShapeType {
+                todo!()
             }
-            return false;
+
+            fn pos(&self) -> &Vector {
+                todo!()
+            }
+
+            fn pos_mut(&mut self) -> &mut Vector {
+                todo!()
+            }
+
+            fn orientation(&self) -> &Vector {
+                todo!()
+            }
+
+            fn orientation_mut(&mut self) -> &mut Vector {
+                todo!()
+            }
+
+            fn update_pos(&mut self, _ms_diff: f64) {
+                todo!()
+            }
+
+            fn bounding_box(&self) -> BoundingBox {
+                self.bounding_box.clone()
+            }
+
+            fn vel(&self) -> &Vector {
+                todo!()
+            }
+
+            fn vel_mut(&mut self) -> &mut Vector {
+                todo!()
+            }
+
+            fn is_static(&self) -> bool {
+                todo!()
+            }
+
+            fn is_dirty(&self) -> bool {
+                todo!()
+            }
+
+            fn set_dirty(&mut self, _is_dirty: bool) {
+                todo!()
+            }
         }
     }
+}
 
-    #[derive(Debug, Eq, PartialEq)]
-    pub struct Collision(pub u16, pub u16);
+pub mod handler {
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+    use std::rc::Rc;
+    use crate::game_object::game_object::GameObject;
+    use crate::utils::utils::{Logger, LoggerFactory};
 
     pub struct CollisionHandler {
         logger: Box<dyn Logger>,
@@ -223,4 +295,171 @@ pub mod collision {
         //     obj_a.pos_mut().add(&b_to_a);
         // }
     }
+
+    pub struct CollisionHandlerRegistry {
+        handlers: HashMap<
+            (String, String),
+            fn(&Rc<RefCell<Box<dyn GameObject>>>, &Rc<RefCell<Box<dyn GameObject>>>),
+        >,
+    }
+
+    type CollisionCallback =
+    fn(&Rc<RefCell<Box<dyn GameObject>>>, &Rc<RefCell<Box<dyn GameObject>>>);
+
+    impl CollisionHandlerRegistry {
+        pub fn new() -> CollisionHandlerRegistry {
+            CollisionHandlerRegistry {
+                handlers: HashMap::new(),
+            }
+        }
+
+        pub fn add(&mut self, mapping: (String, String), callback: CollisionCallback) {
+            if self.handlers.contains_key(&mapping) {
+                panic!(
+                    "Collision handler for mapping {:?} is already registered.",
+                    mapping
+                )
+            }
+            self.handlers.insert(mapping, callback);
+        }
+
+        pub fn call(
+            &self,
+            mapping: &(String, String),
+            values: (
+                &Rc<RefCell<Box<dyn GameObject>>>,
+                &Rc<RefCell<Box<dyn GameObject>>>,
+            ),
+        ) -> bool {
+            let regular = self.handlers.get(&mapping);
+            if let Some(callback) = regular {
+                callback(values.0, values.1);
+                return true;
+            }
+            let inverse = self.handlers.get(&(mapping.clone().1, mapping.clone().0));
+            if let Some(callback) = inverse {
+                callback(values.1, values.0);
+                return true;
+            }
+            return false;
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use rstest::rstest;
+        use std::cell::RefCell;
+        use std::rc::Rc;
+        use crate::collision::handler::CollisionHandler;
+        use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
+        use crate::game_object::game_object::{DefaultGameObject, GameObject};
+        use crate::geom::shape::Shape;
+        use crate::geom::vector::Vector;
+        use crate::utils::utils::DefaultLoggerFactory;
+
+        #[rstest]
+        #[case(
+        create_game_obj(1, Vector::new(1., 0.), Vector::new(1., 0.), true),
+        create_game_obj(2, Vector::new(0., 0.), Vector::new(0., 1.), true)
+        )]
+        #[case(
+        create_game_obj(1, Vector::new(1., 0.), Vector::new(1., 0.), false),
+        create_game_obj(2, Vector::new(0., 0.), Vector::new(0., 1.), true)
+        )]
+        #[case(
+        create_game_obj(1, Vector::new(-1., 0.), Vector::new(-1., 0.), false),
+        create_game_obj(2, Vector::new(0., 0.), Vector::new(0., 1.), true),
+        )]
+        #[case(
+        create_game_obj(1, Vector::new(1., 1.), Vector::new(1., 1.), false),
+        create_game_obj(2, Vector::new(0., 0.), Vector::new(0., 1.), true)
+        )]
+        #[case(
+        create_game_obj(1, Vector::new(-2., 1.), Vector::new(-1., 0.), false),
+        create_game_obj(2, Vector::new(0., 0.), Vector::new(0., 1.), true),
+        )]
+        #[case(
+        create_game_obj(1, Vector::new(1., 0.), Vector::new(1., 0.), false),
+        create_game_obj(2, Vector::new(0., 1.), Vector::new(0., 1.), true)
+        )]
+        #[case(
+        create_game_obj(1, Vector::new(-2., 1.), Vector::new(-1., 0.), false),
+        create_game_obj(2, Vector::new(0., 0.), Vector::new(0., 1.), true),
+        )]
+        pub fn should_handle_collision(
+            #[case] obj_a: Rc<RefCell<Box<dyn GameObject>>>,
+            #[case] obj_b: Rc<RefCell<Box<dyn GameObject>>>,
+        ) {
+            let logger = DefaultLoggerFactory::noop();
+            let mut handler = CollisionHandler::new(&logger);
+            handler.register((String::from("obj"), String::from("obj")), |_a, _b| {
+                let mut a_mut = RefCell::borrow_mut(_a);
+                let mut vel_inverted = a_mut.vel().clone();
+                vel_inverted.invert();
+                *a_mut.vel_mut() = vel_inverted;
+            });
+            let expected_vel_a = Vector::inverted(RefCell::borrow(&obj_a).vel());
+            let res = handler.handle(&obj_a, &obj_b);
+            assert_eq!(true, res);
+            assert_eq!(RefCell::borrow(&obj_a).pos(), RefCell::borrow(&obj_a).pos());
+            assert_eq!(RefCell::borrow(&obj_a).vel(), &expected_vel_a);
+            assert_eq!(RefCell::borrow(&obj_b).pos(), RefCell::borrow(&obj_b).pos());
+            assert_eq!(RefCell::borrow(&obj_a).vel(), RefCell::borrow(&obj_a).vel());
+        }
+
+        fn create_game_obj(
+            id: u16,
+            vel: Vector,
+            orientation: Vector,
+            is_static: bool,
+        ) -> Rc<RefCell<Box<dyn GameObject>>> {
+            Rc::new(RefCell::new(Box::new(DefaultGameObject::new(
+                id,
+                "obj".to_string(),
+                Box::new(DefaultGeomComp::new(Shape::rect(
+                    Vector::zero(),
+                    orientation,
+                    20.,
+                    20.,
+                ))),
+                Box::new(DefaultPhysicsComp::new(vel, is_static)),
+            ))))
+        }
+    }
+}
+
+pub mod collision {
+    use std::fmt::Debug;
+
+    pub trait CollisionRegistry: Debug {
+        fn get_collisions(&self) -> Vec<&Collision>;
+        fn get_collisions_by_id(&self, id: u16) -> Vec<&Collision>;
+    }
+
+    #[derive(Debug)]
+    pub struct Collisions {
+        pub state: Vec<Collision>,
+    }
+
+    impl Collisions {
+        pub fn new(collisions: Vec<Collision>) -> Collisions {
+            Collisions { state: collisions }
+        }
+    }
+
+    impl CollisionRegistry for Collisions {
+        fn get_collisions(&self) -> Vec<&Collision> {
+            self.state.iter().collect()
+        }
+        fn get_collisions_by_id(&self, id: u16) -> Vec<&Collision> {
+            self.state
+                .iter()
+                .filter(|c| c.0 == id || c.1 == id)
+                .collect()
+        }
+    }
+
+    #[derive(Debug, Eq, PartialEq)]
+    pub struct Collision(pub u16, pub u16);
+
 }

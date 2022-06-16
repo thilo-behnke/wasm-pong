@@ -1,12 +1,14 @@
-use std::cell::{RefCell};
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::collision::collision::{
-    CollisionDetector, CollisionGroup, CollisionHandler, CollisionRegistry, Collisions,
+    CollisionRegistry, Collisions,
 };
+use crate::collision::detection::{CollisionDetector, CollisionGroup};
+use crate::collision::handler::{CollisionHandler};
 use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
 use crate::game_object::game_object::{DefaultGameObject, GameObject};
-use crate::geom::shape::{Shape};
+use crate::geom::shape::Shape;
 use crate::geom::vector::Vector;
 use crate::pong::pong_collisions::{
     handle_ball_bounds_collision, handle_player_ball_collision, handle_player_bound_collision,
@@ -191,15 +193,17 @@ impl Field {
         {
             for obj in self.objs.iter().filter(|o| RefCell::borrow(o).is_dirty()) {
                 let mut obj = RefCell::borrow_mut(obj);
-                let event_write_res = self.event_writer
-                    .write(PongEventType::GameObjUpdate(GameObjUpdate {
-                        obj_id: &obj.id().to_string(),
-                        vel: obj.vel(),
-                        orientation: obj.orientation(),
-                        pos: obj.pos(),
-                    }));
+                let event_write_res =
+                    self.event_writer
+                        .write(PongEventType::GameObjUpdate(GameObjUpdate {
+                            obj_id: &obj.id().to_string(),
+                            vel: obj.vel(),
+                            orientation: obj.orientation(),
+                            pos: obj.pos(),
+                        }));
                 if let Err(e) = event_write_res {
-                    self.logger.log(&*format!("Failed to write event logs: {}", e))
+                    self.logger
+                        .log(&*format!("Failed to write event logs: {}", e))
                 }
                 obj.set_dirty(false);
             }
@@ -342,5 +346,51 @@ pub struct Bounds(pub Bound, pub Box<dyn GameObject>);
 impl Bounds {
     pub fn inner(self) -> Box<dyn GameObject> {
         self.1
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cell::RefCell;
+    use crate::game_field::{Field, Input, InputType};
+
+    #[test]
+    fn player_input_update_pos_up() {
+        let height = 1000;
+        let mut field = Field::mock(1000, height);
+        field.add_player(1, 50, height / 2);
+        let inputs = vec![Input {
+            input: InputType::UP,
+            obj_id: 1,
+            player: 1,
+        }];
+        field.tick(inputs, 1.);
+        let player = RefCell::borrow(
+            field
+                .objs()
+                .iter()
+                .find(|o| RefCell::borrow(o).obj_type() == "player")
+                .unwrap(),
+        );
+        assert_eq!(player.pos().y, 530.);
+    }
+
+    #[test]
+    fn player_input_update_pos_down() {
+        let height = 1000;
+        let mut field = Field::mock(1000, height);
+        field.add_player(1, 50, height / 2);
+        let inputs = vec![Input {
+            input: InputType::DOWN,
+            obj_id: 1,
+            player: 1,
+        }];
+        field.tick(inputs, 1.);
+        let objs = field.objs();
+        let player = objs
+            .iter()
+            .find(|o| RefCell::borrow(o).obj_type() == "player")
+            .unwrap();
+        assert_eq!(RefCell::borrow(player).pos().y, 470.);
     }
 }

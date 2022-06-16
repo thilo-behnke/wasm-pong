@@ -5,7 +5,6 @@ use pong::geom::geom::Vector;
 use pong::geom::shape::Shape;
 use pong::utils::utils::DefaultLoggerFactory;
 use rstest::rstest;
-use std::borrow::{Borrow, BorrowMut};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -67,17 +66,18 @@ use std::rc::Rc;
     create_game_obj(2, Vector::new(0., 0.), Vector::new(0., 1.), true),
 )]
 pub fn should_handle_collision(
-    #[case] mut obj_a: Rc<RefCell<Box<dyn GameObject>>>,
-    #[case] mut obj_b: Rc<RefCell<Box<dyn GameObject>>>,
-    #[case] expected_a: Rc<RefCell<Box<dyn GameObject>>>,
-    #[case] expected_b: Rc<RefCell<Box<dyn GameObject>>>,
+    #[case] obj_a: Rc<RefCell<Box<dyn GameObject>>>,
+    #[case] obj_b: Rc<RefCell<Box<dyn GameObject>>>,
+    #[case] _expected_a: Rc<RefCell<Box<dyn GameObject>>>,
+    #[case] _expected_b: Rc<RefCell<Box<dyn GameObject>>>,
 ) {
     let logger = DefaultLoggerFactory::noop();
     let mut handler = CollisionHandler::new(&logger);
-    handler.register((String::from("obj"), String::from("obj")), |a, b| {});
+    handler.register((String::from("obj"), String::from("obj")), |_a, _b| {});
     let res = handler.handle(obj_a, obj_b);
-    assert_eq!(true, res)
-    // assert_eq!(obj_a.pos(), expected_a.pos());
+    assert_eq!(true, res);
+    // TODO: Fix
+    // assert_eq!(RefCell::borrow(&obj_a).pos(), RefCell::borrow(&expected_a).pos());
     // assert_eq!(obj_a.vel(), expected_a.vel());
     // assert_eq!(obj_b.pos(), expected_b.pos());
     // assert_eq!(obj_b.vel(), expected_b.vel());

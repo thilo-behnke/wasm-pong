@@ -1,11 +1,10 @@
 #[cfg(test)]
 mod game_field_tests {
     use pong::game_field::{Field, Input, InputType};
-    use std::borrow::Borrow;
     use std::cell::RefCell;
 
     #[test]
-    fn player_input_update_pos__up() {
+    fn player_input_update_pos_up() {
         let height = 1000;
         let mut field = Field::mock(1000, height);
         field.add_player(1, 50, height / 2);
@@ -26,7 +25,7 @@ mod game_field_tests {
     }
 
     #[test]
-    fn player_input_update_pos__down() {
+    fn player_input_update_pos_down() {
         let height = 1000;
         let mut field = Field::mock(1000, height);
         field.add_player(1, 50, height / 2);

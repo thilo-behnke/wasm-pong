@@ -4,7 +4,7 @@ use pong::geom::geom::{BoundingBox, Vector};
 use pong::geom::shape::ShapeType;
 use pong::utils::utils::DefaultLoggerFactory;
 use rstest::rstest;
-use std::cell::{Ref, RefCell};
+use std::cell::{RefCell};
 use std::rc::Rc;
 
 #[rstest]
@@ -62,8 +62,7 @@ pub fn should_detect_collisions(
 pub struct MockGameObject {
     id: u16,
     obj_type: String,
-    bounding_box: BoundingBox,
-    zero_vec: Vector,
+    bounding_box: BoundingBox
 }
 
 impl MockGameObject {
@@ -75,19 +74,18 @@ impl MockGameObject {
         Rc::new(RefCell::new(Box::new(MockGameObject {
             id,
             obj_type: String::from(obj_type),
-            bounding_box,
-            zero_vec: Vector::zero(),
+            bounding_box
         })))
     }
 }
 
 impl GameObject for MockGameObject {
     fn id(&self) -> u16 {
-        todo!()
+        self.id
     }
 
     fn obj_type(&self) -> &str {
-        todo!()
+        &*self.obj_type
     }
 
     fn shape(&self) -> &ShapeType {
@@ -110,12 +108,12 @@ impl GameObject for MockGameObject {
         todo!()
     }
 
-    fn update_pos(&mut self, ms_diff: f64) {
+    fn update_pos(&mut self, _ms_diff: f64) {
         todo!()
     }
 
     fn bounding_box(&self) -> BoundingBox {
-        todo!()
+        self.bounding_box.clone()
     }
 
     fn vel(&self) -> &Vector {
@@ -134,7 +132,7 @@ impl GameObject for MockGameObject {
         todo!()
     }
 
-    fn set_dirty(&mut self, is_dirty: bool) {
+    fn set_dirty(&mut self, _is_dirty: bool) {
         todo!()
     }
 }

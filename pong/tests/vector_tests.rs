@@ -1,8 +1,6 @@
 use pong::geom::geom::Vector;
 use rstest::rstest;
-use std::f64::consts::FRAC_PI_2;
 use std::f64::consts::FRAC_PI_4;
-use std::f64::consts::PI;
 
 #[rstest]
 #[case(1., 0., 1.)]
@@ -82,8 +80,8 @@ pub fn should_correctly_rotate(
 #[case(Vector::new(1., 0.), Vector::new(0., 1.), 0.)]
 #[case(Vector::new(1., 0.), Vector::new(-1., 0.), -1.)]
 pub fn should_calculate_dot_product(
-    #[case] mut vector: Vector,
-    #[case] mut other: Vector,
+    #[case] vector: Vector,
+    #[case] other: Vector,
     #[case] expected: f64,
 ) {
     let dot = vector.dot(&other);

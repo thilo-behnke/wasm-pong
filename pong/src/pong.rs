@@ -2,8 +2,7 @@ pub mod pong_collisions {
     use crate::game_object::game_object::GameObject;
     use crate::geom::geom::Vector;
     use crate::geom::shape::ShapeType;
-    use std::cell::{RefCell, RefMut};
-    use std::ops::Add;
+    use std::cell::{RefCell};
     use std::rc::Rc;
 
     pub fn handle_player_ball_collision(
@@ -70,7 +69,7 @@ pub mod pong_collisions {
             ShapeType::Circle(_, radius) => radius,
         };
         let mut perpendicular = player_orientation.get_opposing_orthogonal(bound.orientation());
-        perpendicular.y *= (height + 1.);
+        perpendicular.y *= height + 1.;
         let mut new_pos = bound.pos().clone();
         new_pos.add(&perpendicular);
         let player_pos = player.pos_mut();
@@ -84,7 +83,6 @@ pub mod pong_events {
     use crate::event::event::{Event, EventWriter};
     use crate::geom::geom::Vector;
     use serde::Serialize;
-    use serde_json::json;
 
     #[derive(Serialize)]
     pub enum PongEventType<'a> {

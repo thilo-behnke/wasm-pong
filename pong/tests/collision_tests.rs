@@ -83,11 +83,11 @@ impl MockGameObject {
 
 impl GameObject for MockGameObject {
     fn id(&self) -> u16 {
-        self.id
+        todo!()
     }
 
     fn obj_type(&self) -> &str {
-        &*self.obj_type
+        todo!()
     }
 
     fn shape(&self) -> &ShapeType {
@@ -115,7 +115,7 @@ impl GameObject for MockGameObject {
     }
 
     fn bounding_box(&self) -> BoundingBox {
-        self.bounding_box.clone()
+        todo!()
     }
 
     fn vel(&self) -> &Vector {
@@ -127,6 +127,14 @@ impl GameObject for MockGameObject {
     }
 
     fn is_static(&self) -> bool {
+        todo!()
+    }
+
+    fn is_dirty(&self) -> bool {
+        todo!()
+    }
+
+    fn set_dirty(&mut self, is_dirty: bool) {
         todo!()
     }
 }

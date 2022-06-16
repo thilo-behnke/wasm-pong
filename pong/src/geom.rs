@@ -295,18 +295,22 @@ pub mod shape {
             )
         }
 
+        #[allow(dead_code)]
         fn center(&self) -> &Vector {
             &self.center
         }
 
+        #[allow(dead_code)]
         fn center_mut(&mut self) -> &mut Vector {
             &mut self.center
         }
 
+        #[allow(dead_code)]
         fn orientation(&self) -> &Vector {
             &self.orientation
         }
 
+        #[allow(dead_code)]
         fn orientation_mut(&mut self) -> &mut Vector {
             &mut self.orientation
         }

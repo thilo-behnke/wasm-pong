@@ -1,10 +1,7 @@
 pub mod collision {
     use crate::game_object::game_object::GameObject;
-    use crate::geom::geom::Vector;
     use crate::utils::utils::{Logger, LoggerFactory};
-    use std::alloc::handle_alloc_error;
-    use std::any::Any;
-    use std::cell::{Ref, RefCell, RefMut};
+    use std::cell::{RefCell};
     use std::collections::HashMap;
     use std::fmt::Debug;
     use std::rc::Rc;
@@ -34,6 +31,7 @@ pub mod collision {
 
     pub struct CollisionDetector {
         config: CollisionDetectorConfig,
+        #[allow(dead_code)]
         logger: Box<dyn Logger>,
     }
 

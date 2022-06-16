@@ -1,18 +1,13 @@
+use serde::{Deserialize, Serialize};
+
+use pong::event::event::{Event, EventReader, EventWriter};
+
 use crate::hash::Hasher;
 use crate::kafka::{
-    KafkaDefaultEventWriterImpl, KafkaEventReaderImpl, KafkaSessionEventReaderImpl,
+    KafkaDefaultEventWriterImpl, KafkaSessionEventReaderImpl,
     KafkaSessionEventWriterImpl, KafkaTopicManager,
 };
 use crate::player::Player;
-use kafka::producer::Producer;
-use pong::event::event::{Event, EventReader, EventWriter};
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-use serde_json::json;
-use std::collections::HashMap;
-use std::rc::Rc;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 pub struct SessionManager {
     kafka_host: String,
@@ -51,7 +46,10 @@ impl SessionManager {
         let session_hash = Hasher::hash(session_id);
         let session = Session::new(session_id, session_hash, player.clone());
         println!("Successfully created session: {:?}", session);
-        self.write_to_producer(session_created(session.clone(), player.clone()));
+        let write_res = self.write_to_producer(session_created(session.clone(), player.clone()));
+        if let Err(e) = write_res {
+            eprintln!("Failed to write session created event for {:?} to producer: {}", session, e);
+        }
         self.sessions.push(session.clone());
         Ok(session)
     }
@@ -88,7 +86,10 @@ impl SessionManager {
             session.clone()
         };
         {
-            self.write_to_producer(session_joined(updated_session.clone(), player.clone()));
+            let write_res = self.write_to_producer(session_joined(updated_session.clone(), player.clone()));
+            if let Err(e) = write_res {
+                eprintln!("Failed to write session joined event for {:?} to producer: {}", updated_session, e);
+            }
         };
         println!("sessions = {:?}", self.sessions);
         Ok(updated_session.clone())
@@ -230,6 +231,7 @@ impl SessionWriter {
 }
 
 pub struct SessionReader {
+    #[allow(dead_code)]
     session: Session,
     reader: EventReader,
 }

@@ -191,7 +191,7 @@ window.WASM_PONG.createOnlineSession = () => {
         session_display_tag.style.display = 'block';
         session_display_tag.innerHTML = JSON.stringify(session)
 
-        websocket = new WebSocket(`ws://${location.host}/pong/ws?session_id=${session.session.hash}&connection_type=host`)
+        websocket = new WebSocket(`ws://${location.host.split(':')[0]}/pong/ws?session_id=${session.session.hash}&connection_type=host`)
         websocket.onmessage = (event) => {
             addEvents(event);
         }
@@ -227,7 +227,7 @@ const executeJoinSession = (sessionId) => {
         // Field will be instrumented by only drawing the objects for the peer, e.g. collision detection will happen at the host.
         field = null;
 
-        websocket = new WebSocket(`ws://${location.host}/pong/ws?session_id=${session.session.hash}&connection_type=peer`)
+        websocket = new WebSocket(`ws://${location.host.split(':')[0]}/pong/ws?session_id=${session.session.hash}&connection_type=peer`)
         websocket.onmessage = (event) => {
             addEvents(event);
         }

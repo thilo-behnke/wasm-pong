@@ -14,7 +14,7 @@ use tokio::sync::Mutex;
 use crate::request_handler::{DefaultRequestHandler, RequestHandler};
 use crate::session_manager::{SessionManager};
 use crate::utils::http_utils::{build_error_res, get_query_params, read_json_body};
-use crate::websocket::{DefaultWebsocketHandler, WebSocketConnectionType, WebsocketHandler, WebSocketSession};
+use crate::websocket_handler::{DefaultWebsocketHandler, WebSocketConnectionType, WebsocketHandler, WebSocketSession};
 
 pub struct HttpServer {
     addr: [u8; 4],

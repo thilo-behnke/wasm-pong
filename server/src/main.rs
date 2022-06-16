@@ -7,7 +7,7 @@ pub mod http;
 pub mod kafka;
 mod session_manager;
 pub mod utils;
-mod websocket;
+mod websocket_handler;
 mod request_handler;
 mod event;
 mod player;

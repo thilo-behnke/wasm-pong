@@ -9,7 +9,7 @@ use hyper_tungstenite::tungstenite::{Error, Message};
 use serde_json::json;
 use tokio::time::sleep;
 use serde::{Serialize, Deserialize};
-use crate::event::{SessionClosedDto, SessionEventListDTO};
+use crate::event::{SessionEventListDTO};
 use crate::session::Session;
 use crate::session_manager::{SessionManager};
 
@@ -79,7 +79,13 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                         let mut any_error = false;
                         let event_count = event_wrapper.events.len();
                         for event in event_wrapper.events {
-                            let write_res = event_writer.write_to_session(&event.topic, &event.msg);
+                            let serialized = serde_json::to_string(&event);
+                            if let Err(e) = serialized {
+                                eprintln!("Failed to serialize event {:?}: {}", event, e);
+                                any_error = true;
+                                continue;
+                            }
+                            let write_res = event_writer.write_to_session(&event.topic, &serialized.unwrap());
                             if let Err(e) = write_res {
                                 any_error = true;
                                 eprintln!("Failed to write event {:?}: {}", event, e);

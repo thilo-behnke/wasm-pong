@@ -7,7 +7,7 @@ use crate::session::Session;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SessionEventListDTO<'a> {
     pub session_id: &'a str,
-    pub events: Vec<PongEvent<'a>>,
+    pub events: Vec<PongEventWrapper<'a>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -1,6 +1,6 @@
 pub mod pong_collisions {
     use crate::game_object::game_object::GameObject;
-    use crate::geom::geom::Vector;
+    use crate::geom::vector::{Vector};
     use crate::geom::shape::ShapeType;
     use std::cell::{RefCell};
     use std::rc::Rc;
@@ -81,7 +81,7 @@ pub mod pong_collisions {
 
 pub mod pong_events {
     use crate::event::event::{Event, EventWriter};
-    use crate::geom::geom::Vector;
+    use crate::geom::vector::Vector;
     use serde::Serialize;
 
     #[derive(Serialize)]

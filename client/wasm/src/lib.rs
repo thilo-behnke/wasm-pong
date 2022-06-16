@@ -3,7 +3,7 @@ mod utils;
 use pong::collision::collision::{Collision, CollisionDetector};
 use pong::game_field::{Field, Input, InputType};
 use pong::game_object::game_object::{DefaultGameObject, GameObject};
-use pong::geom::geom::Vector;
+use pong::geom::vector::Vector;
 use pong::geom::shape::ShapeType;
 use pong::pong::pong_events::DefaultPongEventWriter;
 use pong::utils::utils::{DefaultLoggerFactory, Logger};

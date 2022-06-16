@@ -1,6 +1,6 @@
 use pong::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
 use pong::game_object::game_object::{DefaultGameObject, GameObject};
-use pong::geom::geom::Vector;
+use pong::geom::vector::Vector;
 use pong::geom::shape::Shape;
 use rstest::rstest;
 

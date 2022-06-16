@@ -1,6 +1,6 @@
 use pong::game_field::{Bound, Field};
 use pong::game_object::game_object::{DefaultGameObject, GameObject};
-use pong::geom::geom::Vector;
+use pong::geom::vector::Vector;
 use pong::pong::pong_collisions::handle_player_bound_collision;
 use pong::utils::utils::{DefaultLoggerFactory};
 use rstest::rstest;
@@ -47,7 +47,7 @@ pub fn should_correctly_handle_player_bounds_collision(
     #[case] player_expected: Rc<RefCell<Box<dyn GameObject>>>,
     #[case] bounds_expected: Rc<RefCell<Box<dyn GameObject>>>,
 ) {
-    handle_player_bound_collision(player.clone(), bounds.clone());
+    handle_player_bound_collision(&player, &bounds);
     assert_eq!(player_expected.borrow().pos(), player.borrow().pos());
     assert_eq!(bounds_expected.borrow().pos(), bounds.borrow().pos());
 }

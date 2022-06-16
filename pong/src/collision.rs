@@ -117,11 +117,11 @@ pub mod collision {
     pub struct CollisionHandlerRegistry {
         handlers: HashMap<
             (String, String),
-            fn(Rc<RefCell<Box<dyn GameObject>>>, Rc<RefCell<Box<dyn GameObject>>>),
+            fn(&Rc<RefCell<Box<dyn GameObject>>>, &Rc<RefCell<Box<dyn GameObject>>>),
         >,
     }
 
-    type CollisionCallback = fn(Rc<RefCell<Box<dyn GameObject>>>, Rc<RefCell<Box<dyn GameObject>>>);
+    type CollisionCallback = fn(&Rc<RefCell<Box<dyn GameObject>>>, &Rc<RefCell<Box<dyn GameObject>>>);
 
     impl CollisionHandlerRegistry {
         pub fn new() -> CollisionHandlerRegistry {
@@ -144,8 +144,8 @@ pub mod collision {
             &self,
             mapping: &(String, String),
             values: (
-                Rc<RefCell<Box<dyn GameObject>>>,
-                Rc<RefCell<Box<dyn GameObject>>>,
+                &Rc<RefCell<Box<dyn GameObject>>>,
+                &Rc<RefCell<Box<dyn GameObject>>>,
             ),
         ) -> bool {
             let regular = self.handlers.get(&mapping);
@@ -182,21 +182,21 @@ pub mod collision {
         pub fn register(
             &mut self,
             mapping: (String, String),
-            callback: fn(Rc<RefCell<Box<dyn GameObject>>>, Rc<RefCell<Box<dyn GameObject>>>),
+            callback: fn(&Rc<RefCell<Box<dyn GameObject>>>, &Rc<RefCell<Box<dyn GameObject>>>),
         ) {
             self.handlers.add(mapping, callback)
         }
 
         pub fn handle(
             &self,
-            obj_a: Rc<RefCell<Box<dyn GameObject>>>,
-            obj_b: Rc<RefCell<Box<dyn GameObject>>>,
+            obj_a: &Rc<RefCell<Box<dyn GameObject>>>,
+            obj_b: &Rc<RefCell<Box<dyn GameObject>>>,
         ) -> bool {
             let key = (
                 RefCell::borrow(&obj_a).obj_type().to_string(),
                 RefCell::borrow(&obj_b).obj_type().to_string(),
             );
-            let handler_res = self.handlers.call(&key, (obj_a, obj_b));
+            let handler_res = self.handlers.call(&key, (&obj_a, &obj_b));
             if !handler_res {
                 self.logger
                     .log(&*format!("Found no matching collision handler: {:?}", key));

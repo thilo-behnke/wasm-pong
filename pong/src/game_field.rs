@@ -185,7 +185,7 @@ impl Field {
                 .find(|o| RefCell::borrow(o).id() == collision.1)
                 .unwrap()
                 .clone();
-            collision_handler.handle(obj_a, obj_b);
+            collision_handler.handle(&obj_a, &obj_b);
         }
 
         {

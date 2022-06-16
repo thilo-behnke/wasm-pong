@@ -22,6 +22,12 @@ pub mod geom {
             Vector { x, y }
         }
 
+        pub fn inverted(vec: &Vector) -> Vector {
+            let mut inverted = vec.clone();
+            inverted.invert();
+            return inverted;
+        }
+
         pub fn normalize(&mut self) {
             if self == &Vector::zero() {
                 return;

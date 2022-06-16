@@ -1,7 +1,8 @@
 pub mod http_utils {
-    use hyper::{body, Body, Request};
+    use hyper::{body, Body, Request, Response, StatusCode};
     use serde::de::DeserializeOwned;
     use std::collections::HashMap;
+    use std::convert::Infallible;
 
     pub fn get_query_params(req: &Request<Body>) -> HashMap<&str, &str> {
         let uri = req.uri();
@@ -25,6 +26,22 @@ pub mod http_utils {
         let bytes = body::to_bytes(body).await.unwrap();
         let body_str = std::str::from_utf8(&*bytes).unwrap();
         serde_json::from_str::<T>(body_str).unwrap()
+    }
+
+    pub fn build_success_res(value: &str) -> Result<Response<Body>, Infallible> {
+        let json = format!("{{\"data\": {}}}", value);
+        let mut res = Response::new(Body::from(json));
+        let headers = res.headers_mut();
+        headers.insert("Content-Type", "application/json".parse().unwrap());
+        headers.insert("Access-Control-Allow-Origin", "*".parse().unwrap());
+        Ok(res)
+    }
+
+    pub fn build_error_res(error: &str, status: StatusCode) -> Result<Response<Body>, Infallible> {
+        let json = format!("{{\"error\": \"{}\"}}", error);
+        let mut res = Response::new(Body::from(json));
+        *res.status_mut() = status;
+        return Ok(res);
     }
 }
 

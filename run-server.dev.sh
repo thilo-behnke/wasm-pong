@@ -12,5 +12,9 @@ echo "Start docker containers."
 docker-compose down
 docker-compose up -d --build --force-recreate kafka zookeeper nginx
 
+echo "Remove temporary local dependencies from components."
+rm -rf ./client/wasm/pong
+rm -rf ./server/pong
+
 echo "Initialize kafka."
 ./init-kafka.sh

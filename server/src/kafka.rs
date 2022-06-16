@@ -8,7 +8,6 @@ use kafka::producer::{Partitioner, Producer, Record, RequiredAcks, Topics};
 use serde::Deserialize;
 
 use pong::event::event::{Event, EventReaderImpl, EventWriterImpl};
-
 use crate::session::Session;
 
 pub struct KafkaSessionEventWriterImpl {

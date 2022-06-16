@@ -3,7 +3,7 @@ mod utils;
 use pong::game_field::{Field, Input, InputType};
 use pong::game_object::game_object::{GameObject};
 use pong::geom::shape::ShapeType;
-use pong::pong::pong_events::DefaultPongEventWriter;
+use pong::pong::pong_events::{NoopPongEventWriter};
 use pong::utils::utils::{DefaultLoggerFactory, Logger};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -113,7 +113,7 @@ impl FieldWrapper {
     pub fn new() -> FieldWrapper {
         let field = Field::new(
             DefaultLoggerFactory::new(Box::new(WasmLogger::root())),
-            DefaultPongEventWriter::new(),
+            NoopPongEventWriter::new(),
         );
         FieldWrapper { field }
     }

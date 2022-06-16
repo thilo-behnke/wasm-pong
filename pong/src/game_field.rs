@@ -170,11 +170,11 @@ impl Field {
 
         let collision_handler = &self.collision_handler;
         let registered_collisions = collisions.get_collisions();
-        self.logger.log(&*format!(
-            "Found {} collisions: {:?}",
-            registered_collisions.len(),
-            registered_collisions
-        ));
+        // self.logger.log(&*format!(
+        //     "Found {} collisions: {:?}",
+        //     registered_collisions.len(),
+        //     registered_collisions
+        // ));
         for collision in registered_collisions.iter() {
             let objs = &self.objs;
             let obj_a = objs

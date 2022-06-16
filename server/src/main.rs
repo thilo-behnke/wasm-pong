@@ -5,9 +5,13 @@ use crate::http::HttpServer;
 mod hash;
 pub mod http;
 pub mod kafka;
+mod session_manager;
+pub mod utils;
+mod websocket;
+mod request_handler;
+mod event;
 mod player;
 mod session;
-pub mod utils;
 
 #[tokio::main]
 pub async fn main() {

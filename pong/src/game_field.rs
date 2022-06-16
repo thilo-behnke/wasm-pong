@@ -24,7 +24,7 @@ pub enum InputType {
     DOWN,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Input {
     pub input: InputType,
     pub obj_id: u16,

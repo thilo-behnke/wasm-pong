@@ -33,8 +33,7 @@ services:
   server:
     container_name: pong_server
     build:
-      context: ./
-      dockerfile: ./server/Dockerfile
+      context: ./server
     ports:
       - '4000:4000'
     restart: on-failure
@@ -46,8 +45,7 @@ services:
   nginx:
     container_name: pong_nginx
     build:
-      context: ./
-      dockerfile: ./client/Dockerfile
+      context: ./client
     ports:
       - '80:80'
     network_mode: 'host'

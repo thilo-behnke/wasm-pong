@@ -1,8 +1,8 @@
 FROM rust:latest as build_stage
 
 RUN mkdir /build
+ADD ./ /build/server
 ADD ./pong /build/pong
-ADD ./server /build/server
 WORKDIR /build/server
 RUN cargo build --release
 

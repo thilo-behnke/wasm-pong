@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use serde::{Deserialize, Serialize};
 
 use crate::collision::collision::{
     CollisionRegistry, Collisions,
@@ -18,7 +19,7 @@ use crate::pong::pong_events::{
 };
 use crate::utils::utils::{DefaultLoggerFactory, Logger, LoggerFactory, NoopLogger};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum InputType {
     UP,
     DOWN,

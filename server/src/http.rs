@@ -2,14 +2,14 @@ use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::{Duration};
+use std::time::Duration;
 
 use futures::{sink::SinkExt, stream::StreamExt};
-use hyper::{Body, Method, Request, Response, Server, StatusCode};
 use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
-use hyper_tungstenite::{HyperWebsocket};
+use hyper::{Body, Method, Request, Response, Server, StatusCode};
 use hyper_tungstenite::tungstenite::{Error, Message};
+use hyper_tungstenite::HyperWebsocket;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::sync::Mutex;
@@ -25,8 +25,16 @@ pub struct HttpServer {
     session_manager: Arc<Mutex<SessionManager>>,
 }
 impl HttpServer {
-    pub fn new(addr: [u8; 4], port: u16, kafka_host: &str, kafka_topic_manager_host: &str) -> HttpServer {
-        let session_manager = Arc::new(Mutex::new(SessionManager::new(kafka_host, kafka_topic_manager_host)));
+    pub fn new(
+        addr: [u8; 4],
+        port: u16,
+        kafka_host: &str,
+        kafka_topic_manager_host: &str,
+    ) -> HttpServer {
+        let session_manager = Arc::new(Mutex::new(SessionManager::new(
+            kafka_host,
+            kafka_topic_manager_host,
+        )));
         HttpServer {
             addr,
             port,

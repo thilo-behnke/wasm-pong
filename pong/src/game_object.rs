@@ -1,9 +1,9 @@
 pub mod game_object {
     use crate::game_object::components::{GeomComp, PhysicsComp};
-    use crate::geom::geom::{BoundingBox};
-    use crate::geom::shape::{ShapeType};
-    use std::fmt::Debug;
+    use crate::geom::shape::ShapeType;
+    use crate::geom::utils::BoundingBox;
     use crate::geom::vector::Vector;
+    use std::fmt::Debug;
 
     pub trait GameObject: Debug {
         fn id(&self) -> u16;
@@ -22,7 +22,6 @@ pub mod game_object {
         fn set_dirty(&mut self, is_dirty: bool);
     }
 
-    // #[derive(Clone, Debug, PartialEq)]
     #[derive(Debug)]
     pub struct DefaultGameObject {
         pub id: u16,
@@ -120,16 +119,50 @@ pub mod game_object {
             self.dirty = is_dirty;
         }
     }
+
+    #[cfg(test)]
+    mod tests {
+        use rstest::rstest;
+        use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
+        use crate::game_object::game_object::{DefaultGameObject, GameObject};
+        use crate::geom::shape::Shape;
+        use crate::geom::vector::Vector;
+
+        #[rstest]
+        #[case(Vector::new(100., 100.), Vector::new(-1., 1.), Vector::new(99.9, 100.1), 0.1)]
+        #[case(Vector::new(300., 400.), Vector::new(-5., 0.), Vector::new(299.5, 400.), 0.1)]
+        #[case(Vector::new(300., 400.), Vector::new(-5., 0.), Vector::new(299.935, 400.), 0.013)]
+        pub fn should_update_pos(
+            #[case] start_pos: Vector,
+            #[case] vel: Vector,
+            #[case] expected_pos: Vector,
+            #[case] ms_diff: f64,
+        ) {
+            let mut obj = DefaultGameObject::new(
+                1,
+                "obj".to_string(),
+                Box::new(DefaultGeomComp::new(Shape::rect(
+                    Vector::new(start_pos.x as f64, start_pos.y as f64),
+                    Vector::new(1., 0.),
+                    0.,
+                    0.,
+                ))),
+                Box::new(DefaultPhysicsComp::new(vel, false)),
+            );
+            obj.update_pos(ms_diff);
+            assert_eq!(*obj.pos(), expected_pos);
+        }
+    }
 }
 
 pub mod components {
-    use crate::geom::geom::{BoundingBox};
     use crate::geom::shape::{
         get_bounding_box, get_center, get_center_mut, get_orientation, get_orientation_mut,
         ShapeType,
     };
-    use std::fmt::Debug;
+    use crate::geom::utils::BoundingBox;
     use crate::geom::vector::Vector;
+    use std::fmt::Debug;
 
     pub trait GeomComp: Debug {
         fn shape(&self) -> &ShapeType;

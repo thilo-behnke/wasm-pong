@@ -1,5 +1,5 @@
 pub mod vector {
-    use serde::{Serialize};
+    use serde::Serialize;
 
     #[derive(Debug, Clone, Serialize)]
     pub struct Vector {
@@ -165,9 +165,9 @@ pub mod vector {
 
     #[cfg(test)]
     mod tests {
+        use crate::geom::vector::Vector;
         use rstest::rstest;
         use std::f64::consts::FRAC_PI_4;
-        use crate::geom::vector::Vector;
 
         #[rstest]
         #[case(1., 0., 1.)]
@@ -214,7 +214,10 @@ pub mod vector {
         #[case(Vector::new(1., 0.), Vector::new(0., -1.))]
         #[case(Vector::new(0., 1.), Vector::new(1., 0.))]
         #[case(Vector::new(7., 7.), Vector::new(7., -7.))]
-        pub fn should_get_orthogonal_clockwise(#[case] mut vector: Vector, #[case] expected: Vector) {
+        pub fn should_get_orthogonal_clockwise(
+            #[case] mut vector: Vector,
+            #[case] expected: Vector,
+        ) {
             vector.orthogonal_clockwise();
             assert_eq!(vector, expected);
         }
@@ -298,7 +301,7 @@ pub mod vector {
     }
 }
 
-pub mod geom {
+pub mod utils {
     use crate::geom::vector::Vector;
 
     #[derive(Clone, Debug)]
@@ -399,12 +402,62 @@ pub mod geom {
             return false;
         }
     }
+
+    #[cfg(test)]
+    mod tests {
+        use crate::geom::utils::BoundingBox;
+        use crate::geom::vector::Vector;
+        use rstest::rstest;
+
+        #[rstest]
+        #[case(BoundingBox::create(&Vector::new(10., 10.), 5., 5.), Vector::new(10., 10.), true)]
+        #[case(BoundingBox::create(&Vector::new(10., 10.), 5., 5.), Vector::new(8., 8.), true)]
+        #[case(BoundingBox::create(&Vector::new(10., 10.), 5., 5.), Vector::new(20., 20.), false)]
+        pub fn should_correctly_determine_if_point_is_within_box(
+            #[case] bounding_box: BoundingBox,
+            #[case] point: Vector,
+            #[case] expected: bool,
+        ) {
+            let res = bounding_box.is_point_within(&point);
+            assert_eq!(res, expected);
+        }
+
+        #[rstest]
+        #[case(
+        BoundingBox::create(&Vector::new(10., 10.), 5., 5.),
+        BoundingBox::create(&Vector::new(10., 10.), 5., 5.),
+        true
+        )]
+        #[case(
+        BoundingBox::create(&Vector::new(10., 10.), 5., 5.),
+        BoundingBox::create(&Vector::new(8., 8.), 5., 5.),
+        true
+        )]
+        #[case(
+        BoundingBox::create(&Vector::new(10., 10.), 5., 5.),
+        BoundingBox::create(&Vector::new(4.9, 4.9), 5., 5.),
+        false
+        )]
+        #[case(
+        BoundingBox::create(&Vector::new(10., 10.), 5., 5.),
+        BoundingBox::create(&Vector::new(5., 5.), 5., 5.),
+        true
+        )]
+        pub fn should_correctly_determine_if_overlap(
+            #[case] bounding_box_a: BoundingBox,
+            #[case] bounding_box_b: BoundingBox,
+            #[case] expected: bool,
+        ) {
+            let res = bounding_box_a.overlaps(&bounding_box_b);
+            assert_eq!(res, expected);
+        }
+    }
 }
 
 pub mod shape {
-    use crate::geom::geom::{BoundingBox};
-    use std::fmt::Debug;
+    use crate::geom::utils::BoundingBox;
     use crate::geom::vector::Vector;
+    use std::fmt::Debug;
 
     #[derive(Clone, Debug, PartialEq)]
     pub enum ShapeType {

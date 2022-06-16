@@ -4,8 +4,8 @@ use pong::event::event::{Event, EventReader, EventWriter};
 
 use crate::hash::Hasher;
 use crate::kafka::{
-    KafkaDefaultEventWriterImpl, KafkaSessionEventReaderImpl,
-    KafkaSessionEventWriterImpl, KafkaTopicManager,
+    KafkaDefaultEventWriterImpl, KafkaSessionEventReaderImpl, KafkaSessionEventWriterImpl,
+    KafkaTopicManager,
 };
 use crate::player::Player;
 
@@ -48,7 +48,10 @@ impl SessionManager {
         println!("Successfully created session: {:?}", session);
         let write_res = self.write_to_producer(session_created(session.clone(), player.clone()));
         if let Err(e) = write_res {
-            eprintln!("Failed to write session created event for {:?} to producer: {}", session, e);
+            eprintln!(
+                "Failed to write session created event for {:?} to producer: {}",
+                session, e
+            );
         }
         self.sessions.push(session.clone());
         Ok(session)
@@ -86,9 +89,13 @@ impl SessionManager {
             session.clone()
         };
         {
-            let write_res = self.write_to_producer(session_joined(updated_session.clone(), player.clone()));
+            let write_res =
+                self.write_to_producer(session_joined(updated_session.clone(), player.clone()));
             if let Err(e) = write_res {
-                eprintln!("Failed to write session joined event for {:?} to producer: {}", updated_session, e);
+                eprintln!(
+                    "Failed to write session joined event for {:?} to producer: {}",
+                    updated_session, e
+                );
             }
         };
         println!("sessions = {:?}", self.sessions);

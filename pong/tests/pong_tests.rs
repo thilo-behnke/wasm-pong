@@ -2,11 +2,10 @@ use pong::game_field::{Bound, Field};
 use pong::game_object::game_object::{DefaultGameObject, GameObject};
 use pong::geom::geom::Vector;
 use pong::pong::pong_collisions::handle_player_bound_collision;
-use pong::utils::utils::{DefaultLoggerFactory, NoopLogger};
+use pong::utils::utils::{DefaultLoggerFactory};
 use rstest::rstest;
 use std::cell::RefCell;
 use std::rc::Rc;
-use pong::event::event::EventWriter;
 use pong::pong::pong_events::NoopPongEventWriter;
 
 #[rstest]
@@ -43,10 +42,10 @@ use pong::pong::pong_events::NoopPongEventWriter;
     get_bound(Bound::TOP)
 )]
 pub fn should_correctly_handle_player_bounds_collision(
-    #[case] mut player: Rc<RefCell<Box<dyn GameObject>>>,
-    #[case] mut bounds: Rc<RefCell<Box<dyn GameObject>>>,
-    #[case] mut player_expected: Rc<RefCell<Box<dyn GameObject>>>,
-    #[case] mut bounds_expected: Rc<RefCell<Box<dyn GameObject>>>,
+    #[case] player: Rc<RefCell<Box<dyn GameObject>>>,
+    #[case] bounds: Rc<RefCell<Box<dyn GameObject>>>,
+    #[case] player_expected: Rc<RefCell<Box<dyn GameObject>>>,
+    #[case] bounds_expected: Rc<RefCell<Box<dyn GameObject>>>,
 ) {
     handle_player_bound_collision(player.clone(), bounds.clone());
     assert_eq!(player_expected.borrow().pos(), player.borrow().pos());

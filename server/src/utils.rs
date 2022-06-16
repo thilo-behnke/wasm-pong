@@ -1,11 +1,7 @@
 pub mod http_utils {
-    use hyper::body::Buf;
     use hyper::{body, Body, Request};
     use serde::de::DeserializeOwned;
-    use serde::Deserialize;
-    use std::borrow::BorrowMut;
     use std::collections::HashMap;
-    use std::io::Read;
 
     pub fn get_query_params(req: &Request<Body>) -> HashMap<&str, &str> {
         let uri = req.uri();
@@ -25,7 +21,7 @@ pub mod http_utils {
     where
         T: DeserializeOwned,
     {
-        let mut body = req.body_mut();
+        let body = req.body_mut();
         let bytes = body::to_bytes(body).await.unwrap();
         let body_str = std::str::from_utf8(&*bytes).unwrap();
         serde_json::from_str::<T>(body_str).unwrap()

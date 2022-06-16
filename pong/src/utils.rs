@@ -40,14 +40,8 @@ pub mod utils {
             Box::new(self.clone())
         }
 
-        fn set_name(&mut self, name: &str) {}
+        fn set_name(&mut self, _name: &str) {}
 
-        fn log(&self, msg: &str) {}
-    }
-
-    impl NoopLogger {
-        fn new() -> Box<dyn Logger> {
-            Box::new(NoopLogger {})
-        }
+        fn log(&self, _msg: &str) {}
     }
 }

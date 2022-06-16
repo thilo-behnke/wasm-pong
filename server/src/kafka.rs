@@ -1,17 +1,15 @@
-use crate::hash::Hasher;
-use crate::session::Session;
-use hyper::{Body, Client, Method, Request, Uri};
-use kafka::client::metadata::Topic;
-use kafka::client::{KafkaClient, ProduceMessage};
-use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage, MessageSet};
-use kafka::producer::{DefaultPartitioner, Partitioner, Producer, Record, RequiredAcks, Topics};
-use pong::event::event::{Event, EventReaderImpl, EventWriter, EventWriterImpl};
-use serde::Deserialize;
-use std::hash::{BuildHasher, Hash};
-use std::process::ExitStatus;
 use std::str::FromStr;
 use std::time::Duration;
-use tokio::process::Command;
+
+use hyper::{Body, Client, Method, Request, Uri};
+use kafka::client::{ProduceMessage};
+use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage, MessageSet};
+use kafka::producer::{Partitioner, Producer, Record, RequiredAcks, Topics};
+use serde::Deserialize;
+
+use pong::event::event::{Event, EventReaderImpl, EventWriterImpl};
+
+use crate::session::Session;
 
 pub struct KafkaSessionEventWriterImpl {
     producer: Producer<SessionPartitioner>,
@@ -19,7 +17,7 @@ pub struct KafkaSessionEventWriterImpl {
 impl KafkaSessionEventWriterImpl {
     pub fn new(host: &str) -> KafkaSessionEventWriterImpl {
         println!("Connecting session_writer producer to kafka host: {}", host);
-        let mut producer = Producer::from_hosts(vec![host.to_owned()])
+        let producer = Producer::from_hosts(vec![host.to_owned()])
             .with_ack_timeout(Duration::from_secs(1))
             .with_required_acks(RequiredAcks::One)
             .with_partitioner(SessionPartitioner {})
@@ -35,7 +33,7 @@ pub struct KafkaDefaultEventWriterImpl {
 impl KafkaDefaultEventWriterImpl {
     pub fn new(host: &str) -> KafkaDefaultEventWriterImpl {
         println!("Connecting default producer to kafka host: {}", host);
-        let mut producer = Producer::from_hosts(vec![host.to_owned()])
+        let producer = Producer::from_hosts(vec![host.to_owned()])
             .with_ack_timeout(Duration::from_secs(1))
             .with_required_acks(RequiredAcks::One)
             .create()
@@ -100,7 +98,7 @@ impl KafkaEventReaderImpl {
 
     pub fn new(host: &str) -> KafkaEventReaderImpl {
         println!("Connecting consumer to kafka host: {}", host);
-        let mut consumer = Consumer::from_hosts(vec![host.to_owned()])
+        let consumer = Consumer::from_hosts(vec![host.to_owned()])
             .with_topic("move".to_owned())
             .with_topic("status".to_owned())
             .with_topic("input".to_owned())
@@ -187,7 +185,7 @@ impl KafkaSessionEventReaderImpl {
     ) -> Result<KafkaSessionEventReaderImpl, String> {
         let partitions = [session.id as i32];
         let reader = KafkaEventReaderImpl::for_partitions(host, &partitions, topics);
-        if let Err(e) = reader {
+        if let Err(_) = reader {
             return Err("Failed to create kafka session event reader".to_string());
         }
         let reader = reader.unwrap();
@@ -220,7 +218,7 @@ impl KafkaTopicManager {
     }
 
     pub async fn add_partition(&self) -> Result<u16, String> {
-        let mut client = Client::new();
+        let client = Client::new();
         let request = Request::builder()
             .method(Method::POST)
             .uri(Uri::from_str(&self.partition_management_endpoint).unwrap())
@@ -278,7 +276,7 @@ struct PartitionApiDTO {
 pub struct SessionPartitioner {}
 
 impl Partitioner for SessionPartitioner {
-    fn partition(&mut self, topics: Topics, msg: &mut ProduceMessage) {
+    fn partition(&mut self, _topics: Topics, msg: &mut ProduceMessage) {
         match msg.key {
             Some(key) => {
                 let key = std::str::from_utf8(key).unwrap();

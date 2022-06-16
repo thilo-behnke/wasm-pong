@@ -1,23 +1,20 @@
+use std::cell::{RefCell};
+use std::rc::Rc;
+
 use crate::collision::collision::{
-    Collision, CollisionDetector, CollisionGroup, CollisionHandler, CollisionRegistry, Collisions,
+    CollisionDetector, CollisionGroup, CollisionHandler, CollisionRegistry, Collisions,
 };
-use crate::event::event::Event;
 use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
 use crate::game_object::game_object::{DefaultGameObject, GameObject};
 use crate::geom::geom::Vector;
-use crate::geom::shape::{Shape, ShapeType};
+use crate::geom::shape::{Shape};
 use crate::pong::pong_collisions::{
     handle_ball_bounds_collision, handle_player_ball_collision, handle_player_bound_collision,
 };
 use crate::pong::pong_events::{
-    DefaultPongEventWriter, GameObjUpdate, NoopPongEventWriter, PongEventType, PongEventWriter,
+    GameObjUpdate, NoopPongEventWriter, PongEventType, PongEventWriter,
 };
 use crate::utils::utils::{DefaultLoggerFactory, Logger, LoggerFactory, NoopLogger};
-use std::borrow::{Borrow, BorrowMut};
-use std::cell::{Cell, Ref, RefCell, RefMut};
-use std::collections::HashMap;
-use std::ops::Deref;
-use std::rc::Rc;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum InputType {
@@ -194,13 +191,16 @@ impl Field {
         {
             for obj in self.objs.iter().filter(|o| RefCell::borrow(o).is_dirty()) {
                 let mut obj = RefCell::borrow_mut(obj);
-                self.event_writer
+                let event_write_res = self.event_writer
                     .write(PongEventType::GameObjUpdate(GameObjUpdate {
                         obj_id: &obj.id().to_string(),
                         vel: obj.vel(),
                         orientation: obj.orientation(),
                         pos: obj.pos(),
                     }));
+                if let Err(e) = event_write_res {
+                    self.logger.log(&*format!("Failed to write event logs: {}", e))
+                }
                 obj.set_dirty(false);
             }
         }

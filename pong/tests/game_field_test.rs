@@ -12,8 +12,9 @@ mod game_field_tests {
         let inputs = vec![Input {
             input: InputType::UP,
             obj_id: 1,
+            player: 1
         }];
-        field.tick(inputs);
+        field.tick(inputs, 1_000.);
         let player = RefCell::borrow(
             field
                 .objs()
@@ -32,8 +33,9 @@ mod game_field_tests {
         let inputs = vec![Input {
             input: InputType::DOWN,
             obj_id: 1,
+            player: 1
         }];
-        field.tick(inputs);
+        field.tick(inputs, 1_000.);
         let objs = field.objs();
         let player = objs
             .iter()

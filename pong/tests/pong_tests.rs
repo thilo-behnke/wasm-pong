@@ -6,6 +6,8 @@ use pong::utils::utils::{DefaultLoggerFactory, NoopLogger};
 use rstest::rstest;
 use std::cell::RefCell;
 use std::rc::Rc;
+use pong::event::event::EventWriter;
+use pong::pong::pong_events::NoopPongEventWriter;
 
 #[rstest]
 #[case(
@@ -53,7 +55,8 @@ pub fn should_correctly_handle_player_bounds_collision(
 
 fn create_player(id: u16, x: u16, y: u16, orientation: Vector) -> Rc<RefCell<Box<dyn GameObject>>> {
     let logger = DefaultLoggerFactory::noop();
-    let field = Field::new(logger);
+    let event_writer = NoopPongEventWriter::new();
+    let field = Field::new(logger, event_writer);
     let mut player = DefaultGameObject::player(id, x, y, &field);
     let player_orientation = player.orientation_mut();
     player_orientation.x = orientation.x;
@@ -63,7 +66,8 @@ fn create_player(id: u16, x: u16, y: u16, orientation: Vector) -> Rc<RefCell<Box
 
 fn get_bound(bound: Bound) -> Rc<RefCell<Box<dyn GameObject>>> {
     let logger = DefaultLoggerFactory::noop();
-    let field = Field::new(logger);
+    let event_writer = NoopPongEventWriter::new();
+    let field = Field::new(logger, event_writer);
     let bounds = DefaultGameObject::bounds(field.width, field.height);
     return Rc::new(RefCell::new(
         bounds.into_iter().find(|b| b.0 == bound).unwrap().inner(),

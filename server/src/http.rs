@@ -1,29 +1,23 @@
-use crate::kafka::{KafkaEventReaderImpl, KafkaSessionEventWriterImpl};
-use crate::player::Player;
-use crate::session::{Session, SessionManager};
-use crate::utils::http_utils::{get_query_params, read_json_body};
-use crate::utils::time_utils::now;
-use futures::{sink::SinkExt, stream::StreamExt};
-use hyper::server::conn::AddrStream;
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{body, Body, Method, Request, Response, Server, StatusCode};
-use hyper_tungstenite::tungstenite::{Error, Message};
-use hyper_tungstenite::{tungstenite, HyperWebsocket};
-use kafka::producer::Producer;
-use pong::event::event::{Event, EventReader, EventWriter};
-use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::convert::Infallible;
-use std::fs::read;
-use std::io::ErrorKind::NotFound;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime};
-use tokio::io::Sink;
+use std::time::{Duration};
+
+use futures::{sink::SinkExt, stream::StreamExt};
+use hyper::{Body, Method, Request, Response, Server, StatusCode};
+use hyper::server::conn::AddrStream;
+use hyper::service::{make_service_fn, service_fn};
+use hyper_tungstenite::{HyperWebsocket};
+use hyper_tungstenite::tungstenite::{Error, Message};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 use tokio::sync::Mutex;
-use tokio::task;
 use tokio::time::sleep;
+
+use crate::player::Player;
+use crate::session::{Session, SessionManager};
+use crate::utils::http_utils::{get_query_params, read_json_body};
 
 pub struct HttpServer {
     addr: [u8; 4],
@@ -42,11 +36,11 @@ impl HttpServer {
 
     pub async fn run(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let make_svc = make_service_fn(|socket: &AddrStream| {
-            let mut session_manager = Arc::clone(&self.session_manager);
+            let session_manager = Arc::clone(&self.session_manager);
             let addr = socket.remote_addr();
             async move {
                 Ok::<_, Infallible>(service_fn(move |req: Request<Body>| {
-                    let mut session_manager = Arc::clone(&session_manager);
+                    let session_manager = Arc::clone(&session_manager);
                     async move {
                         if hyper_tungstenite::is_upgrade_request(&req) {
                             println!(
@@ -131,7 +125,7 @@ async fn serve_websocket(
     websocket: HyperWebsocket,
     session_manager: Arc<Mutex<SessionManager>>,
 ) -> Result<(), Error> {
-    let mut websocket = websocket.await?;
+    let websocket = websocket.await?;
     let (mut websocket_writer, mut websocket_reader) = websocket.split();
 
     let session_manager = session_manager.lock().await;
@@ -282,7 +276,7 @@ async fn handle_get_session(
     session_manager: &Arc<Mutex<SessionManager>>,
     req: Request<Body>,
 ) -> Result<Response<Body>, Infallible> {
-    let mut locked = session_manager.lock().await;
+    let locked = session_manager.lock().await;
     let query_params = get_query_params(&req);
     let session_id = query_params.get("session_id");
     if let None = session_id {
@@ -351,7 +345,7 @@ async fn handle_event_write(
     session_manager: &Arc<Mutex<SessionManager>>,
     mut req: Request<Body>,
 ) -> Result<Response<Body>, Infallible> {
-    let mut locked = session_manager.lock().await;
+    let locked = session_manager.lock().await;
     let event = read_json_body::<SessionEventWriteDTO>(&mut req).await;
     let writer = locked.get_session_writer(&event.session_id);
     if let Err(e) = writer {
@@ -379,7 +373,7 @@ async fn handle_event_read(
     session_manager: &Arc<Mutex<SessionManager>>,
     mut req: Request<Body>,
 ) -> Result<Response<Body>, Infallible> {
-    let mut locked = session_manager.lock().await;
+    let locked = session_manager.lock().await;
     let read_payload = read_json_body::<SessionReadDTO>(&mut req).await;
     let reader = locked.get_session_reader(
         &read_payload.session_id,

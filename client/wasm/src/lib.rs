@@ -1,16 +1,13 @@
 mod utils;
 
-use pong::collision::collision::{Collision, CollisionDetector};
 use pong::game_field::{Field, Input, InputType};
-use pong::game_object::game_object::{DefaultGameObject, GameObject};
+use pong::game_object::game_object::{GameObject};
 use pong::geom::shape::ShapeType;
-use pong::geom::vector::Vector;
 use pong::pong::pong_events::DefaultPongEventWriter;
 use pong::utils::utils::{DefaultLoggerFactory, Logger};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::cell::RefCell;
-use std::cmp::{max, min};
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
@@ -20,7 +17,7 @@ extern crate web_sys;
 // A macro to provide `println!(..)`-style syntax for `console.log` logging.
 macro_rules! log {
     ( $( $t:tt )* ) => {
-        web_sys::console::log_1(&format!( $( $t )* ).into());
+        web_sys::console::log_1(&format!( $( $t )* ).into())
     }
 }
 

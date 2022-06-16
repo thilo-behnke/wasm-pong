@@ -252,9 +252,6 @@ async fn serve_websocket(
                     break;
                 }
             }
-            // Avoid starvation of read thread (?)
-            // TODO: How to avoid this? This is very bad for performance.
-            sleep(Duration::from_millis(1)).await;
         }
     });
     Ok(())

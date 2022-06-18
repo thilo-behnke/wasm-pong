@@ -82,12 +82,11 @@ async fn handle_session_create(
             .unwrap());
     }
     let reason = format!("player {:?} created session", player);
-    let session_created = SessionEventPayload {
+    let session_created = SessionEvent::Created(SessionEventPayload {
         session: session_create_res.unwrap(),
         player,
-        event_type: SessionEventType::Created,
         reason
-    };
+    });
     let serialized = json!(session_created);
     return build_success_res(&serialized.to_string());
 }
@@ -114,12 +113,11 @@ async fn handle_session_join(
     let session = session_join_res.unwrap();
     println!("Successfully joined session: {:?}", session);
     let reason = format!("player {:?} joined session", player);
-    let session_joined = SessionEventPayload {
+    let session_joined = SessionEvent::Joined(SessionEventPayload {
         player,
         session,
-        event_type: SessionEventType::Joined,
         reason
-    };
+    });
     let serialized = json!(session_joined);
     return build_success_res(&serialized.to_string());
 }

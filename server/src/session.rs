@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 use crate::player::Player;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Session {
     pub id: u16,
     pub hash: String,

@@ -117,12 +117,11 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                             "unknown".to_owned()
                         };
 
-                        let session_closed_event = SessionEventPayload {
+                        let session_closed_event = SessionEvent::Closed(SessionEventPayload {
                             player: websocket_session_read_copy.player.clone(),
                             session: websocket_session_read_copy.session.clone(),
                             reason: format!("ws closed: {}", reason),
-                            event_type: SessionEventType::Closed
-                        };
+                        });
                         let msg = json!(session_closed_event).to_string();
                         let session_event_write_res = event_writer.write_to_session("session", &msg);
                         if let Err(e) = session_event_write_res {

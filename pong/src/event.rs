@@ -5,10 +5,10 @@ pub mod event {
     use std::io::Write;
 
     #[derive(Debug, Deserialize, Serialize)]
-    pub struct Event {
-        pub topic: String,
-        pub key: Option<String>,
-        pub msg: String,
+    pub struct Event<'a> {
+        pub topic: &'a str,
+        pub key: Option<&'a str>,
+        pub msg: &'a str,
     }
 
     pub trait EventWriterImpl: Send + Sync {

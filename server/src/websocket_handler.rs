@@ -9,10 +9,11 @@ use hyper_tungstenite::tungstenite::{Error, Message};
 use serde_json::json;
 use tokio::time::sleep;
 use serde::{Serialize, Deserialize};
-use crate::event::{SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType};
+use pong::game_field::Input;
+use crate::event::{InputEventPayload, MoveEventPayload, SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType};
 use crate::player::Player;
 use crate::session::Session;
-use crate::session_manager::{SessionManager};
+use crate::session_manager::{SessionManager, SessionWriter};
 
 #[async_trait]
 pub trait WebsocketHandler {
@@ -66,19 +67,53 @@ impl WebsocketHandler for DefaultWebsocketHandler {
             while let Some(message) = websocket_reader.next().await {
                 match message.unwrap() {
                     Message::Text(msg) => {
-                        let events = serde_json::from_str::<SessionEventListDTO>(&msg);
+                        let session_snapshot = deserialize_event_snapshot(&msg, &websocket_session_read_copy.connection_type);
                         println!("Received ws message to persist events to kafka");
-                        if let Err(e) = events {
+                        if let Err(e) = session_snapshot {
                             eprintln!("Failed to deserialize ws message to event {}: {}", msg, e);
                             continue;
                         }
-                        let event_wrapper = events.unwrap();
-                        if event_wrapper.session_id != websocket_session_read_copy.session.hash {
-                            eprintln!("Websocket has session {:?} but was asked to write to session {} - skip.", websocket_session_read_copy, event_wrapper.session_id);
+                        let session_snapshot = session_snapshot.unwrap();
+                        let session_id = session_snapshot.session_id();
+                        if session_id != websocket_session_read_copy.session.hash {
+                            eprintln!("Websocket has session {:?} but was asked to write to session {} - skip.", websocket_session_read_copy, session_id);
                             continue;
                         }
                         let mut any_error = false;
-                        let event_count = event_wrapper.events.len();
+                        match session_snapshot {
+                            SessionSnapshot::Host(_, payload) => {
+                                let move_events = payload.objects.iter().map(|o| {
+                                    o.to_move_event(session_id, payload.ts)
+                                });
+                                // TODO: Multiple at once.
+                                for move_event in move_events {
+                                    let serialized_move_event = serde_json::to_string(&move_event);
+                                    if let Err(e) = serialized_move_event {
+                                        eprintln!("Failed to serialize move event {:?}: {:?}", move_event, e);
+                                        any_error = true;
+                                    }
+                                    let write_res = event_writer.write_to_session("move", &serialized_move_event.unwrap());
+                                    if let Err(e) = write_res {
+                                        eprintln!("Failed to write event {:?} to topic {}: {:?}", move_event, "move", e);
+                                    }
+                                }
+                                let input_events = payload.inputs.iter().map(|i| {
+                                    InputEventPayload {
+                                        inputs,
+                                        player,
+                                        ts: payload.ts,
+                                        session_id: session_id.to_owned()
+                                    }
+                                });
+                            },
+                            SessionSnapshot::Peer(_, payload) => {
+
+                            },
+                            SessionSnapshot::Observer(_, payload) => {
+                                // TODO: Only persist heart beat?
+                            }
+                        }
+                        let event_count = .events.len();
                         for event in event_wrapper.events {
                             let serialized = serde_json::to_string(&event);
                             if let Err(e) = serialized {
@@ -211,6 +246,99 @@ impl WebSocketConnectionType {
             WebSocketConnectionType::PEER | WebSocketConnectionType::OBSERVER => {
                 &["move", "input", "status", "session"]
             }
+        }
+    }
+}
+
+fn deserialize_event_snapshot(serialized_snapshot: &str, connection_type: &WebSocketConnectionType) -> Result<SessionSnapshot, String> {
+    match connection_type {
+        WebSocketConnectionType::HOST => serde_json::from_str::<HostSessionSnapshotDTO>(serialized_snapshot).map_err(|e| e.to_string()).map(|s| SessionSnapshot::Host(s.session_id.to_owned(), s)),
+        WebSocketConnectionType::PEER => serde_json::from_str::<PeerSessionSnapshotDTO>(serialized_snapshot).map_err(|e| e.to_string()).map(|s| SessionSnapshot::Peer(s.session_id.to_owned(), s)),
+        WebSocketConnectionType::OBSERVER => serde_json::from_str::<ObserverSessionSnapshotDTO>(serialized_snapshot).map_err(|e| e.to_string()).map(|s| SessionSnapshot::Observer(s.session_id.to_owned(), s)),
+    }
+}
+
+enum SessionSnapshot {
+    Host(String, HostSessionSnapshotDTO),
+    Peer(String, PeerSessionSnapshotDTO),
+    Observer(String, ObserverSessionSnapshotDTO)
+}
+
+impl SessionSnapshot {
+    pub fn session_id(&self) -> &str {
+        match self {
+            SessionSnapshot::Host(id, _) => id,
+            SessionSnapshot::Peer(id, _) => id,
+            SessionSnapshot::Observer(id, _) => id
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct HostSessionSnapshotDTO {
+    pub session_id: String,
+    pub inputs: Vec<Input>,
+    pub objects: Vec<GameObjectStateDTO>,
+    pub player: String,
+    pub ts: u128
+}
+
+#[derive(Deserialize)]
+struct PeerSessionSnapshotDTO {
+    pub session_id: String,
+    pub inputs: Vec<Input>,
+    pub player: String,
+    pub ts: u128
+}
+
+#[derive(Deserialize)]
+struct ObserverSessionSnapshotDTO {
+    pub session_id: String,
+    pub ts: u128
+}
+
+#[derive(Deserialize)]
+struct GameObjectStateDTO {
+    pub id: i32,
+    pub orientation_x: f64,
+    pub orientation_y: f64,
+    pub shape_param_1: f64,
+    pub shape_param_2: f64,
+    pub vel_x: f64,
+    pub vel_y: f64,
+    pub x: f64,
+    pub y: f64,
+}
+
+impl GameObjectStateDTO {
+    pub fn to_move_event(&self, session_id: &str, ts: u128) -> MoveEventPayload {
+        MoveEventPayload {
+            session_id: session_id.to_owned(),
+            ts,
+            id: self.id,
+            x: self.x,
+            y: self.y,
+            orientation_x: self.orientation_x,
+            orientation_y: self.orientation_y,
+            vel_x: self.vel_x,
+            vel_y: self.vel_y,
+            shape_param_1: self.shape_param_1,
+            shape_param_2: self.shape_param_2,
+        }
+    }
+}
+
+// TODO: Wip - Refactor to function
+fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter) {
+    for move_event in move_events {
+        let serialized_move_event = serde_json::to_string(&move_event);
+        if let Err(e) = serialized_move_event {
+            eprintln!("Failed to serialize move event {:?}: {:?}", move_event, e);
+            any_error = true;
+        }
+        let write_res = event_writer.write_to_session("move", &serialized_move_event.unwrap());
+        if let Err(e) = write_res {
+            eprintln!("Failed to write event {:?} to topic {}: {:?}", move_event, "move", e);
         }
     }
 }

@@ -190,13 +190,15 @@ pub struct SessionWriter {
 }
 
 impl SessionWriter {
-    pub fn write_to_session(&mut self, topic: &str, msg: &str) -> Result<(), String> {
-        let event = Event {
-            msg: msg.to_owned(),
-            key: Some(self.session.id.to_string()),
-            topic: topic.to_owned(),
-        };
-        self.writer.write(event)
+    pub fn write_to_session(&mut self, topic: &str, messages: Vec<&str>) -> Result<(), String> {
+        let events = messages.into_iter().map(|e| {
+            Event {
+                msg: e.to_owned(),
+                key: Some(self.session.id.to_string()),
+                topic: topic.to_owned(),
+            }
+        }).collect();
+        self.writer.write_all(events)
     }
 }
 

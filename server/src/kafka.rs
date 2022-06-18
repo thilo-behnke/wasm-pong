@@ -13,6 +13,7 @@ use crate::session::Session;
 pub struct KafkaSessionEventWriterImpl {
     producer: Producer<SessionPartitioner>,
 }
+
 impl KafkaSessionEventWriterImpl {
     pub fn new(host: &str) -> KafkaSessionEventWriterImpl {
         println!("Connecting session_writer producer to kafka host: {}", host);
@@ -29,6 +30,7 @@ impl KafkaSessionEventWriterImpl {
 pub struct KafkaDefaultEventWriterImpl {
     producer: Producer,
 }
+
 impl KafkaDefaultEventWriterImpl {
     pub fn new(host: &str) -> KafkaDefaultEventWriterImpl {
         println!("Connecting default producer to kafka host: {}", host);
@@ -42,50 +44,48 @@ impl KafkaDefaultEventWriterImpl {
 }
 
 impl EventWriterImpl for KafkaSessionEventWriterImpl {
-    fn write(&mut self, event: Event) -> Result<(), String> {
-        match event.key {
-            Some(key) => {
-                let record = Record::from_key_value(event.topic.as_str(), key, event.msg.as_str());
-                match self.producer.send(&record) {
-                    Ok(()) => Ok(()),
-                    Err(e) => Err(format!("{}", e)),
-                }
-            }
-            None => {
-                let record = Record::from_value(event.topic.as_str(), event.msg.as_str());
-                match self.producer.send(&record) {
-                    Ok(()) => Ok(()),
-                    Err(e) => Err(format!("{}", e)),
-                }
-            }
-        }
+    fn write(&mut self, events: Vec<Event>) -> Result<(), String> {
+        write_events(events, &mut self.producer)
     }
 }
 
 impl EventWriterImpl for KafkaDefaultEventWriterImpl {
-    fn write(&mut self, event: Event) -> Result<(), String> {
-        match event.key {
+    fn write(&mut self, events: Vec<Event>) -> Result<(), String> {
+        write_events(events, &mut self.producer)
+    }
+}
+
+fn write_events<T>(events: Vec<Event>, producer: &mut Producer<T>) -> Result<(), String> where T : Partitioner {
+    let mut records_without_key = vec![];
+    let mut records_with_key = vec![];
+    for event in events {
+        match &event.key {
             Some(key) => {
-                let record = Record::from_key_value(event.topic.as_str(), key, event.msg.as_str());
-                match self.producer.send(&record) {
-                    Ok(()) => Ok(()),
-                    Err(e) => Err(format!("{}", e)),
-                }
+                let record = Record::from_key_value(event.topic.as_str(), key.clone(), event.msg.as_str());
+                records_with_key.push(record);
             }
             None => {
                 let record = Record::from_value(event.topic.as_str(), event.msg.as_str());
-                match self.producer.send(&record) {
-                    Ok(()) => Ok(()),
-                    Err(e) => Err(format!("{}", e)),
-                }
+                records_without_key.push(record);
             }
         }
     }
+
+    let res_with_key = match producer.send_all::<String, &str>(&*records_with_key) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("{}", e)),
+    };
+    let res_without_key = match producer.send_all(&*records_without_key) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("{}", e)),
+    };
+    res_with_key.and(res_without_key)
 }
 
 pub struct KafkaEventReaderImpl {
     consumer: Consumer,
 }
+
 impl KafkaEventReaderImpl {
     pub fn default() -> KafkaEventReaderImpl {
         KafkaEventReaderImpl::new("localhost:9093")
@@ -133,6 +133,7 @@ impl KafkaEventReaderImpl {
         Ok(KafkaEventReaderImpl { consumer })
     }
 }
+
 impl EventReaderImpl for KafkaEventReaderImpl {
     fn read(&mut self) -> Result<Vec<Event>, String> {
         self.consume()
@@ -202,6 +203,7 @@ impl EventReaderImpl for KafkaSessionEventReaderImpl {
 pub struct KafkaTopicManager {
     partition_management_endpoint: String,
 }
+
 impl KafkaTopicManager {
     pub fn default() -> KafkaTopicManager {
         KafkaTopicManager {

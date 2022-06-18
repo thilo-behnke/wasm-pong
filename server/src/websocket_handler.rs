@@ -134,7 +134,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                             reason: format!("ws closed: {}", reason),
                         });
                         let msg = json!(session_closed_event).to_string();
-                        let session_event_write_res = event_writer.write_to_session("session", &msg);
+                        let session_event_write_res = event_writer.write_to_session("session", vec![&msg]);
                         if let Err(e) = session_event_write_res {
                             eprintln!("Failed to write session closed event: {0}", e)
                         }
@@ -307,6 +307,7 @@ impl GameObjectStateDTO {
 // TODO: Wip - Refactor to function
 fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter) -> bool where T : Serialize + Debug {
     let mut any_error = false;
+    let mut events = vec![];
     for event in events {
         let serialized = serde_json::to_string(&event);
         if let Err(e) = serialized {
@@ -314,12 +315,13 @@ fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter
             any_error = true;
             continue;
         }
-        let serialized = serialized.unwrap();
-        let write_res = event_writer.write_to_session(topic, &serialized);
-        if let Err(e) = write_res {
-            eprintln!("Failed to write event {:?} to topic {}: {:?}", serialized, "move", e);
-            any_error = true;
-        }
+        events.push(serialized.unwrap().as_str());
+    }
+
+    let write_res = event_writer.write_to_session(topic, events);
+    if let Err(e) = write_res {
+        eprintln!("Failed to write at least one event to topic {}: {:?}", "move", e);
+        any_error = true;
     }
     return any_error;
 }

@@ -55,23 +55,23 @@ impl EventWriterImpl for KafkaDefaultEventWriterImpl {
     }
 }
 
-fn write_events<'a, T>(events: Vec<Event<'a>>, producer: &mut Producer<T>) -> Result<(), String> where T : Partitioner {
+fn write_events<T>(events: Vec<Event>, producer: &mut Producer<T>) -> Result<(), String> where T : Partitioner {
     let mut records_without_key = vec![];
     let mut records_with_key = vec![];
     for event in events {
         match &event.key {
             Some(key) => {
-                let record = Record::from_key_value(event.topic, key.clone(), event.msg);
+                let record = Record::from_key_value(event.topic.as_str(), key.clone(), event.msg.as_str());
                 records_with_key.push(record);
             }
             None => {
-                let record = Record::from_value(event.topic, event.msg);
+                let record = Record::from_value(event.topic.as_str(), event.msg.as_str());
                 records_without_key.push(record);
             }
         }
     }
 
-    let res_with_key = match producer.send_all::<&str, &str>(&*records_with_key) {
+    let res_with_key = match producer.send_all::<String, &str>(&*records_with_key) {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("{}", e)),
     };
@@ -155,9 +155,9 @@ impl KafkaEventReaderImpl {
             println!("querying topic={} partition={}", topic, partition);
             for m in ms.messages() {
                 let event = Event {
-                    topic,
-                    key: Some(std::str::from_utf8(m.key).unwrap()),
-                    msg: std::str::from_utf8(m.value).unwrap(),
+                    topic: String::from(topic),
+                    key: Some(std::str::from_utf8(m.key).unwrap().parse().unwrap()),
+                    msg: std::str::from_utf8(m.value).unwrap().parse().unwrap(),
                 };
                 topic_event_count += 1;
                 events.push(event);

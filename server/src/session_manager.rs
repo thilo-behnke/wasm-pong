@@ -109,9 +109,9 @@ impl SessionManager {
     {
         let json_event = serde_json::to_string(&session_event).unwrap();
         let session_event_write = self.session_producer.write(Event {
-            topic: "session",
+            topic: "session".to_owned(),
             key: None,
-            msg: json_event.as_str(),
+            msg: json_event,
         });
         if let Err(e) = session_event_write {
             let message = format!("Failed to write session create event to kafka: {:?}", e);
@@ -193,9 +193,9 @@ impl SessionWriter {
     pub fn write_to_session(&mut self, topic: &str, messages: Vec<&str>) -> Result<(), String> {
         let events = messages.into_iter().map(|e| {
             Event {
-                msg: e,
-                key: Some(&self.session.id.to_string()),
-                topic,
+                msg: e.to_owned(),
+                key: Some(self.session.id.to_string()),
+                topic: topic.to_owned(),
             }
         }).collect();
         self.writer.write_all(events)

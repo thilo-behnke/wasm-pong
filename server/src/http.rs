@@ -49,7 +49,7 @@ impl HttpServer {
                     let session_manager = Arc::clone(&session_manager);
                     async move {
                         if hyper_tungstenite::is_upgrade_request(&req) {
-                            return handle_potential_ws_upgrade(session_manager, req).await;
+                            return handle_potential_ws_upgrade(session_manager, req, addr).await;
                         }
 
                         return handle_http_request(session_manager, req, addr).await;
@@ -68,10 +68,10 @@ impl HttpServer {
 
 }
 
-async fn handle_potential_ws_upgrade(session_manager: Arc<Mutex<SessionManager>>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+async fn handle_potential_ws_upgrade(session_manager: Arc<Mutex<SessionManager>>, req: Request<Body>, addr: SocketAddr) -> Result<Response<Body>, Infallible> {
     println!(
-        "Received request to upgrade to websocket connection: {:?}",
-        req
+        "Received request from {:?} to upgrade to websocket connection: {:?}",
+        addr, req
     );
     let params = get_query_params(&req);
     println!("Ws request params: {:?}", params);
@@ -91,6 +91,20 @@ async fn handle_potential_ws_upgrade(session_manager: Arc<Mutex<SessionManager>>
         return res;
     }
     let session_id = params.get("session_id").unwrap();
+    let request_player_id = addr.to_string();
+    let session = session_manager.lock().await.get_session(session_id);
+    if let None = session {
+        let error = format!("Session does not exist: {}", session_id);
+        eprintln!("{}", error);
+        return build_error_res(error.as_str(), StatusCode::NOT_FOUND);
+    }
+    let session = session.unwrap();
+    let matching_player = session.players.iter().find(|p| p.id == request_player_id);
+    if let None = matching_player {
+        let error = format!("Player is not registered in session: {}", request_player_id);
+        eprintln!("{}", error);
+        return build_error_res(error.as_str(), StatusCode::FORBIDDEN);
+    }
     let connection_type_raw = params.get("connection_type").unwrap();
     let connection_type =
         WebSocketConnectionType::from_str(connection_type_raw);
@@ -100,16 +114,10 @@ async fn handle_potential_ws_upgrade(session_manager: Arc<Mutex<SessionManager>>
         eprintln!("{}", error);
         return build_error_res(error.as_str(), StatusCode::BAD_REQUEST);
     }
-    let session = session_manager.lock().await.get_session(session_id);
-    if let None = session {
-        let error = format!("Session does not exist: {}", session_id);
-        eprintln!("{}", error);
-        return build_error_res(error.as_str(), StatusCode::NOT_FOUND);
-    }
-    let session = session.unwrap();
     let websocket_session = WebSocketSession {
         session: session.clone(),
         connection_type: connection_type.unwrap(),
+        player: matching_player.unwrap().clone()
     };
     println!("Websocket upgrade request is valid, will now upgrade to websocket: {:?}", req);
 

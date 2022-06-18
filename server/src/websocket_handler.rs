@@ -9,7 +9,8 @@ use hyper_tungstenite::tungstenite::{Error, Message};
 use serde_json::json;
 use tokio::time::sleep;
 use serde::{Serialize, Deserialize};
-use crate::event::{SessionEventListDTO};
+use crate::event::{SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType};
+use crate::player::Player;
 use crate::session::Session;
 use crate::session_manager::{SessionManager};
 
@@ -105,18 +106,22 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                     }
                     Message::Close(msg) => {
                         // No need to send a reply: tungstenite takes care of this for you.
-                        if let Some(msg) = &msg {
+                        let reason = if let Some(msg) = &msg {
                             println!(
                                 "Received close message with code {} and message: {}",
                                 msg.code, msg.reason
                             );
+                            format!("{}: {}", msg.code, msg.reason)
                         } else {
                             println!("Received close message");
-                        }
+                            "unknown".to_owned()
+                        };
 
-                        let session_closed_event = SessionClosedDto {
+                        let session_closed_event = SessionEventPayload {
+                            player: websocket_session_read_copy.player.clone(),
                             session: websocket_session_read_copy.session.clone(),
-                            reason: "ws closed".to_owned(),
+                            reason: format!("ws closed: {}", reason),
+                            event_type: SessionEventType::Closed
                         };
                         let msg = json!(session_closed_event).to_string();
                         let session_event_write_res = event_writer.write_to_session("session", &msg);
@@ -177,6 +182,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
 pub struct WebSocketSession {
     pub connection_type: WebSocketConnectionType,
     pub session: Session,
+    pub player: Player
 }
 
 #[derive(Debug, Clone, PartialEq)]

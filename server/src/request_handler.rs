@@ -5,7 +5,8 @@ use hyper::{Body, Method, Request, Response, StatusCode};
 use async_trait::async_trait;
 use serde_json::json;
 use tokio::sync::Mutex;
-use crate::event::{SessionCreatedDto, SessionJoinDto, SessionJoinedDto};
+use serde::{Deserialize};
+use crate::event::{SessionEvent, SessionEventPayload, SessionEventType};
 use crate::player::Player;
 use crate::session_manager::SessionManager;
 use crate::utils::http_utils::{build_error_res, build_success_res, get_query_params, read_json_body};
@@ -80,9 +81,12 @@ async fn handle_session_create(
             .body(Body::from(e))
             .unwrap());
     }
-    let session_created = SessionCreatedDto {
+    let reason = format!("player {:?} created session", player);
+    let session_created = SessionEventPayload {
         session: session_create_res.unwrap(),
         player,
+        event_type: SessionEventType::Created,
+        reason
     };
     let serialized = json!(session_created);
     return build_success_res(&serialized.to_string());
@@ -109,7 +113,19 @@ async fn handle_session_join(
     }
     let session = session_join_res.unwrap();
     println!("Successfully joined session: {:?}", session);
-    let session_joined = SessionJoinedDto { session, player };
+    let reason = format!("player {:?} joined session", player);
+    let session_joined = SessionEventPayload {
+        player,
+        session,
+        event_type: SessionEventType::Joined,
+        reason
+    };
     let serialized = json!(session_joined);
     return build_success_res(&serialized.to_string());
+}
+
+#[derive(Deserialize)]
+struct SessionJoinDto {
+    pub session_id: String,
+    pub player: String
 }

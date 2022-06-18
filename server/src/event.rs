@@ -5,29 +5,29 @@ use crate::player::Player;
 use crate::session::Session;
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct SessionEventListDTO<'a> {
-    pub session_id: &'a str,
-    pub events: Vec<PongEventWrapper<'a>>,
+pub struct SessionEventListDTO {
+    pub session_id: String,
+    pub events: Vec<PongEventWrapper>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct PongEventWrapper<'a> {
-    pub session_id: &'a str,
-    pub topic: &'a str,
-    pub event: &'a str
+pub struct PongEventWrapper {
+    pub session_id: String,
+    pub topic: String,
+    pub event: String
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum PongEvent<'a> {
-    Move(&'a str, MoveEventPayload<'a>),
-    Input(&'a str, InputEventPayload<'a>),
-    Status(&'a str, StatusEventPayload),
-    Session(&'a str, SessionEvent)
+pub enum PongEvent {
+    Move(String, MoveEventPayload),
+    Input(String, InputEventPayload),
+    Status(String, StatusEventPayload),
+    Session(String, SessionEvent)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct MoveEventPayload<'a> {
-    pub session_id: &'a str,
+pub struct MoveEventPayload {
+    pub session_id: String,
     pub id: i32,
     pub orientation_x: f64,
     pub orientation_y: f64,
@@ -41,10 +41,10 @@ pub struct MoveEventPayload<'a> {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct InputEventPayload<'a> {
-    pub session_id: &'a str,
+pub struct InputEventPayload {
+    pub session_id: String,
     pub inputs: Vec<Input>,
-    pub player: &'a str,
+    pub player: String,
     pub ts: u128
 }
 
@@ -55,16 +55,17 @@ pub struct StatusEventPayload {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum SessionEvent {
-    SessionCreated(SessionEventPayload),
-    SessionJoined(SessionEventPayload),
-    SessionClosed(SessionEventPayload)
+    Created(SessionEventPayload),
+    Joined(SessionEventPayload),
+    Closed(SessionEventPayload)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SessionEventPayload {
     pub session: Session,
     pub player: Player,
-    pub event_type: SessionEventType
+    pub event_type: SessionEventType,
+    pub reason: String
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -88,21 +89,21 @@ impl FromStr for SessionEventType {
 pub fn deserialize(event: &str) -> Option<PongEvent> {
     let wrapper = serde_json::from_str::<PongEventWrapper>(event);
     wrapper.ok().and_then(|w| {
-        match w.topic {
-            "move" => serde_json::from_str::<MoveEventPayload>(w.event).ok().map(|e| PongEvent::Move(w.session_id, e)),
-            "input" => serde_json::from_str::<InputEventPayload>(w.event).ok().map(|e| PongEvent::Input(w.session_id, e)),
-            "status" => serde_json::from_str::<StatusEventPayload>(w.event).ok().map(|e| PongEvent::Status(w.session_id, e)),
-            "session" => serde_json::from_str::<SessionEventPayload>(w.event).ok().map(|e| deserialize_session_event(w.session_id, e)),
+        match w.topic.as_str() {
+            "move" => serde_json::from_str::<MoveEventPayload>(&w.event).ok().map(|e| PongEvent::Move(w.session_id, e)),
+            "input" => serde_json::from_str::<InputEventPayload>(&w.event).ok().map(|e| PongEvent::Input(w.session_id, e)),
+            "status" => serde_json::from_str::<StatusEventPayload>(&w.event).ok().map(|e| PongEvent::Status(w.session_id, e)),
+            "session" => serde_json::from_str::<SessionEventPayload>(&w.event).ok().map(|e| deserialize_session_event(w.session_id, e)),
             _ => None
         }
     })
 }
 
-pub fn deserialize_session_event(session_id: &str, event: SessionEventPayload) -> PongEvent {
+pub fn deserialize_session_event<'a>(session_id: String, event: SessionEventPayload) -> PongEvent {
     let session_event = match event.event_type {
-        SessionEventType::Created => SessionEvent::SessionCreated(event),
-        SessionEventType::Joined => SessionEvent::SessionJoined(event),
-        SessionEventType::Closed => SessionEvent::SessionClosed(event)
+        SessionEventType::Created => SessionEvent::Created(event),
+        SessionEventType::Joined => SessionEvent::Joined(event),
+        SessionEventType::Closed => SessionEvent::Closed(event)
     };
 
     PongEvent::Session(session_id, session_event)

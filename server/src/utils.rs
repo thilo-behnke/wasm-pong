@@ -22,10 +22,15 @@ pub mod http_utils {
     where
         T: DeserializeOwned,
     {
+        let body_str = read_json_body_raw(req).await;
+        serde_json::from_str::<T>(&body_str).unwrap()
+    }
+
+    pub async fn read_json_body_raw(req: &mut Request<Body>) -> String
+    {
         let body = req.body_mut();
         let bytes = body::to_bytes(body).await.unwrap();
-        let body_str = std::str::from_utf8(&*bytes).unwrap();
-        serde_json::from_str::<T>(body_str).unwrap()
+        std::str::from_utf8(&*bytes).unwrap().to_owned()
     }
 
     pub fn build_success_res(value: &str) -> Result<Response<Body>, Infallible> {

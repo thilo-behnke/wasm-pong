@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -74,69 +75,44 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                             continue;
                         }
                         let session_snapshot = session_snapshot.unwrap();
-                        let session_id = session_snapshot.session_id();
-                        if session_id != websocket_session_read_copy.session.hash {
-                            eprintln!("Websocket has session {:?} but was asked to write to session {} - skip.", websocket_session_read_copy, session_id);
-                            continue;
+                        {
+                            let session_id = session_snapshot.session_id();
+                            if session_id != websocket_session_read_copy.session.hash {
+                                eprintln!("Websocket has session {:?} but was asked to write to session {} - skip.", websocket_session_read_copy, session_id);
+                                continue;
+                            }
                         }
                         let mut any_error = false;
                         match session_snapshot {
-                            SessionSnapshot::Host(_, payload) => {
+                            SessionSnapshot::Host(session_id, payload) => {
                                 let move_events = payload.objects.iter().map(|o| {
-                                    o.to_move_event(session_id, payload.ts)
-                                });
-                                // TODO: Multiple at once.
-                                for move_event in move_events {
-                                    let serialized_move_event = serde_json::to_string(&move_event);
-                                    if let Err(e) = serialized_move_event {
-                                        eprintln!("Failed to serialize move event {:?}: {:?}", move_event, e);
-                                        any_error = true;
-                                    }
-                                    let write_res = event_writer.write_to_session("move", &serialized_move_event.unwrap());
-                                    if let Err(e) = write_res {
-                                        eprintln!("Failed to write event {:?} to topic {}: {:?}", move_event, "move", e);
-                                    }
-                                }
-                                let input_events = payload.inputs.iter().map(|i| {
-                                    InputEventPayload {
-                                        inputs,
-                                        player,
-                                        ts: payload.ts,
-                                        session_id: session_id.to_owned()
-                                    }
-                                });
+                                    o.to_move_event(&session_id, payload.ts)
+                                }).collect();
+                                any_error = write_events(move_events, "move", &mut event_writer) || any_error;
+                                let input_event = InputEventPayload {
+                                    inputs: payload.inputs,
+                                    player: websocket_session_read_copy.player.id.to_owned(),
+                                    ts: payload.ts,
+                                    session_id: session_id.to_owned()
+                                };
+                                any_error = write_events(vec![input_event], "input", &mut event_writer) || any_error;
+                                // TODO: Status events.
                             },
-                            SessionSnapshot::Peer(_, payload) => {
-
+                            SessionSnapshot::Peer(session_id, payload) => {
+                                let input_event = InputEventPayload {
+                                    inputs: payload.inputs,
+                                    player: websocket_session_read_copy.player.id.to_owned(),
+                                    ts: payload.ts,
+                                    session_id: session_id.to_owned()
+                                };
+                                any_error = write_events(vec![input_event], "input", &mut event_writer) || any_error;
                             },
                             SessionSnapshot::Observer(_, payload) => {
                                 // TODO: Only persist heart beat?
                             }
                         }
-                        let event_count = .events.len();
-                        for event in event_wrapper.events {
-                            let serialized = serde_json::to_string(&event);
-                            if let Err(e) = serialized {
-                                eprintln!("Failed to serialize event {:?}: {}", event, e);
-                                any_error = true;
-                                continue;
-                            }
-                            let write_res = event_writer.write_to_session(&event.topic, &serialized.unwrap());
-                            if let Err(e) = write_res {
-                                any_error = true;
-                                eprintln!("Failed to write event {:?}: {}", event, e);
-                            }
-                        }
                         if any_error {
-                            eprintln!(
-                                "Failed to write at least one message for session {}",
-                                event_wrapper.session_id
-                            );
-                        } else {
-                            println!(
-                                "Successfully wrote {} messages to kafka for session {:?}",
-                                event_count, websocket_session_read_copy
-                            )
+                            eprintln!("At least one event write operation failed for session {:?}", websocket_session_read_copy);
                         }
                     }
                     Message::Close(msg) => {
@@ -329,16 +305,21 @@ impl GameObjectStateDTO {
 }
 
 // TODO: Wip - Refactor to function
-fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter) {
-    for move_event in move_events {
-        let serialized_move_event = serde_json::to_string(&move_event);
-        if let Err(e) = serialized_move_event {
-            eprintln!("Failed to serialize move event {:?}: {:?}", move_event, e);
+fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter) -> bool where T : Serialize + Debug {
+    let mut any_error = false;
+    for event in events {
+        let serialized = serde_json::to_string(&event);
+        if let Err(e) = serialized {
+            eprintln!("Failed to serialize event {:?} in topic {}: {:?}", event, topic, e);
+            any_error = true;
+            continue;
+        }
+        let serialized = serialized.unwrap();
+        let write_res = event_writer.write_to_session(topic, &serialized);
+        if let Err(e) = write_res {
+            eprintln!("Failed to write event {:?} to topic {}: {:?}", serialized, "move", e);
             any_error = true;
         }
-        let write_res = event_writer.write_to_session("move", &serialized_move_event.unwrap());
-        if let Err(e) = write_res {
-            eprintln!("Failed to write event {:?} to topic {}: {:?}", move_event, "move", e);
-        }
     }
+    return any_error;
 }

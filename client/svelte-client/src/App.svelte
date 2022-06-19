@@ -2,16 +2,30 @@
 	import { FieldWrapper } from "wasm-app";
 	import Canvas from "./Canvas.svelte";
 	import Fps from "./Fps.svelte";
-	const field = FieldWrapper.new();
-	console.log({field})
-	export let name: string;
+	import {keysPressed} from "./game/engine";
+	import Input from "./Input.svelte";
+
+	function handleKeydown({key}) {
+		if ($keysPressed.includes(key)) {
+			return;
+		}
+		$keysPressed = [...$keysPressed, key]
+	}
+	function handleKeyup({key}) {
+		if (!$keysPressed.includes(key)) {
+			return;
+		}
+		$keysPressed = $keysPressed.filter(key => key !== key)
+	}
 </script>
 
 <main>
 	<Canvas>
 		<Fps></Fps>
 	</Canvas>
+	<Input inputs={$keysPressed}></Input>
 </main>
+<svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup}/>
 
 <style>
 	main {

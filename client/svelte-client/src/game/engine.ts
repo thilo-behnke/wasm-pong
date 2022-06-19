@@ -9,6 +9,26 @@ export const pixelRatio = writable(window.devicePixelRatio);
 
 export const keysPressed: Writable<string[]> = writable([])
 
+export const playerInputs = derived(
+    keysPressed,
+    $keysPressed => {
+        return $keysPressed.map(key => {
+            switch(key.toLowerCase()) {
+                case 'w':
+                    return {input: 'UP', obj_id: 0, player: 1}
+                case 's':
+                    return {input: 'DOWN', obj_id: 0, player: 1}
+                case 'arrowup':
+                    return {input: 'UP', obj_id: 1, player: 2}
+                case 'arrowdown':
+                    return {input: 'DOWN', obj_id: 1, player: 2}
+                default:
+                    return null
+            }
+        }).filter(it => !!it);
+    }
+)
+
 // A more convenient store for grabbing all game props
 export const props = deriveObject({
     width,

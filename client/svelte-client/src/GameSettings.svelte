@@ -14,6 +14,7 @@
 <style>
     .game-settings {
         display: flex;
-        flex-flow: row nowrap;
+        flex-flow: column nowrap;
+        align-items: center;
     }
 </style>

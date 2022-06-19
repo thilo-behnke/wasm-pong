@@ -60,13 +60,9 @@
     }
 </script>
 <main>
-    {#if $network.loading}
-        loading...
-    {:else}
-        {JSON.stringify($sessionStore)}
-    {/if}
     {#if !$sessionStore.session}
         <div class="mode-select">
+            <h1>Welcome to WASM-Pong!</h1>
             <ModeSelect
                     on:local-create={() => localSession()}
                     on:session-create={() => createSession()}
@@ -77,12 +73,14 @@
         </div>
     {:else}
         <NetworkSessionWrapper>
-            <GameSettings on:debug-toggle={() => toggleDebug()}></GameSettings>
             <div class="game-area">
                 <Canvas debug={debug}>
                     <Fps></Fps>
                 </Canvas>
-                <Input inputs={$keysPressed}></Input>
+                <div>
+                    <GameSettings on:debug-toggle={() => toggleDebug()}></GameSettings>
+                    <Input inputs={$keysPressed}></Input>
+                </div>
             </div>
         </NetworkSessionWrapper>
     {/if}
@@ -98,18 +96,14 @@
     }
 
     .mode-select {
-
+        display: flex;
+        flex-flow: column nowrap;
+        align-items: center;
+        width: 100%;
     }
 
     .game-area {
         display: flex;
-    }
-
-    h1 {
-        color: #ff3e00;
-        text-transform: uppercase;
-        font-size: 4em;
-        font-weight: 100;
     }
 
     @media (min-width: 640px) {

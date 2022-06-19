@@ -61,3 +61,17 @@ button:not(:disabled):active {
 button:focus {
 	border-color: #666;
 }
+
+h1 {
+	color: #ff3e00;
+	text-transform: uppercase;
+	font-size: 2em;
+	font-weight: 100;
+}
+
+h3 {
+	color: #ff3e00;
+	text-transform: uppercase;
+	font-size: 1.3em;
+	font-weight: 100;
+}

@@ -60,7 +60,7 @@ async function createSession(): Promise<Session> {
     await new Promise((res) => {
         setTimeout(() => {
             res(null)
-        }, 2000)
+        }, 2_000)
     });
     return {
         session_id: "a",

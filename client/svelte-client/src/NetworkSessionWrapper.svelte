@@ -10,15 +10,15 @@
 </script>
 
 {#if !$session.session}
-    error!
+    <h1>error!</h1>
 {:else if $session.session.state === SessionState.PENDING}
-    waiting for other player...
+    <h1>waiting for other player...</h1>
 {:else if $session.session.state === SessionState.CLOSED}
-    game over!
+    <h1>game over!</h1>
 {:else if $session.session.state === SessionState.RUNNING}
     <slot></slot>
 {:else }
-    unknown game state
+    <h1>unknown game state</h1>
 {/if}
 
 

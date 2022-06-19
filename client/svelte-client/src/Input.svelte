@@ -22,9 +22,15 @@
     }
 
     .game_input {
-        border: 1px solid grey;
-        border-radius: 0.5em;
-        text-align: center;
+        background-color: #eee;
+        border-radius: 4px;
+        font-size: 1em;
+        padding: 0.2em 0.5em;
+        border-top: 5px solid rgba(255, 255, 255, 0.5);
+        border-left: 5px solid rgba(255, 255, 255, 0.5);
+        border-right: 5px solid rgba(0, 0, 0, 0.2);
+        border-bottom: 5px solid rgba(0, 0, 0, 0.2);
+        color: #555;
     }
 
     .game_input--inactive {
@@ -33,6 +39,6 @@
 
     .game_input--active {
         color: white;
-        background-color: red;
+        background-color: #ff3e00;
     }
 </style>

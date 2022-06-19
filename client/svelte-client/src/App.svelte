@@ -60,9 +60,9 @@
     }
 </script>
 <main>
+    <h1>Welcome to WASM-Pong!</h1>
     {#if !$sessionStore.session}
         <div class="mode-select">
-            <h1>Welcome to WASM-Pong!</h1>
             <ModeSelect
                     on:local-create={() => localSession()}
                     on:session-create={() => createSession()}
@@ -77,7 +77,7 @@
                 <Canvas debug={debug}>
                     <Fps></Fps>
                 </Canvas>
-                <div>
+                <div class="game-area__hud">
                     <GameSettings on:debug-toggle={() => toggleDebug()}></GameSettings>
                     <Input inputs={$keysPressed}></Input>
                 </div>
@@ -103,7 +103,16 @@
     }
 
     .game-area {
-        display: flex;
+        display: grid;
+        grid-template-columns: 1fr min-content;
+        grid-column-gap: 1rem;
+    }
+
+    .game-area__hud {
+        display: grid;
+        grid-template-rows: max-content 1fr;
+        border: 1px solid lightgrey;
+        padding: 0.4rem;
     }
 
     @media (min-width: 640px) {

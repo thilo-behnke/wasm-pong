@@ -64,7 +64,7 @@ async function createSession(): Promise<Session> {
     });
     return {
         session_id: "a",
-        state: SessionState.CLOSED,
+        state: SessionState.PENDING,
         players: [],
         observers: []
     }
@@ -78,7 +78,7 @@ async function joinSession(sessionId): Promise<Session> {
     });
     return {
         session_id: sessionId,
-        state: SessionState.CLOSED,
+        state: SessionState.PENDING,
         players: [],
         observers: []
     }
@@ -92,7 +92,7 @@ async function watchSession(sessionId): Promise<Session> {
     });
     return {
         session_id: sessionId,
-        state: SessionState.CLOSED,
+        state: SessionState.RUNNING,
         players: [],
         observers: []
     }

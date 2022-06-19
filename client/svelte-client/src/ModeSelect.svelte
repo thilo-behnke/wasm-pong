@@ -27,23 +27,20 @@
         dispatch("session-watch", sessionId)
     }
 
-    const toggleDebug = () => {
-        dispatch("debug-toggle")
-    }
 </script>
 
-<div class="game-actions">
+<div class="game-mode-select">
     <button on:click={() => localSession()}>Create Local Game</button>
     <button on:click={() => createSession()}>Create Online Game</button>
     <input bind:value={sessionId}/>
-    <button on:click={() => joinSession()}>Join Online Game</button>
-    <button on:click={() => watchSession()}>Watch Online Game</button>
-    <button on:click={() => toggleDebug()}>Toggle Debug</button>
+    <button disabled={!sessionId} on:click={() => joinSession()}>Join Online Game</button>
+    <button disabled={!sessionId} on:click={() => watchSession()}>Watch Online Game</button>
 </div>
 
 <style>
-    .game-actions {
-        display: flex;
-        justify-content: center;
+    .game-mode-select {
+        display: grid;
+        grid-auto-columns: 200px;
+        grid-auto-rows: 200px;
     }
 </style>

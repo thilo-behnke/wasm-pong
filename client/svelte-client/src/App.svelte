@@ -6,8 +6,10 @@
     import Input from "./Input.svelte";
     import {setContext} from "svelte";
     import {sessionContext, sessionStore} from "./game/session";
-    import Action from "./Action.svelte";
+    import ModeSelect from "./ModeSelect.svelte";
     import {network, networkContext} from "./game/network";
+    import NetworkSessionWrapper from "./NetworkSessionWrapper.svelte";
+    import GameSettings from "./GameSettings.svelte";
 
     setContext(sessionContext, sessionStore);
     setContext(networkContext, network);
@@ -54,7 +56,7 @@
     }
 
     function toggleDebug() {
-        debug = true;
+        debug = !debug;
     }
 </script>
 <main>
@@ -65,21 +67,24 @@
     {/if}
     {#if !$sessionStore.session}
         <div class="mode-select">
-            <Action
+            <ModeSelect
                     on:local-create={() => localSession()}
                     on:session-create={() => createSession()}
                     on:session-join={({detail: sessionId}) => joinSession(sessionId)}
                     on:session-watch={({detail: sessionId}) => watchSession(sessionId)}
                     on:debug-toggle={() => toggleDebug()}
-            ></Action>
+            ></ModeSelect>
         </div>
     {:else}
-        <div class="game-area">
-            <Canvas debug={debug}>
-                <Fps></Fps>
-            </Canvas>
-            <Input inputs={$keysPressed}></Input>
-        </div>
+        <NetworkSessionWrapper>
+            <GameSettings on:debug-toggle={() => toggleDebug()}></GameSettings>
+            <div class="game-area">
+                <Canvas debug={debug}>
+                    <Fps></Fps>
+                </Canvas>
+                <Input inputs={$keysPressed}></Input>
+            </div>
+        </NetworkSessionWrapper>
     {/if}
 </main>
 <svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup}/>

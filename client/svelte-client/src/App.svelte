@@ -1,21 +1,22 @@
 <script lang="ts">
 	import { FieldWrapper } from "wasm-app";
 	import Canvas from "./Canvas.svelte";
+	import Fps from "./Fps.svelte";
 	const field = FieldWrapper.new();
 	console.log({field})
 	export let name: string;
 </script>
 
 <main>
-	<Canvas></Canvas>
+	<Canvas>
+		<Fps></Fps>
+	</Canvas>
 </main>
 
 <style>
 	main {
-		text-align: center;
-		padding: 1em;
-		max-width: 240px;
-		margin: 0 auto;
+		display: flex;
+		justify-content: center;
 	}
 
 	h1 {

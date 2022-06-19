@@ -2,21 +2,21 @@
     import { FieldWrapper } from "wasm-app";
     import {onMount} from "svelte";
     import {get, writable} from "svelte/store";
-    import {drawObjects} from "./render/render";
+    import {drawObjects} from "./game/render";
+    import {width, height, pixelRatio} from "./game/engine";
+
     const field = FieldWrapper.new();
 
     let canvas: any;
     let ctx: any;
     let frame: number;
 
-    const width = writable(field.width());
-    const height = writable(field.height());
-    const pixelRatio = writable(window.devicePixelRatio);
-
     let debug = writable(false);
     let fps = 0;
 
     onMount(() => {
+        width.set(canvas.width);
+        height.set(canvas.height);
         ctx = canvas.getContext('2d');
         return createLoop((elapsed, dt) => {
             tick(dt);
@@ -67,6 +67,7 @@
         style="width: {$width}px; height: {$height}px;"
 ></canvas>
 <svelte:window on:resize|passive={handleResize} />
+<slot></slot>
 
 <style>
 

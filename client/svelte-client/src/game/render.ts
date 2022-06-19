@@ -1,4 +1,3 @@
-
 const GRID_COLOR = "#CCCCCC";
 
 export const drawObjects = (ctx: CanvasRenderingContext2D, objects, [width, height], debug = false) => {

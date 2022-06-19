@@ -43,8 +43,8 @@ function makeSessionStore() {
     return {
         subscribe,
         createSession: () => createSession().then(session => update(() => ({session, sessionType: SessionType.HOST}))),
-        joinSession: () => joinSession().then(session => update(() => ({session, sessionType: SessionType.PEER}))),
-        watchSession: () => watchSession().then(session => update(() => ({session, sessionType: SessionType.OBSERVER}))),
+        joinSession: (sessionId) => joinSession().then(session => update(() => ({session, sessionType: SessionType.PEER}))),
+        watchSession: (sessionId) => watchSession().then(session => update(() => ({session, sessionType: SessionType.OBSERVER}))),
         reset: () => set(initialValue())
     }
 }

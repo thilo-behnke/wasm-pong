@@ -39,11 +39,11 @@ export const props = deriveObject({
     keysPressed
 });
 
-export const gameContext = Symbol();
+export const renderContext = Symbol();
 
 // https://svelte.dev/repl/79f4f3e0296a403ea988f74d332a7a4a?version=3.12.1
 export const renderable = (render) => {
-    const api: any = getContext(gameContext);
+    const api: any = getContext(renderContext);
     const element = {
         ready: false,
         mounted: false,

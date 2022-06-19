@@ -1,10 +1,19 @@
 <script lang="ts">
-    import { FieldWrapper } from "wasm-app";
-    import {onMount, setContext} from "svelte";
+    import {FieldWrapper} from "wasm-app";
+    import {getContext, onMount, setContext} from "svelte";
     import {get, writable} from "svelte/store";
     import {drawObjects} from "./game/render";
-    import {width, height, pixelRatio, gameContext, props, engineCtx, engineCanvas, playerInputs} from "./game/engine";
-    import {sessionStore} from "./game/session";
+    import {
+        engineCanvas,
+        engineCtx,
+        height,
+        pixelRatio,
+        playerInputs,
+        props,
+        renderContext,
+        width
+    } from "./game/engine";
+    import {sessionContext} from "./game/session";
 
     export let killLoopOnError = true;
 
@@ -16,6 +25,9 @@
     let listeners = [];
 
     let debug = writable(false);
+
+    let session = getContext(sessionContext);
+    console.log(session)
 
     onMount(() => {
         ctx = canvas.getContext('2d');
@@ -41,7 +53,7 @@
         });
     })
 
-    setContext(gameContext, {
+    setContext(renderContext, {
         add (fn) {
             this.remove(fn);
             listeners.push(fn);
@@ -100,6 +112,7 @@
     }
 </script>
 
+{JSON.stringify($session)}
 <canvas
         bind:this={canvas}
         width={$width * $pixelRatio}

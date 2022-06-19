@@ -8,7 +8,7 @@
 	import {sessionContext, sessionStore} from "./game/session";
 	import Action from "./Action.svelte";
 
-	setContext(sessionContext, sessionStore)
+	setContext(sessionContext, sessionStore);
 
 	function handleKeydown({key}) {
 		if ($keysPressed.includes(key)) {
@@ -24,9 +24,13 @@
 	}
 </script>
 
+{JSON.stringify($sessionStore)}
 <main>
-	{JSON.stringify($sessionStore.session)}
-	<Action></Action>
+	<Action
+			on:session-create={() => sessionStore.createSession()}
+			on:session-join={(sessionId) => sessionStore.joinSession(sessionId)}
+			on:session-watch={(sessionId) => sessionStore.watchSession(sessionId)}
+	></Action>
 	<div class="game-area">
 		<Canvas>
 			<Fps></Fps>

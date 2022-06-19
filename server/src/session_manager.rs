@@ -7,7 +7,7 @@ use crate::kafka::{
     KafkaDefaultEventWriterImpl, KafkaSessionEventReaderImpl, KafkaSessionEventWriterImpl,
     KafkaTopicManager,
 };
-use crate::player::Player;
+use crate::actor::Player;
 use crate::session::{Session, SessionState};
 
 pub struct SessionManager {

@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use crate::player::Player;
+use crate::actor::{Actor, Observer, Player};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Session {
@@ -7,6 +7,7 @@ pub struct Session {
     pub hash: String,
     pub state: SessionState,
     pub players: Vec<Player>,
+    pub observers: Vec<Observer>
 }
 
 impl Session {
@@ -16,6 +17,7 @@ impl Session {
             id,
             hash,
             state: SessionState::PENDING,
+            observers: vec![]
         }
     }
 

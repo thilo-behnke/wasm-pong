@@ -10,7 +10,7 @@ pub mod utils;
 mod websocket_handler;
 mod request_handler;
 mod event;
-mod player;
+mod actor;
 mod session;
 
 #[tokio::main]

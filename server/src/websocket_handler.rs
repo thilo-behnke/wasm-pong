@@ -12,7 +12,7 @@ use tokio::time::sleep;
 use serde::{Serialize, Deserialize};
 use pong::game_field::Input;
 use crate::event::{HeartBeatEventPayload, InputEventPayload, MoveEventPayload, SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType};
-use crate::player::Player;
+use crate::actor::Player;
 use crate::session::Session;
 use crate::session_manager::{SessionManager, SessionWriter};
 
@@ -120,7 +120,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                             WebsocketEvent::HeartBeat(session_id, heartbeat) => {
                                 let event = HeartBeatEventPayload {
                                     session_id: session_id.clone(),
-                                    player: heartbeat.player,
+                                    actor_id: heartbeat.player,
                                     ts: heartbeat.ts
                                 };
                                 let res = write_events(vec![event], "heart_beat", &mut event_writer);
@@ -144,7 +144,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                         };
 
                         let session_closed_event = SessionEvent::Closed(SessionEventPayload {
-                            player: websocket_session_read_copy.player.clone(),
+                            actor: websocket_session_read_copy.player.clone(),
                             session: websocket_session_read_copy.session.clone(),
                             reason: format!("ws closed: {}", reason),
                         });

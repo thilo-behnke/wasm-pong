@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 use pong::game_field::Input;
-use crate::player::Player;
+use crate::actor::Player;
 use crate::session::Session;
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -56,7 +56,7 @@ pub struct StatusEventPayload {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HeartBeatEventPayload {
-    pub player: String,
+    pub actor_id: String,
     pub session_id: String,
     pub ts: u128
 }
@@ -72,7 +72,7 @@ pub enum SessionEvent {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct SessionEventPayload {
     pub session: Session,
-    pub player: Player,
+    pub actor: Player,
     pub reason: String,
 }
 
@@ -113,10 +113,10 @@ pub fn deserialize(event: &str) -> Option<PongEvent> {
 #[cfg(test)]
 mod tests {
     use crate::event::{SessionEvent, SessionEventPayload};
-    use crate::player::Player;
+    use crate::actor::{Observer, Player};
     use crate::session::{Session, SessionState};
 
-    const SESSION_EVENT_JSON: &str = "{\"event_type\":\"Created\",\"session\":{\"id\":1,\"hash\":\"abc\",\"state\":\"PENDING\",\"players\":[{\"id\":\"player_1\"}]},\"player\":{\"id\":\"player_1\"},\"reason\":\"some reason\"}";
+    const SESSION_EVENT_JSON: &str = "{\"event_type\":\"Created\",\"session\":{\"id\":1,\"hash\":\"abc\",\"state\":\"PENDING\",\"players\":[{\"id\":\"player_1\"}],\"observers\":[{\"id\":\"observer_1\"}]},\"actor\":{\"id\":\"player_1\"},\"reason\":\"some reason\"}";
 
     #[test]
     pub fn should_serialize_correctly() {
@@ -141,8 +141,9 @@ mod tests {
                 hash: "abc".to_owned(),
                 state: SessionState::PENDING,
                 players: vec![Player { id: "player_1".to_owned() }],
+                observers: vec![Observer {id: "observer_1".to_owned()}]
             },
-            player: Player { id: "player_1".to_owned() },
+            actor: Player { id: "player_1".to_owned() },
             reason: "some reason".to_owned(),
         })
     }

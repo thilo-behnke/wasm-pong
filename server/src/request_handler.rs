@@ -7,7 +7,7 @@ use serde_json::json;
 use tokio::sync::Mutex;
 use serde::{Deserialize};
 use crate::event::{SessionEvent, SessionEventPayload, SessionEventType};
-use crate::player::Player;
+use crate::actor::Player;
 use crate::session_manager::SessionManager;
 use crate::utils::http_utils::{build_error_res, build_success_res, get_query_params, read_json_body};
 
@@ -84,7 +84,7 @@ async fn handle_session_create(
     let reason = format!("player {:?} created session", player);
     let session_created = SessionEvent::Created(SessionEventPayload {
         session: session_create_res.unwrap(),
-        player,
+        actor: player,
         reason
     });
     let serialized = json!(session_created);
@@ -114,7 +114,7 @@ async fn handle_session_join(
     println!("Successfully joined session: {:?}", session);
     let reason = format!("player {:?} joined session", player);
     let session_joined = SessionEvent::Joined(SessionEventPayload {
-        player,
+        actor: player,
         session,
         reason
     });

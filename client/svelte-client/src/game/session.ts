@@ -5,7 +5,7 @@ export enum SessionState {
 }
 
 export enum SessionType {
-    HOST = 'HOST', PEER = 'PEER', OBSERVER = 'OBSERVER'
+    LOCAL = 'LOCAL', HOST = 'HOST', PEER = 'PEER', OBSERVER = 'OBSERVER'
 }
 
 export type Player = {
@@ -16,12 +16,18 @@ export type Observer = {
     id: string
 }
 
-export type Session = {
+export type LocalSession = {
+    state: SessionState
+}
+
+export type NetworkSession = {
     session_id: string,
     state: SessionState,
     players: Player[],
     observers: Observer[]
 }
+
+export type Session = LocalSession | NetworkSession;
 
 export type SessionStore = {
     session?: Session,
@@ -42,9 +48,10 @@ function makeSessionStore() {
 
     return {
         subscribe,
-        createSession: () => createSession().then(session => update(() => ({session, sessionType: SessionType.HOST}))),
-        joinSession: (sessionId) => joinSession(sessionId).then(session => update(() => ({session, sessionType: SessionType.PEER}))),
-        watchSession: (sessionId) => watchSession(sessionId).then(session => update(() => ({session, sessionType: SessionType.OBSERVER}))),
+        createLocalSession: () => update(() => ({session: {state: SessionState.RUNNING}})),
+        createNetworkSession: () => createSession().then(session => update(() => ({session, sessionType: SessionType.HOST}))),
+        joinNetworkSession: (sessionId) => joinSession(sessionId).then(session => update(() => ({session, sessionType: SessionType.PEER}))),
+        watchNetworkSession: (sessionId) => watchSession(sessionId).then(session => update(() => ({session, sessionType: SessionType.OBSERVER}))),
         reset: () => set(initialValue())
     }
 }

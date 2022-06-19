@@ -28,19 +28,19 @@
 	}
 	function createSession() {
 		$network.loading = true;
-		sessionStore.createSession().then(() => {
+		sessionStore.createNetworkSession().then(() => {
 			$network.loading = false;
 		})
 	}
 	function joinSession(sessionId) {
 		$network.loading = true;
-		sessionStore.joinSession(sessionId).then(() => {
+		sessionStore.joinNetworkSession(sessionId).then(() => {
 			$network.loading = false;
 		})
 	}
 	function watchSession(sessionId) {
 		$network.loading = true;
-		sessionStore.watchSession(sessionId).then(() => {
+		sessionStore.watchNetworkSession(sessionId).then(() => {
 			$network.loading = false;
 		})
 	}

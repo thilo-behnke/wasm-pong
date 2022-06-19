@@ -3,8 +3,8 @@ import {getContext, onMount} from "svelte";
 
 export const engineCanvas = writable();
 export const engineCtx = writable();
-export const width = writable(window.innerWidth);
-export const height = writable(window.innerHeight);
+export const width = writable(800);
+export const height = writable(600);
 export const pixelRatio = writable(window.devicePixelRatio);
 
 // A more convenient store for grabbing all game props

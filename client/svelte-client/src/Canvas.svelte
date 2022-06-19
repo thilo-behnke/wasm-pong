@@ -22,6 +22,7 @@
         engineCanvas.set(engineCanvas);
         width.set(canvas.width);
         height.set(canvas.height);
+        // field.set_dimensions(canvas.width, canvas.height);
 
         // setup entities
         listeners.forEach(async entity => {
@@ -68,8 +69,6 @@
 
     function tick(dt) {
         field.tick([], dt);
-        let objects = JSON.parse(field.objects());
-        render(objects, dt);
     }
 
     function render(objects, dt) {
@@ -93,8 +92,9 @@
     }
 
     function handleResize () {
-        width.set(window.innerWidth);
-        height.set(window.innerHeight);
+        // TODO: Resolution scaling needs to be implemented in wasm module.
+        // width.set(window.innerWidth);
+        // height.set(window.innerHeight);
         pixelRatio.set(window.devicePixelRatio);
     }
 </script>

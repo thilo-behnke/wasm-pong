@@ -147,6 +147,12 @@ impl FieldWrapper {
         let json = json!(objs);
         serde_json::to_string(&json).unwrap()
     }
+
+    pub fn set_dimensions(&mut self, width_js: JsValue, height_js: JsValue) {
+        let width = width_js.as_f64().unwrap();
+        let height = height_js.as_f64().unwrap();
+        self.field.set_dimensions(width as u16, height as u16);
+    }
 }
 
 #[derive(Clone)]

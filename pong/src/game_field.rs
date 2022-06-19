@@ -219,6 +219,11 @@ impl Field {
     pub fn objs(&self) -> Vec<&Rc<RefCell<Box<dyn GameObject>>>> {
         self.objs.iter().collect()
     }
+
+    pub fn set_dimensions(&mut self, width: u16, height: u16) {
+        self.width = width;
+        self.height = height;
+    }
 }
 
 impl DefaultGameObject {

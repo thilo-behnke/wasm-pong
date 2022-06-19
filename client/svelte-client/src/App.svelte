@@ -4,6 +4,11 @@
 	import Fps from "./Fps.svelte";
 	import {keysPressed} from "./game/engine";
 	import Input from "./Input.svelte";
+	import {setContext} from "svelte";
+	import {sessionContext, sessionStore} from "./game/session";
+	import Action from "./Action.svelte";
+
+	setContext(sessionContext, sessionStore)
 
 	function handleKeydown({key}) {
 		if ($keysPressed.includes(key)) {
@@ -20,17 +25,27 @@
 </script>
 
 <main>
-	<Canvas>
-		<Fps></Fps>
-	</Canvas>
-	<Input inputs={$keysPressed}></Input>
+	{JSON.stringify($sessionStore.session)}
+	<Action></Action>
+	<div class="game-area">
+		<Canvas>
+			<Fps></Fps>
+		</Canvas>
+		<Input inputs={$keysPressed}></Input>
+	</div>
 </main>
 <svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup}/>
 
 <style>
 	main {
 		display: flex;
-		justify-content: center;
+		flex-flow: column;
+		justify-content: start;
+		align-items: center;
+	}
+
+	.game-area {
+		display: flex;
 	}
 
 	h1 {

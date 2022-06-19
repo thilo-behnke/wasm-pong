@@ -6,7 +6,6 @@
     import {width, height, pixelRatio, gameContext, props, engineCtx, engineCanvas, playerInputs} from "./game/engine";
 
     export let killLoopOnError = true;
-    export let inputs = [];
 
     const field = FieldWrapper.new();
 

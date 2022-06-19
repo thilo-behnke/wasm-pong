@@ -1,8 +1,8 @@
 import {derived, writable} from "svelte/store";
 import {getContext, onMount} from "svelte";
 
-export const canvas = writable();
-export const ctx = writable();
+export const engineCanvas = writable();
+export const engineCtx = writable();
 export const width = writable(window.innerWidth);
 export const height = writable(window.innerHeight);
 export const pixelRatio = writable(window.devicePixelRatio);
@@ -11,14 +11,16 @@ export const pixelRatio = writable(window.devicePixelRatio);
 export const props = deriveObject({
     width,
     height,
-    pixelRatio
+    pixelRatio,
+    engineCanvas,
+    engineCtx
 });
 
-export const key = Symbol();
+export const gameContext = Symbol();
 
 // https://svelte.dev/repl/79f4f3e0296a403ea988f74d332a7a4a?version=3.12.1
 export const renderable = (render) => {
-    const api: any = getContext(key);
+    const api: any = getContext(gameContext);
     const element = {
         ready: false,
         mounted: false,

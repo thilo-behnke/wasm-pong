@@ -1,29 +1,54 @@
 <script lang="ts">
     import { FieldWrapper } from "wasm-app";
-    import {onMount} from "svelte";
+    import {onMount, setContext} from "svelte";
     import {get, writable} from "svelte/store";
     import {drawObjects} from "./game/render";
-    import {width, height, pixelRatio} from "./game/engine";
+    import {width, height, pixelRatio, gameContext, props, engineCtx, engineCanvas} from "./game/engine";
+
+    export let killLoopOnError = true;
 
     const field = FieldWrapper.new();
 
     let canvas: any;
     let ctx: any;
     let frame: number;
+    let listeners = [];
 
     let debug = writable(false);
-    let fps = 0;
 
     onMount(() => {
+        ctx = canvas.getContext('2d');
+        engineCtx.set(ctx)
+        engineCanvas.set(engineCanvas);
         width.set(canvas.width);
         height.set(canvas.height);
-        ctx = canvas.getContext('2d');
+
+        // setup entities
+        listeners.forEach(async entity => {
+            if (entity.setup) {
+                let p = entity.setup($props);
+                if (p && p.then) await p;
+            }
+            entity.ready = true;
+        });
+
         return createLoop((elapsed, dt) => {
             tick(dt);
             const objects = JSON.parse(field.objects());
-            render(objects);
+            render(objects, dt);
         });
     })
+
+    setContext(gameContext, {
+        add (fn) {
+            this.remove(fn);
+            listeners.push(fn);
+        },
+        remove (fn) {
+            const idx = listeners.indexOf(fn);
+            if (idx >= 0) listeners.splice(idx, 1);
+        }
+    });
 
     function createLoop (fn) {
         let elapsed = 0;
@@ -44,13 +69,27 @@
     function tick(dt) {
         field.tick([], dt);
         let objects = JSON.parse(field.objects());
-        render(objects);
+        render(objects, dt);
     }
 
-    function render(objects) {
+    function render(objects, dt) {
         const [canvas_width, canvas_height] = [canvas.width, canvas.height];
         ctx.clearRect(0, 0, canvas_width, canvas_height);
         drawObjects(ctx, objects, [canvas_width, canvas_height], get(debug));
+
+        listeners.forEach(entity => {
+            try {
+                if (entity.mounted && entity.ready && entity.render) {
+                    entity.render($props, dt);
+                }
+            } catch (err) {
+                console.error(err);
+                if (killLoopOnError) {
+                    cancelAnimationFrame(frame);
+                    console.warn('Animation loop stopped due to an error');
+                }
+            }
+        });
     }
 
     function handleResize () {

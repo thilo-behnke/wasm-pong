@@ -13,13 +13,13 @@
     export let fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica';
 
     renderable(props => {
-        const { context } = props;
+        const { engineCtx: ctx } = props;
         if (text) {
-            context.fillStyle = color;
-            context.font = `${fontSize}px ${fontFamily}`;
-            context.textAlign = align;
-            context.textBaseline = baseline;
-            context.fillText(text, x, y);
+            ctx.fillStyle = 'black';
+            ctx.font = `${fontSize}px ${fontFamily}`;
+            ctx.textAlign = align;
+            ctx.textBaseline = baseline;
+            ctx.fillText(text, x, y);
         }
     });
 </script>

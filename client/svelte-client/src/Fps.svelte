@@ -1,5 +1,4 @@
 <script>
-
     import Text from "./Text.svelte";
     import {renderable} from "./game/engine";
 

@@ -35,11 +35,10 @@ export type Input = {
     player: number
 }
 
-export interface InputProvider {
-    getInputs(): Input[]
+enum InputMethod {
+    UNDEFINED, KEYBOARD, NETWORK
 }
 
-// TODO: Not fired.
 const keysPressed: Readable<string[]> = readable([], function(set) {
     let keys = [];
 
@@ -87,16 +86,20 @@ export const localSessionInputs = derived(
     }
 )
 
-export class LocalSessionInputProvider implements InputProvider {
-    getInputs(): Input[] {
-        return get(localSessionInputs);
+const inputMethod = writable(InputMethod.UNDEFINED)
+
+export const sessionInputs = derived([inputMethod, localSessionInputs], ([$inputMethod, $localSessionInputs]) => {
+    switch($inputMethod) {
+        case InputMethod.KEYBOARD:
+            return $localSessionInputs
+        default:
+            return []
     }
-}
+});
 
 export type SessionStore = {
     session?: Session,
-    sessionType?: SessionType,
-    inputProvider?: InputProvider
+    sessionType?: SessionType
 }
 
 export const sessionContext = Symbol();
@@ -104,8 +107,7 @@ export const sessionContext = Symbol();
 function initialValue(): SessionStore {
     return {
         session: null,
-        sessionType: null,
-        inputProvider: null
+        sessionType: null
     }
 }
 
@@ -114,25 +116,24 @@ function makeSessionStore() {
 
     return {
         subscribe,
-        createLocalSession: () => update(() => ({
-            session: {state: SessionState.RUNNING},
-            sessionType: SessionType.LOCAL,
-            inputProvider: new LocalSessionInputProvider()
-        })),
+        createLocalSession: () => {
+            inputMethod.set(InputMethod.KEYBOARD);
+            update(() => ({
+                session: {state: SessionState.RUNNING},
+                sessionType: SessionType.LOCAL
+            }))
+        },
         createNetworkSession: () => createSession().then(session => update(() => ({
             session,
-            sessionType: SessionType.HOST,
-            inputProvider: new LocalSessionInputProvider()
+            sessionType: SessionType.HOST
         }))),
         joinNetworkSession: (sessionId) => joinSession(sessionId).then(session => update(() => ({
             session,
             sessionType: SessionType.PEER,
-            inputProvider: new LocalSessionInputProvider()
         }))),
         watchNetworkSession: (sessionId) => watchSession(sessionId).then(session => update(() => ({
             session,
-            sessionType: SessionType.OBSERVER,
-            inputProvider: new LocalSessionInputProvider()
+            sessionType: SessionType.OBSERVER
         }))),
         reset: () => set(initialValue())
     }

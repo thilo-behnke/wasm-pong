@@ -1,14 +1,24 @@
 <script lang="ts">
-    const controls: string[] = ["w", "s", "arrowup", "arrowdown"]
-    export let inputs: string[] = [];
+    import type {Input} from "./game/session";
 
-    $: filteredInputs = inputs.map(i => i.toLowerCase()).filter(i => controls.includes(i))
+    const availableInputs: string[] = ["UP", "DOWN"]
+    export let inputs: Input[] = [];
+
+    $: player1Inputs = inputs.filter(({player}) => player === 1).map(({input}) => input)
+    $: player2Inputs = inputs.filter(({player}) => player === 2).map(({input}) => input)
 </script>
 
 <div class="game_inputs">
-    {#each controls as control}
-        <div class="game_input game_input--{filteredInputs.includes(control) ? 'active' : 'inactive'}">
-            {control}
+    <h4>Player 1</h4>
+    {#each availableInputs as input}
+        <div class="game_input game_input--{player1Inputs.includes(input) ? 'active' : 'inactive'}">
+            {input}
+        </div>
+    {/each}
+    <h4>Player 2</h4>
+    {#each availableInputs as input}
+        <div class="game_input game_input--{player2Inputs.includes(input) ? 'active' : 'inactive'}">
+            {input}
         </div>
     {/each}
 </div>

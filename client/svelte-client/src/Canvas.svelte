@@ -78,8 +78,9 @@
     }
 
     function tick(dt) {
-        const inputs = $session.inputProvider.getInputs();
-        field.tick(inputs, dt);
+        const inputs = $session.inputs;
+        console.log($session);
+        field.tick([], dt);
     }
 
     function render(objects, dt) {

@@ -4,13 +4,13 @@
     import Fps from "./Fps.svelte";
     import Input from "./Input.svelte";
     import {setContext} from "svelte";
-    import {sessionContext, sessionStore} from "./game/session";
+    import {localSessionInputs, sessionContext, sessionInputs, sessionStore} from "./game/session";
     import ModeSelect from "./ModeSelect.svelte";
     import {network, networkContext} from "./game/network";
     import NetworkSessionWrapper from "./NetworkSessionWrapper.svelte";
     import GameSettings from "./GameSettings.svelte";
 
-    setContext(sessionContext, sessionStore);
+    setContext(sessionContext, {session: () => ($sessionStore as any).session, inputs: () => $sessionInputs});
     setContext(networkContext, network);
 
     let debug = false;
@@ -64,7 +64,7 @@
                 </Canvas>
                 <div class="game-area__hud">
                     <GameSettings on:debug-toggle={() => toggleDebug()}></GameSettings>
-                    <Input inputs={$sessionStore.inputProvider?.getInputs()}></Input>
+                    <Input inputs={$sessionInputs}></Input>
                 </div>
             </div>
         </NetworkSessionWrapper>

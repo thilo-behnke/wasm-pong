@@ -304,10 +304,9 @@ impl GameObjectStateDTO {
     }
 }
 
-// TODO: Wip - Refactor to function
 fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter) -> bool where T : Serialize + Debug {
     let mut any_error = false;
-    let mut events = vec![];
+    let mut to_send = vec![];
     for event in events {
         let serialized = serde_json::to_string(&event);
         if let Err(e) = serialized {
@@ -315,10 +314,12 @@ fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter
             any_error = true;
             continue;
         }
-        events.push(serialized.unwrap().as_str());
+        let serialized = serialized.unwrap();
+        to_send.push(serialized);
     }
 
-    let write_res = event_writer.write_to_session(topic, events);
+    let to_send = to_send.iter().map(|e| e.as_str()).collect();
+    let write_res = event_writer.write_to_session(topic, to_send);
     if let Err(e) = write_res {
         eprintln!("Failed to write at least one event to topic {}: {:?}", "move", e);
         any_error = true;

@@ -58,24 +58,24 @@ impl EventWriterImpl for KafkaDefaultEventWriterImpl {
 fn write_events<T>(events: Vec<Event>, producer: &mut Producer<T>) -> Result<(), String> where T : Partitioner {
     let mut records_without_key = vec![];
     let mut records_with_key = vec![];
-    for event in events {
+    for event in events.iter() {
         match &event.key {
             Some(key) => {
-                let record = Record::from_key_value(event.topic.as_str(), key.clone(), event.msg.as_str());
+                let record = Record::from_key_value(&event.topic, key.clone(), event.msg.clone());
                 records_with_key.push(record);
             }
             None => {
-                let record = Record::from_value(event.topic.as_str(), event.msg.as_str());
+                let record = Record::from_value(&event.topic, event.msg.clone());
                 records_without_key.push(record);
             }
         }
     }
 
-    let res_with_key = match producer.send_all::<String, &str>(&*records_with_key) {
+    let res_with_key = match producer.send_all::<String, String>(&*records_with_key) {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("{}", e)),
     };
-    let res_without_key = match producer.send_all(&*records_without_key) {
+    let res_without_key = match producer.send_all::<(), String>(&*records_without_key) {
         Ok(_) => Ok(()),
         Err(e) => Err(format!("{}", e)),
     };

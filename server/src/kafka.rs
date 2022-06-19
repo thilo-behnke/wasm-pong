@@ -87,10 +87,6 @@ pub struct KafkaEventReaderImpl {
 }
 
 impl KafkaEventReaderImpl {
-    pub fn default() -> KafkaEventReaderImpl {
-        KafkaEventReaderImpl::new("localhost:9093")
-    }
-
     pub fn from(host: &str) -> KafkaEventReaderImpl {
         KafkaEventReaderImpl::new(host)
     }
@@ -142,9 +138,6 @@ impl EventReaderImpl for KafkaEventReaderImpl {
 
 impl KafkaEventReaderImpl {
     fn consume(&mut self) -> Result<Vec<Event>, String> {
-        // TODO: How to best filter messages by key (= game session id?)
-        // E.g. https://docs.rs/kafka/latest/kafka/producer/struct.DefaultPartitioner.html - is it possible to read from partition by retrieving the hash of the key?
-        // Does it even make sense to hash the key if it already is a hash? Custom partitioner?
         let polled = self.consumer.poll().unwrap();
         let message_sets: Vec<MessageSet<'_>> = polled.iter().collect();
         let mut events = vec![];
@@ -205,12 +198,6 @@ pub struct KafkaTopicManager {
 }
 
 impl KafkaTopicManager {
-    pub fn default() -> KafkaTopicManager {
-        KafkaTopicManager {
-            partition_management_endpoint: "http://localhost:7243/add_partition".to_owned(),
-        }
-    }
-
     pub fn from(topic_manager_host: &str) -> KafkaTopicManager {
         KafkaTopicManager {
             partition_management_endpoint: format!("http://{}/add_partition", topic_manager_host)

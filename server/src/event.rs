@@ -22,6 +22,7 @@ pub enum PongEvent {
     Move(String, MoveEventPayload),
     Input(String, InputEventPayload),
     Status(String, StatusEventPayload),
+    HeartBeat(String, HeartBeatEventPayload),
     Session(String, SessionEvent),
 }
 
@@ -51,6 +52,13 @@ pub struct InputEventPayload {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StatusEventPayload {
     // TODO
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HeartBeatEventPayload {
+    pub player: String,
+    pub session_id: String,
+    pub ts: u128
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -95,6 +103,7 @@ pub fn deserialize(event: &str) -> Option<PongEvent> {
             "move" => serde_json::from_str::<MoveEventPayload>(&w.event).ok().map(|e| PongEvent::Move(w.session_id, e)),
             "input" => serde_json::from_str::<InputEventPayload>(&w.event).ok().map(|e| PongEvent::Input(w.session_id, e)),
             "status" => serde_json::from_str::<StatusEventPayload>(&w.event).ok().map(|e| PongEvent::Status(w.session_id, e)),
+            "heart_beat" => serde_json::from_str::<HeartBeatEventPayload>(&w.event).ok().map(|e| PongEvent::HeartBeat(w.session_id, e)),
             "session" => serde_json::from_str::<SessionEvent>(&w.event).ok().map(|e| PongEvent::Session(w.session_id, e)),
             _ => None
         }

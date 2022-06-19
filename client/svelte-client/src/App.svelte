@@ -2,7 +2,6 @@
     import {FieldWrapper} from "wasm-app";
     import Canvas from "./Canvas.svelte";
     import Fps from "./Fps.svelte";
-    import {keysPressed} from "./game/engine";
     import Input from "./Input.svelte";
     import {setContext} from "svelte";
     import {sessionContext, sessionStore} from "./game/session";
@@ -15,20 +14,6 @@
     setContext(networkContext, network);
 
     let debug = false;
-
-    function handleKeydown({key}) {
-        if ($keysPressed.includes(key)) {
-            return;
-        }
-        $keysPressed = [...$keysPressed, key]
-    }
-
-    function handleKeyup({key}) {
-        if (!$keysPressed.includes(key)) {
-            return;
-        }
-        $keysPressed = $keysPressed.filter(key => key !== key)
-    }
 
     function localSession() {
         sessionStore.createLocalSession();
@@ -79,13 +64,12 @@
                 </Canvas>
                 <div class="game-area__hud">
                     <GameSettings on:debug-toggle={() => toggleDebug()}></GameSettings>
-                    <Input inputs={$keysPressed}></Input>
+                    <Input inputs={$sessionStore.inputProvider?.getInputs()}></Input>
                 </div>
             </div>
         </NetworkSessionWrapper>
     {/if}
 </main>
-<svelte:window on:keydown={handleKeydown} on:keyup={handleKeyup}/>
 
 <style>
     main {

@@ -8,7 +8,6 @@
         engineCtx,
         height,
         pixelRatio,
-        playerInputs,
         props,
         renderContext,
         width
@@ -79,7 +78,8 @@
     }
 
     function tick(dt) {
-        field.tick($playerInputs, dt);
+        const inputs = $session.inputProvider.getInputs();
+        field.tick(inputs, dt);
     }
 
     function render(objects, dt) {

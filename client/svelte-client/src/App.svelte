@@ -7,8 +7,12 @@
 	import {setContext} from "svelte";
 	import {sessionContext, sessionStore} from "./game/session";
 	import Action from "./Action.svelte";
+	import {network, networkContext} from "./game/network";
 
 	setContext(sessionContext, sessionStore);
+	setContext(networkContext, network);
+
+	let debug = false;
 
 	function handleKeydown({key}) {
 		if ($keysPressed.includes(key)) {
@@ -22,17 +26,43 @@
 		}
 		$keysPressed = $keysPressed.filter(key => key !== key)
 	}
-</script>
+	function createSession() {
+		$network.loading = true;
+		sessionStore.createSession().then(() => {
+			$network.loading = false;
+		})
+	}
+	function joinSession(sessionId) {
+		$network.loading = true;
+		sessionStore.joinSession(sessionId).then(() => {
+			$network.loading = false;
+		})
+	}
+	function watchSession(sessionId) {
+		$network.loading = true;
+		sessionStore.watchSession(sessionId).then(() => {
+			$network.loading = false;
+		})
+	}
 
-{JSON.stringify($sessionStore)}
+	function toggleDebug() {
+		debug = true;
+	}
+</script>
 <main>
+	{#if $network.loading}
+		loading...
+	{:else}
+		{JSON.stringify($sessionStore)}
+	{/if}
 	<Action
-			on:session-create={() => sessionStore.createSession()}
-			on:session-join={(sessionId) => sessionStore.joinSession(sessionId)}
-			on:session-watch={(sessionId) => sessionStore.watchSession(sessionId)}
+			on:session-create={() => createSession()}
+			on:session-join={({detail: sessionId}) => joinSession(sessionId)}
+			on:session-watch={({detail: sessionId}) => watchSession(sessionId)}
+			on:debug-toggle={() => toggleDebug()}
 	></Action>
 	<div class="game-area">
-		<Canvas>
+		<Canvas debug={debug}>
 			<Fps></Fps>
 		</Canvas>
 		<Input inputs={$keysPressed}></Input>

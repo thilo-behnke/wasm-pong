@@ -1,11 +1,11 @@
 import {readable, writable} from "svelte/store";
 
 export enum SessionState {
-    PENDING, RUNNING, CLOSED
+    PENDING = 'PENDING', RUNNING = 'RUNNING', CLOSED = 'CLOSED'
 }
 
 export enum SessionType {
-    HOST, PEER, OBSERVER
+    HOST = 'HOST', PEER = 'PEER', OBSERVER = 'OBSERVER'
 }
 
 export type Player = {
@@ -43,8 +43,8 @@ function makeSessionStore() {
     return {
         subscribe,
         createSession: () => createSession().then(session => update(() => ({session, sessionType: SessionType.HOST}))),
-        joinSession: (sessionId) => joinSession().then(session => update(() => ({session, sessionType: SessionType.PEER}))),
-        watchSession: (sessionId) => watchSession().then(session => update(() => ({session, sessionType: SessionType.OBSERVER}))),
+        joinSession: (sessionId) => joinSession(sessionId).then(session => update(() => ({session, sessionType: SessionType.PEER}))),
+        watchSession: (sessionId) => watchSession(sessionId).then(session => update(() => ({session, sessionType: SessionType.OBSERVER}))),
         reset: () => set(initialValue())
     }
 }
@@ -63,28 +63,28 @@ async function createSession(): Promise<Session> {
     }
 }
 
-async function joinSession(): Promise<Session> {
+async function joinSession(sessionId): Promise<Session> {
     await new Promise((res) => {
         setTimeout(() => {
             res(null)
         }, 2000)
     });
     return {
-        session_id: "a",
+        session_id: sessionId,
         state: SessionState.CLOSED,
         players: [],
         observers: []
     }
 }
 
-async function watchSession(): Promise<Session> {
+async function watchSession(sessionId): Promise<Session> {
     await new Promise((res) => {
         setTimeout(() => {
             res(null)
         }, 2000)
     });
     return {
-        session_id: "a",
+        session_id: sessionId,
         state: SessionState.CLOSED,
         players: [],
         observers: []

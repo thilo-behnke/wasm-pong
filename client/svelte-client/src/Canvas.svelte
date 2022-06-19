@@ -16,6 +16,7 @@
     import {sessionContext} from "./game/session";
 
     export let killLoopOnError = true;
+    export let debug = false;
 
     const field = FieldWrapper.new();
 
@@ -23,8 +24,6 @@
     let ctx: any;
     let frame: number;
     let listeners = [];
-
-    let debug = writable(false);
 
     let session = getContext(sessionContext);
     console.log(session)
@@ -87,7 +86,7 @@
     function render(objects, dt) {
         const [canvas_width, canvas_height] = [canvas.width, canvas.height];
         ctx.clearRect(0, 0, canvas_width, canvas_height);
-        drawObjects(ctx, objects, [canvas_width, canvas_height], get(debug));
+        drawObjects(ctx, objects, [canvas_width, canvas_height], debug);
 
         listeners.forEach(entity => {
             try {
@@ -112,7 +111,6 @@
     }
 </script>
 
-{JSON.stringify($session)}
 <canvas
         bind:this={canvas}
         width={$width * $pixelRatio}

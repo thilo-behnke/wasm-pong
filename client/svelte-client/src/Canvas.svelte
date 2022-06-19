@@ -26,7 +26,6 @@
     let listeners = [];
 
     let session = getContext(sessionContext);
-    console.log(session)
 
     onMount(() => {
         ctx = canvas.getContext('2d');

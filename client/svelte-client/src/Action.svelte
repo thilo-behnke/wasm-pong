@@ -5,6 +5,10 @@
 
     let sessionId = '';
 
+    const localSession = () => {
+        dispatch("local-create")
+    }
+
     const createSession = () => {
         dispatch("session-create")
     }
@@ -29,10 +33,11 @@
 </script>
 
 <div class="game-actions">
-    <button on:click={() => createSession()}>Create Session</button>
+    <button on:click={() => localSession()}>Create Local Game</button>
+    <button on:click={() => createSession()}>Create Online Game</button>
     <input bind:value={sessionId}/>
-    <button on:click={() => joinSession()}>Join Session</button>
-    <button on:click={() => watchSession()}>Watch Session</button>
+    <button on:click={() => joinSession()}>Join Online Game</button>
+    <button on:click={() => watchSession()}>Watch Online Game</button>
     <button on:click={() => toggleDebug()}>Toggle Debug</button>
 </div>
 

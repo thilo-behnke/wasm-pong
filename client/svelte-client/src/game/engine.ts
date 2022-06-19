@@ -1,4 +1,4 @@
-import {derived, writable} from "svelte/store";
+import {derived, Writable, writable} from "svelte/store";
 import {getContext, onMount} from "svelte";
 
 export const engineCanvas = writable();
@@ -7,13 +7,16 @@ export const width = writable(800);
 export const height = writable(600);
 export const pixelRatio = writable(window.devicePixelRatio);
 
+export const keysPressed: Writable<string[]> = writable([])
+
 // A more convenient store for grabbing all game props
 export const props = deriveObject({
     width,
     height,
     pixelRatio,
     engineCanvas,
-    engineCtx
+    engineCtx,
+    keysPressed
 });
 
 export const gameContext = Symbol();

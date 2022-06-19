@@ -3,7 +3,7 @@
     import {onMount, setContext} from "svelte";
     import {get, writable} from "svelte/store";
     import {drawObjects} from "./game/render";
-    import {width, height, pixelRatio, gameContext, props, engineCtx, engineCanvas} from "./game/engine";
+    import {width, height, pixelRatio, gameContext, props, engineCtx, engineCanvas, keysPressed} from "./game/engine";
 
     export let killLoopOnError = true;
 
@@ -15,6 +15,8 @@
     let listeners = [];
 
     let debug = writable(false);
+
+    $: keys = $keysPressed.join(',')
 
     onMount(() => {
         ctx = canvas.getContext('2d');
@@ -97,17 +99,34 @@
         // height.set(window.innerHeight);
         pixelRatio.set(window.devicePixelRatio);
     }
-</script>
 
-<canvas
-        bind:this={canvas}
-        width={$width * $pixelRatio}
-        height={$height * $pixelRatio}
-        style="width: {$width}px; height: {$height}px;"
-></canvas>
-<svelte:window on:resize|passive={handleResize} />
+    function handleKeydown({key}) {
+        if ($keysPressed.includes(key)) {
+            return;
+        }
+        $keysPressed = [...$keysPressed, key]
+    }
+    function handleKeyup({key}) {
+        if (!$keysPressed.includes(key)) {
+            return;
+        }
+        $keysPressed = $keysPressed.filter(key => key !== key)
+    }
+</script>
+<div class="game_wrapper">
+    <canvas
+            bind:this={canvas}
+            width={$width * $pixelRatio}
+            height={$height * $pixelRatio}
+            style="width: {$width}px; height: {$height}px;"
+    ></canvas>
+    <div>{keys}</div>
+</div>
+<svelte:window on:resize|passive={handleResize} on:keydown={handleKeydown} on:keyup={handleKeyup}/>
 <slot></slot>
 
 <style>
-
+    .game_wrapper {
+        display: flex;
+    }
 </style>

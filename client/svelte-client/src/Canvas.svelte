@@ -4,6 +4,7 @@
     import {get, writable} from "svelte/store";
     import {drawObjects} from "./game/render";
     import {width, height, pixelRatio, gameContext, props, engineCtx, engineCanvas, playerInputs} from "./game/engine";
+    import {sessionStore} from "./game/session";
 
     export let killLoopOnError = true;
 
@@ -98,6 +99,7 @@
         pixelRatio.set(window.devicePixelRatio);
     }
 </script>
+
 <canvas
         bind:this={canvas}
         width={$width * $pixelRatio}

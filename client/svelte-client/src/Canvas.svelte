@@ -1,14 +1,15 @@
 <script lang="ts">
     import { FieldWrapper } from "wasm-app";
     import {onMount} from "svelte";
+    import {get, writable} from "svelte/store";
     const field = FieldWrapper.new();
     let canvas: any;
     let ctx: any;
 
     const GRID_COLOR = "#CCCCCC";
-    const width = field.width();
-    const height = field.height();
-    const pixelRatio = window.devicePixelRatio;
+    const width = writable(field.width());
+    const height = writable(field.height());
+    const pixelRatio = writable(window.devicePixelRatio);
 
     let debug = false;
     let fps = 0;
@@ -35,11 +36,12 @@
     }
 
     const drawObjects = objects => {
+        const canvas_height = get(height);
         objects.forEach(obj => {
             ctx.beginPath();
             ctx.strokeStyle = GRID_COLOR;
 
-            const obj_y = height - obj.y;
+            const obj_y = canvas_height - obj.y;
             const orientation_y = obj.orientation_y * -1;
             const vel_y = obj.vel_y * -1;
 
@@ -79,14 +81,21 @@
         ctx.lineTo(to_x, to_y);
         ctx.stroke();
     }
+
+    function handleResize () {
+        width.set(window.innerWidth);
+        height.set(window.innerHeight);
+        pixelRatio.set(window.devicePixelRatio);
+    }
 </script>
 
 <canvas
         bind:this={canvas}
-        width={width * pixelRatio}
-        height={height * pixelRatio}
-        style="width: {width}px; height: {height}px;"
+        width={$width * $pixelRatio}
+        height={$height * $pixelRatio}
+        style="width: {$width}px; height: {$height}px;"
 ></canvas>
+<svelte:window on:resize|passive={handleResize} />
 
 <style>
 

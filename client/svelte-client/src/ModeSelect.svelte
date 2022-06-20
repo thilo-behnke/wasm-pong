@@ -1,15 +1,15 @@
 <script lang="ts">
     import {createEventDispatcher, getContext} from "svelte";
-    import {networkContext} from "./game/network";
     import {Shadow} from 'svelte-loading-spinners'
 
+    export let isLoading = false;
+
     const dispatch = createEventDispatcher();
-    let network = getContext(networkContext);
 
     let joinSessionId = '';
     let watchSessionId = '';
 
-    $: disableControls = $network.loading;
+    $: disableControls = isLoading;
 
     const localSession = () => {
         dispatch("local-create")
@@ -36,7 +36,7 @@
 </script>
 
 <div class="game-mode-select">
-    {#if $network.loading}
+    {#if isLoading}
         <h3 style="text-align: center">Loading...</h3>
         <div class="game-mode-select__loading">
             <Shadow size="20" unit="px" color="#FF3E00" duration="1s"></Shadow>

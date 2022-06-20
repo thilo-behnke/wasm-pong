@@ -12,7 +12,9 @@
         renderContext,
         width
     } from "./game/engine";
-    import {sessionContext} from "./game/session";
+    import {Input} from "./game/session";
+
+    export let inputs: Input[] = []
 
     export let killLoopOnError = true;
     export let debug = false;
@@ -23,8 +25,6 @@
     let ctx: any;
     let frame: number;
     let listeners = [];
-
-    let session = getContext(sessionContext);
 
     onMount(() => {
         ctx = canvas.getContext('2d');
@@ -78,9 +78,7 @@
     }
 
     function tick(dt) {
-        const inputs = $session.inputs;
-        console.log($session);
-        field.tick([], dt);
+        field.tick(inputs, dt);
     }
 
     function render(objects, dt) {
@@ -110,7 +108,6 @@
         pixelRatio.set(window.devicePixelRatio);
     }
 </script>
-
 <canvas
         bind:this={canvas}
         width={$width * $pixelRatio}

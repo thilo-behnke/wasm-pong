@@ -1,41 +1,36 @@
 <script lang="ts">
-    import {FieldWrapper} from "wasm-app";
     import Canvas from "./Canvas.svelte";
     import Fps from "./Fps.svelte";
     import Input from "./Input.svelte";
-    import {setContext} from "svelte";
-    import {localSessionInputs, sessionContext, sessionInputs, sessionStore} from "./game/session";
+    import {sessionStore} from "./game/session";
     import ModeSelect from "./ModeSelect.svelte";
-    import {network, networkContext} from "./game/network";
-    import NetworkSessionWrapper from "./NetworkSessionWrapper.svelte";
+    import {network} from "./game/network";
     import GameSettings from "./GameSettings.svelte";
-
-    setContext(sessionContext, {session: () => ($sessionStore as any).session, inputs: () => $sessionInputs});
-    setContext(networkContext, network);
+    import SessionWrapper from "./SessionWrapper.svelte";
+    import api from "./game/api";
 
     let debug = false;
 
     function localSession() {
-        sessionStore.createLocalSession();
+        sessionCreator(() => api.createLocalSession());
     }
 
     function createSession() {
-        $network.loading = true;
-        sessionStore.createNetworkSession().then(() => {
-            $network.loading = false;
-        })
+        sessionCreator(() => api.createNetworkSession());
     }
 
     function joinSession(sessionId) {
-        $network.loading = true;
-        sessionStore.joinNetworkSession(sessionId).then(() => {
-            $network.loading = false;
-        })
+        sessionCreator(() => api.joinNetworkSession(sessionId));
     }
 
     function watchSession(sessionId) {
+        sessionCreator(() => api.watchNetworkSession(sessionId));
+    }
+
+    function sessionCreator(fn) {
         $network.loading = true;
-        sessionStore.watchNetworkSession(sessionId).then(() => {
+        fn().then(s => {
+            $sessionStore = s;
             $network.loading = false;
         })
     }
@@ -46,9 +41,10 @@
 </script>
 <main>
     <h1>Welcome to WASM-Pong!</h1>
-    {#if !$sessionStore.session}
+    {#if !$sessionStore}
         <div class="mode-select">
             <ModeSelect
+                    isLoading={$network.loading}
                     on:local-create={() => localSession()}
                     on:session-create={() => createSession()}
                     on:session-join={({detail: sessionId}) => joinSession(sessionId)}
@@ -57,17 +53,17 @@
             ></ModeSelect>
         </div>
     {:else}
-        <NetworkSessionWrapper>
+        <SessionWrapper session={$sessionStore} let:inputs={inputs}>
             <div class="game-area">
-                <Canvas debug={debug}>
+                <Canvas debug={debug} session={$sessionStore} inputs={inputs}>
                     <Fps></Fps>
                 </Canvas>
                 <div class="game-area__hud">
                     <GameSettings on:debug-toggle={() => toggleDebug()}></GameSettings>
-                    <Input inputs={$sessionInputs}></Input>
+                    <Input inputs={inputs}></Input>
                 </div>
             </div>
-        </NetworkSessionWrapper>
+        </SessionWrapper>
     {/if}
 </main>
 

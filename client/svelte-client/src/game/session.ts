@@ -10,7 +10,8 @@ export enum SessionType {
 }
 
 export type Player = {
-    id: string
+    id: string,
+    nr: number
 }
 
 export type Observer = {
@@ -39,11 +40,15 @@ export type Input = {
     player: number
 }
 
-enum InputMethod {
-    UNDEFINED, KEYBOARD, NETWORK
+export type InputEventPayload = {
+    session_id: string,
+    inputs: Input[],
+    player_id: string,
+    player_nr: number,
+    ts: number,
 }
 
-export const keyboardInputs = derived(
+const player1KeyboardInputs = derived(
     keysPressed,
     $keysPressed => {
         return $keysPressed.map((key): Input => {
@@ -52,6 +57,18 @@ export const keyboardInputs = derived(
                     return {input: 'UP', obj_id: 0, player: 1};
                 case 's':
                     return {input: 'DOWN', obj_id: 0, player: 1}
+                default:
+                    return null
+            }
+        }).filter(it => !!it);
+    }
+)
+
+const player2KeyboardInputs = derived(
+    keysPressed,
+    $keysPressed => {
+        return $keysPressed.map((key): Input => {
+            switch(key.toLowerCase()) {
                 case 'arrowup':
                     return {input: 'UP', obj_id: 1, player: 2}
                 case 'arrowdown':
@@ -63,10 +80,30 @@ export const keyboardInputs = derived(
     }
 )
 
-const inputMethod = writable(InputMethod.UNDEFINED)
+const sessionEvents = readable([], function(set) {
+    // TODO: Setup ws
 
-function initialValue(): Session {
-    return null
-}
+    setInterval(() => {
+        set([])
+    }, 10)
+
+    // TODO: Destroy ws
+    return () => {}
+})
+
+const inputEvents = derived(sessionEvents, ([$sessionEvents]) => $sessionEvents.filter(({input}) => input === 'topic'));
+
+const player1InputEvents = derived(inputEvents, ([$inputEvents]) => {
+    return $inputEvents.filter(({player_nr}) => player_nr === 1)
+})
+
+const player2InputEvents = derived(inputEvents, ([$inputEvents]) => {
+    return $inputEvents.filter(({player_nr}) => player_nr === 2)
+})
+
+export const localSessionInputs = derived([player1KeyboardInputs, player2KeyboardInputs], ([$player1KeyboardInputs, $player2KeyboardInputs]) => [...$player1KeyboardInputs, ...$player2KeyboardInputs])
+export const hostNetworkSessionInputs = derived([player1KeyboardInputs, player2InputEvents], ([player1, player2]) => [...player1, ...player2])
+export const peerNetworkSessionInputs = derived([player1InputEvents, player2KeyboardInputs], ([player1, player2]) => [...player1, ...player2])
+export const observerNetworkSessionInputs = derived([player1InputEvents, player2InputEvents], ([player1, player2]) => [...player1, ...player2])
 
 export const sessionStore = writable<Session>(null);

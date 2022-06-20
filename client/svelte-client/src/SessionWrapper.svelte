@@ -1,6 +1,7 @@
 <script lang="ts">
-    import {keyboardInputs, Session, SessionState, SessionType} from "./game/session";
+    import {localSessionInputs, Session, SessionState, SessionType} from "./game/session";
     import LocalSessionWrapper from "./LocalSessionWrapper.svelte";
+    import NetworkSessionWrapper from "./NetworkSessionWrapper.svelte";
 
     export let session: Session;
 </script>
@@ -13,12 +14,14 @@
     </LocalSessionWrapper>
 {:else}
     {#if session.state === SessionState.PENDING}
-        <h1>waiting for other player...</h1>
+        <h3>waiting for other player...</h3>
     {:else if session.state === SessionState.CLOSED}
-        <h1>game over!</h1>
+        <h3>game over!</h3>
     {:else if session.state === SessionState.RUNNING}
-        <slot inputs={$keyboardInputs}></slot>
+        <NetworkSessionWrapper let:inputs={inputs}>
+            <slot inputs={$localSessionInputs}></slot>
+        </NetworkSessionWrapper>
     {:else }
-        <h1>unknown game state</h1>
+        <h3>unknown game state</h3>
     {/if}
 {/if}

@@ -8,7 +8,9 @@
     import GameSettings from "./components/GameSettings.svelte";
     import SessionWrapper from "./components/SessionWrapper.svelte";
     import api from "./api/session";
+    import Error from "./components/Error.svelte";
 
+    let error: string = null;
     let debug = false;
 
     function localSession() {
@@ -31,6 +33,9 @@
         $network.loading = true;
         fn().then(s => {
             $sessionStore = s;
+        }).catch(e => {
+            error = e;
+        }).finally(() => {
             $network.loading = false;
         })
     }
@@ -41,6 +46,7 @@
 </script>
 <main>
     <h1>Welcome to WASM-Pong!</h1>
+    <Error error={error}></Error>
     {#if !$sessionStore}
         <div class="mode-select">
             <ModeSelect

@@ -15,7 +15,8 @@ async function createLocalSession(): Promise<LocalSession> {
 }
 
 async function createNetworkSession(): Promise<Session> {
-    return fetch("/pong/api/create_session", {method: 'POST'}).then(res => res.json())
+    return fetch("/pong/api/create_session", {method: 'POST', headers: [['Content-Type', 'application/json']]})
+        .then(sessionResponseHandler)
         .catch(err => {
             console.error(`Failed to create session: ${err}`);
             throw(err);
@@ -23,7 +24,8 @@ async function createNetworkSession(): Promise<Session> {
 }
 
 async function joinNetworkSession(sessionId): Promise<Session> {
-    return fetch("/pong/api/join_session", {method: 'POST', body: JSON.stringify({session_id: sessionId})}).then(res => res.json())
+    return fetch("/pong/api/join_session", {method: 'POST', body: JSON.stringify({session_id: sessionId}), headers: [['Content-Type', 'application/json']]})
+        .then(sessionResponseHandler)
         .catch(err => {
             console.error(`Failed to create session: ${err}`);
             throw(err);
@@ -31,11 +33,23 @@ async function joinNetworkSession(sessionId): Promise<Session> {
 }
 
 async function watchNetworkSession(sessionId): Promise<Session> {
-    return fetch("/pong/api/watch_session", {method: 'POST', body: JSON.stringify({session_id: sessionId})}).then(res => res.json())
+    return fetch("/pong/api/watch_session", {method: 'POST', body: JSON.stringify({session_id: sessionId}), headers: [['Content-Type', 'application/json']] })
+        .then(sessionResponseHandler)
         .catch(err => {
             console.error(`Failed to create session: ${err}`);
             throw(err);
         });
+}
+
+async function sessionResponseHandler(response: Response): Promise<Session> {
+    return new Promise((res, rej) => {
+        if(!response.ok) {
+            return response.text().then(text => {
+               return rej(`${response.status}: ${text}`)
+            });
+        }
+        return response.json()
+    })
 }
 
 async function createEventWebsocket(session: Session): Promise<WebSocket> {

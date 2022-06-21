@@ -11,6 +11,7 @@
     import Error from "./components/Error.svelte";
 
     let error: string = null;
+    let errorAt: number = null;
     let debug = false;
 
     function localSession() {
@@ -35,6 +36,7 @@
             $sessionStore = s;
         }).catch(e => {
             error = e;
+            errorAt = performance.now();
         }).finally(() => {
             $network.loading = false;
         })
@@ -46,7 +48,9 @@
 </script>
 <main>
     <h1>Welcome to WASM-Pong!</h1>
-    <Error error={error}></Error>
+    {#key errorAt}
+        <Error error={error} duration={5_000}></Error>
+    {/key}
     {#if !$sessionStore}
         <div class="mode-select">
             <ModeSelect

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {localSessionInputs, Session, SessionState, SessionType} from "./game/session";
+    import {localSessionInputs, Session, SessionState, SessionType} from "../store/session";
     import LocalSessionWrapper from "./LocalSessionWrapper.svelte";
     import NetworkSessionWrapper from "./NetworkSessionWrapper.svelte";
 

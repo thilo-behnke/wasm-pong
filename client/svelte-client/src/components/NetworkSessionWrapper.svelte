@@ -1,11 +1,11 @@
 <script lang="ts">
 
-    import type {NetworkSession} from "./game/session";
+    import type {NetworkSession} from "../store/session";
     import {
         hostNetworkSessionInputs,
         observerNetworkSessionInputs,
         peerNetworkSessionInputs
-    } from "./game/session";
+    } from "../store/session";
 
     export let session: NetworkSession;
 </script>

@@ -1,6 +1,6 @@
 <script>
     import Text from "./Text.svelte";
-    import {renderable} from "./game/engine";
+    import {renderable} from "../store/engine";
 
     let text = '';
 

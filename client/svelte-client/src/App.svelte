@@ -1,13 +1,13 @@
 <script lang="ts">
-    import Canvas from "./Canvas.svelte";
-    import Fps from "./Fps.svelte";
-    import Input from "./Input.svelte";
-    import {sessionStore} from "./game/session";
-    import ModeSelect from "./ModeSelect.svelte";
-    import {network} from "./game/network";
-    import GameSettings from "./GameSettings.svelte";
-    import SessionWrapper from "./SessionWrapper.svelte";
-    import api from "./game/api";
+    import Canvas from "./components/Canvas.svelte";
+    import Fps from "./components/Fps.svelte";
+    import Input from "./components/Input.svelte";
+    import {sessionStore} from "./store/session";
+    import ModeSelect from "./components/ModeSelect.svelte";
+    import {network} from "./store/network";
+    import GameSettings from "./components/GameSettings.svelte";
+    import SessionWrapper from "./components/SessionWrapper.svelte";
+    import api from "./api/session";
 
     let debug = false;
 

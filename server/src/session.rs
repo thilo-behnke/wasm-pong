@@ -37,7 +37,7 @@ impl Session {
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub enum SessionState {
     PENDING, // 1 player is missing
-    RUNNING, // game is playing
-    CLOSED,  // game is over
+    RUNNING, // store is playing
+    CLOSED,  // store is over
 }
 

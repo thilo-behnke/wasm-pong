@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {localSessionInputs, Session} from "./game/session";
+    import {localSessionInputs, Session} from "../store/session";
 
     export let session: Session;
 </script>

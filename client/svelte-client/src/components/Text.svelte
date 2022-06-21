@@ -1,5 +1,5 @@
 <script>
-    import {renderable} from "./game/engine";
+    import {renderable} from "../store/engine";
 
     export let color = 'hsl(0, 0%, 100%)';
     export let align = 'center';

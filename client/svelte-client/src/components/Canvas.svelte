@@ -2,7 +2,7 @@
     import {FieldWrapper} from "wasm-app";
     import {getContext, onMount, setContext} from "svelte";
     import {get, writable} from "svelte/store";
-    import {drawObjects} from "./game/render";
+    import {drawObjects} from "../store/render";
     import {
         engineCanvas,
         engineCtx,
@@ -11,8 +11,8 @@
         props,
         renderContext,
         width
-    } from "./game/engine";
-    import {Input} from "./game/session";
+    } from "../store/engine";
+    import {Input} from "../store/session";
 
     export let inputs: Input[] = []
 

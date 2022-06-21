@@ -1,5 +1,5 @@
-import type {LocalSession, Player, Session} from "./session";
-import {SessionState, SessionType} from "./session";
+import type {LocalSession, Player, Session} from "../store/session";
+import {SessionState, SessionType} from "../store/session";
 
 async function createLocalSession(): Promise<LocalSession> {
     await new Promise((res) => {

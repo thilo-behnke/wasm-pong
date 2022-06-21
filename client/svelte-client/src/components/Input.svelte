@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type {Input} from "./game/session";
+    import type {Input} from "../store/session";
 
     const availableInputs: string[] = ["UP", "DOWN"]
     export let inputs: Input[] = [];

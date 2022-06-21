@@ -7,7 +7,7 @@ export const width = writable(800);
 export const height = writable(600);
 export const pixelRatio = writable(window.devicePixelRatio);
 
-// A more convenient store for grabbing all game props
+// A more convenient store for grabbing all store props
 export const props = deriveObject({
     width,
     height,

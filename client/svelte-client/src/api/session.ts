@@ -41,14 +41,14 @@ async function watchNetworkSession(sessionId): Promise<Session> {
         });
 }
 
-async function sessionResponseHandler(response: Response): Promise<Session> {
+async function sessionResponseHandler(response: Response): Promise<any> {
     return new Promise((res, rej) => {
         if(!response.ok) {
             return response.text().then(text => {
                return rej(`${response.status}: ${text}`)
             });
         }
-        return response.json()
+        return response.json();
     })
 }
 

@@ -33,6 +33,7 @@
     function sessionCreator(fn) {
         $network.loading = true;
         fn().then(s => {
+            console.log('test')
             $sessionStore = s;
         }).catch(e => {
             error = e;

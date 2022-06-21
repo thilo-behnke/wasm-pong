@@ -1,4 +1,4 @@
-import type {LocalSession, Player, Session} from "../store/session";
+import type {LocalSession, Session} from "../store/session";
 import {SessionState, SessionType} from "../store/session";
 
 async function createLocalSession(): Promise<LocalSession> {
@@ -36,6 +36,40 @@ async function watchNetworkSession(sessionId): Promise<Session> {
             console.error(`Failed to create session: ${err}`);
             throw(err);
         });
+}
+
+async function createEventWebsocket(session: Session): Promise<WebSocket> {
+    return new Promise((res, rej) => {
+        if (session.type === SessionType.LOCAL) {
+            return rej("Websocket not allowed for local session!");
+        }
+        const url = `pong/ws?session_id=${session.session_id}&connection_type=${session.type.toLowerCase()}`;
+        return createWebsocket(url);
+    })
+}
+
+async function createWebsocket(path: string): Promise<WebSocket> {
+    return new Promise((res, rej) => {
+        const baseUrl = location.host.split(':')[0];
+        const websocket = new WebSocket(`ws://${baseUrl}/${path}`);
+        waitForWebsocket(websocket, 10, () => {
+            return res(websocket)
+        }, () => rej())
+    })
+}
+
+const waitForWebsocket = (websocket, retries, success, fail) => {
+    if (retries <= 0) {
+        console.error("Websocket not established successfully")
+        return
+    }
+    if(websocket.readyState !== 1) {
+        setTimeout(() => {
+            waitForWebsocket(websocket, retries - 1, success, fail)
+        }, 100)
+    } else {
+        success()
+    }
 }
 
 export default {

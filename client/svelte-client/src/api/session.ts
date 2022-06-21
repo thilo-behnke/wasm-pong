@@ -90,5 +90,6 @@ export default {
     createLocalSession,
     createNetworkSession,
     joinNetworkSession,
-    watchNetworkSession
+    watchNetworkSession,
+    createEventWebsocket
 }

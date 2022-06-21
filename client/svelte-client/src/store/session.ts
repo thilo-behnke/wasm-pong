@@ -1,6 +1,7 @@
 import {get, Readable, readable, writable, derived} from "svelte/store";
 import {keysPressed} from "./io";
-import {onDestroy} from "svelte";
+import {createEventDispatcher, onDestroy} from "svelte";
+import api from "../api/session";
 
 export enum SessionState {
     PENDING = 'PENDING', RUNNING = 'RUNNING', CLOSED = 'CLOSED'
@@ -82,17 +83,31 @@ const player2KeyboardInputs = derived(
 )
 
 const sessionEvents = (session: Session) => readable([], function(set) {
-    // TODO: Setup ws
+    const websocket = writable<WebSocket>(null);
+    api.createEventWebsocket(session).then(ws => {
+        websocket.set(ws);
+    });
 
-    setInterval(() => {
-        set([])
-    }, 10)
+    const events = writable([]);
+    derived(websocket, ($websocket: WebSocket) => {
+        if (!websocket) {
+            return;
+        }
+        $websocket.onmessage = event => {
+            events.set([...get(events), event])
+        }
+    });
 
-    // TODO: Destroy ws
-    return () => {}
+    const interval = setInterval(() => {
+        set(get(events));
+    }, 0)
+
+    return () => {
+        clearInterval(interval);
+    }
 })
 
-const inputEvents = (session: Session) => derived(sessionEvents(session), ([$sessionEvents]) => $sessionEvents.filter(({input}) => input === 'topic'));
+const inputEvents = (session: Session): Readable<unknown[]> => derived(sessionEvents(session), ([$sessionEvents]) => $sessionEvents.filter(({input}) => input === 'topic'));
 
 export const sessionInputs = (session: Session) => readable([], function(setInputs) {
     let player1Inputs = writable([]);
@@ -111,8 +126,50 @@ export const sessionInputs = (session: Session) => readable([], function(setInpu
             onDestroy(p2Sub);
         }
     }
-    throw new Error()
-    // let $sessionEvents = sessionEvents(session);
+    if (session.type === SessionType.HOST) {
+        const p1Sub = player1KeyboardInputs.subscribe(inputs => {
+            player1Inputs.set(inputs)
+            setInputs([...get(player1Inputs), ...get(player2Inputs)])
+        })
+        const p2Sub = inputEvents(session).subscribe(inputs => {
+            player2Inputs.set(inputs)
+            setInputs([...get(player1Inputs), ...get(player2Inputs)])
+        })
+        return () => {
+            onDestroy(p1Sub);
+            onDestroy(p2Sub);
+        }
+    }
+    if (session.type === SessionType.PEER) {
+        const p1Sub = inputEvents(session).subscribe(inputs => {
+            player1Inputs.set(inputs)
+            setInputs([...get(player1Inputs), ...get(player2Inputs)])
+        })
+        const p2Sub = player2KeyboardInputs.subscribe(inputs => {
+            player2Inputs.set(inputs)
+            setInputs([...get(player1Inputs), ...get(player2Inputs)])
+        })
+        return () => {
+            onDestroy(p1Sub);
+            onDestroy(p2Sub);
+        }
+    }
+    if (session.type === SessionType.OBSERVER) {
+        const events = inputEvents(session);
+        const p1Sub = events.subscribe(inputs => {
+            player1Inputs.set(inputs)
+            setInputs([...get(player1Inputs), ...get(player2Inputs)])
+        })
+        const p2Sub = events.subscribe(inputs => {
+            player2Inputs.set(inputs)
+            setInputs([...get(player1Inputs), ...get(player2Inputs)])
+        })
+        return () => {
+            onDestroy(p1Sub);
+            onDestroy(p2Sub);
+        }
+    }
+    throw new Error(`unknown session type ${session.type}`)
 })
 
 export const sessionStore = writable<Session>(null);

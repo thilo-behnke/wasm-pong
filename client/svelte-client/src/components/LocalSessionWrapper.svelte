@@ -1,7 +1,15 @@
 <script lang="ts">
-    import {localSessionInputs, Session} from "../store/session";
+    import {LocalSession, Session, sessionInputs} from "../store/session";
 
-    export let session: Session;
+    export let session: LocalSession;
+
+    let localSessionInputs;
+
+    $: if (session) {
+        localSessionInputs = sessionInputs(session);
+    }
 </script>
 
-<slot inputs={$localSessionInputs}></slot>
+{#if session && localSessionInputs}
+    <slot inputs={$localSessionInputs}></slot>
+{/if}

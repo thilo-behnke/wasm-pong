@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {localSessionInputs, Session, SessionState, SessionType} from "../store/session";
+    import {Session, SessionState, SessionType} from "../store/session";
     import LocalSessionWrapper from "./LocalSessionWrapper.svelte";
     import NetworkSessionWrapper from "./NetworkSessionWrapper.svelte";
 
@@ -9,7 +9,7 @@
 {#if !session}
     <h1>no session</h1>
 {:else if session.type === SessionType.LOCAL}
-    <LocalSessionWrapper let:inputs={inputs}>
+    <LocalSessionWrapper session={session} let:inputs={inputs}>
         <slot inputs={inputs}></slot>
     </LocalSessionWrapper>
 {:else}
@@ -19,7 +19,7 @@
         <h3>game over!</h3>
     {:else if session.state === SessionState.RUNNING}
         <NetworkSessionWrapper let:inputs={inputs}>
-            <slot inputs={$localSessionInputs}></slot>
+            <slot inputs={inputs}></slot>
         </NetworkSessionWrapper>
     {:else }
         <h3>unknown game state</h3>

@@ -1,5 +1,6 @@
 import {get, Readable, readable, writable, derived} from "svelte/store";
 import {keysPressed} from "./io";
+import {onDestroy} from "svelte";
 
 export enum SessionState {
     PENDING = 'PENDING', RUNNING = 'RUNNING', CLOSED = 'CLOSED'
@@ -29,7 +30,7 @@ export type NetworkSession = {
     type: SessionType.HOST | SessionType.PEER | SessionType.OBSERVER,
     state: SessionState,
     players: Player[],
-    observers: Observer[]
+    you: Player
 }
 
 export type Session = LocalSession | NetworkSession;
@@ -80,7 +81,7 @@ const player2KeyboardInputs = derived(
     }
 )
 
-const sessionEvents = readable([], function(set) {
+const sessionEvents = (session: Session) => readable([], function(set) {
     // TODO: Setup ws
 
     setInterval(() => {
@@ -91,19 +92,27 @@ const sessionEvents = readable([], function(set) {
     return () => {}
 })
 
-const inputEvents = derived(sessionEvents, ([$sessionEvents]) => $sessionEvents.filter(({input}) => input === 'topic'));
+const inputEvents = (session: Session) => derived(sessionEvents(session), ([$sessionEvents]) => $sessionEvents.filter(({input}) => input === 'topic'));
 
-const player1InputEvents = derived(inputEvents, ([$inputEvents]) => {
-    return $inputEvents.filter(({player_nr}) => player_nr === 1)
+export const sessionInputs = (session: Session) => readable([], function(setInputs) {
+    let player1Inputs = writable([]);
+    let player2Inputs = writable([]);
+    if (session.type === SessionType.LOCAL) {
+        const p1Sub = player1KeyboardInputs.subscribe(inputs => {
+            player1Inputs.set(inputs)
+            setInputs([...get(player1Inputs), ...get(player2Inputs)])
+        })
+        const p2Sub = player2KeyboardInputs.subscribe(inputs => {
+            player2Inputs.set(inputs)
+            setInputs([...get(player1Inputs), ...get(player2Inputs)])
+        })
+        return () => {
+            onDestroy(p1Sub);
+            onDestroy(p2Sub);
+        }
+    }
+    throw new Error()
+    // let $sessionEvents = sessionEvents(session);
 })
-
-const player2InputEvents = derived(inputEvents, ([$inputEvents]) => {
-    return $inputEvents.filter(({player_nr}) => player_nr === 2)
-})
-
-export const localSessionInputs = derived([player1KeyboardInputs, player2KeyboardInputs], ([$player1KeyboardInputs, $player2KeyboardInputs]) => [...$player1KeyboardInputs, ...$player2KeyboardInputs])
-export const hostNetworkSessionInputs = derived([player1KeyboardInputs, player2InputEvents], ([player1, player2]) => [...player1, ...player2])
-export const peerNetworkSessionInputs = derived([player1InputEvents, player2KeyboardInputs], ([player1, player2]) => [...player1, ...player2])
-export const observerNetworkSessionInputs = derived([player1InputEvents, player2InputEvents], ([player1, player2]) => [...player1, ...player2])
 
 export const sessionStore = writable<Session>(null);

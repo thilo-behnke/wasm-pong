@@ -15,50 +15,28 @@ async function createLocalSession(): Promise<LocalSession> {
 }
 
 async function createNetworkSession(): Promise<Session> {
-    await new Promise((res) => {
-        setTimeout(() => {
-            res(null)
-        }, 2_000)
-    });
-    return {
-        session_id: "a",
-        type: SessionType.HOST,
-        state: SessionState.PENDING,
-        players: [],
-        observers: []
-    }
+    return fetch("/pong/api/create_session", {method: 'POST'}).then(res => res.json())
+        .catch(err => {
+            console.error(`Failed to create session: ${err}`);
+            throw(err);
+        });
 }
 
 async function joinNetworkSession(sessionId): Promise<Session> {
-    await new Promise((res) => {
-        setTimeout(() => {
-            res(null)
-        }, 2000)
-    });
-    return {
-        session_id: sessionId,
-        type: SessionType.PEER,
-        state: SessionState.PENDING,
-        players: [],
-        observers: []
-    }
+    return fetch("/pong/api/join_session", {method: 'POST', body: JSON.stringify({session_id: sessionId})}).then(res => res.json())
+        .catch(err => {
+            console.error(`Failed to create session: ${err}`);
+            throw(err);
+        });
 }
 
 async function watchNetworkSession(sessionId): Promise<Session> {
-    await new Promise((res) => {
-        setTimeout(() => {
-            res(null)
-        }, 2000)
-    });
-    return {
-        session_id: sessionId,
-        type: SessionType.OBSERVER,
-        state: SessionState.RUNNING,
-        players: [],
-        observers: []
-    }
+    return fetch("/pong/api/watch_session", {method: 'POST', body: JSON.stringify({session_id: sessionId})}).then(res => res.json())
+        .catch(err => {
+            console.error(`Failed to create session: ${err}`);
+            throw(err);
+        });
 }
-
 
 export default {
     createLocalSession,

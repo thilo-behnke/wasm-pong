@@ -42,14 +42,12 @@ async function watchNetworkSession(sessionId): Promise<Session> {
 }
 
 async function sessionResponseHandler(response: Response): Promise<any> {
-    return new Promise((res, rej) => {
-        if(!response.ok) {
-            return response.text().then(text => {
-               return rej(`${response.status}: ${text}`)
-            });
-        }
-        return response.json();
-    })
+    if(!response.ok) {
+        return response.text().then(text => {
+           return Promise.reject(`${response.status}: ${text}`)
+        });
+    }
+    return response.json();
 }
 
 async function createEventWebsocket(session: Session): Promise<WebSocket> {

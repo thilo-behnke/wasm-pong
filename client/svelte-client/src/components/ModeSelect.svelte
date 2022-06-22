@@ -1,6 +1,7 @@
 <script lang="ts">
-    import {createEventDispatcher, getContext} from "svelte";
+    import {createEventDispatcher, getContext, onMount} from "svelte";
     import {Shadow} from 'svelte-loading-spinners'
+    import session from "../api/session";
 
     export let isLoading = false;
 
@@ -10,6 +11,18 @@
     let watchSessionId = '';
 
     $: disableControls = isLoading;
+
+    onMount(() => {
+        if (!window.location.search.startsWith("?")) {
+            return;
+        }
+        const params = window.location.search.slice(1).split("?").map(p => p.split('=')).reduce((acc, [key, val]) => ({...acc, [key]: val}), {}) as any;
+        console.log(params)
+        if (!params.session_id) {
+            return;
+        }
+        joinSessionId = params.session_id;
+    })
 
     const localSession = () => {
         dispatch("local-create")

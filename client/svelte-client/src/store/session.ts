@@ -111,17 +111,15 @@ export const sessionInputs = (session: Session) => readable([], function(setInpu
     }
     if (session.type === SessionType.OBSERVER) {
         const events = inputEvents(session);
-        const p1Sub = events.subscribe(inputs => {
+        events.subscribe(inputs => {
             player1Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])
         })
-        const p2Sub = events.subscribe(inputs => {
+        events.subscribe(inputs => {
             player2Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])
         })
         return () => {
-            onDestroy(p1Sub);
-            onDestroy(p2Sub);
         }
     }
     throw new Error(`unknown session type ${session.type}`)

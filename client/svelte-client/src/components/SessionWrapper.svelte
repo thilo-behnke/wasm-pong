@@ -29,7 +29,7 @@
         {:else if session.state === SessionState.CLOSED}
             <h3>game over!</h3>
         {:else if session.state === SessionState.RUNNING}
-            <NetworkSessionWrapper let:inputs={inputs}>
+            <NetworkSessionWrapper session={session} let:inputs={inputs}>
                 <slot inputs={inputs}></slot>
             </NetworkSessionWrapper>
         {:else }

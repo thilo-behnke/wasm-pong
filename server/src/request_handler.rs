@@ -106,7 +106,7 @@ async fn handle_session_join(
     if let Err(e) = session_join_res {
         eprintln!("Failed to join session: {:?}", e);
         return Ok(Response::builder()
-            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .status(StatusCode::CONFLICT)
             .body(Body::from(e))
             .unwrap());
     }
@@ -124,6 +124,5 @@ async fn handle_session_join(
 
 #[derive(Deserialize)]
 struct SessionJoinDto {
-    pub session_id: String,
-    pub player: String
+    pub session_id: String
 }

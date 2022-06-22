@@ -1,6 +1,6 @@
-import type {LocalSession, Session} from "../store/model/session";
+import type {LocalSession, NetworkSession, Session} from "../store/model/session";
 import {SessionState, SessionType} from "../store/model/session";
-import type {SessionEventPayload} from "../store/model/event";
+import type {NetworkSessionEventPayload, SessionEventPayload} from "../store/model/event";
 
 async function createLocalSession(): Promise<LocalSession> {
     await new Promise((res) => {
@@ -15,9 +15,10 @@ async function createLocalSession(): Promise<LocalSession> {
     }
 }
 
-async function createNetworkSession(): Promise<Session> {
+async function createNetworkSession(): Promise<NetworkSession> {
     return fetch("/pong/api/create_session", {method: 'POST', headers: [['Content-Type', 'application/json']]})
         .then(sessionResponseHandler)
+        .then(session => ({...session, type: SessionType.HOST}) as NetworkSession)
         .catch(err => {
             console.error(`Failed to create session: ${err}`);
             throw(err);
@@ -28,33 +29,35 @@ function createJoinLink(sessionId: string): string {
     return `${window.location.origin}${window.location.pathname}?session_id=${sessionId}`;
 }
 
-async function joinNetworkSession(sessionId): Promise<Session> {
+async function joinNetworkSession(sessionId): Promise<NetworkSession> {
     return fetch("/pong/api/join_session", {
         method: 'POST',
         body: JSON.stringify({session_id: sessionId}),
         headers: [['Content-Type', 'application/json']]
     })
         .then(sessionResponseHandler)
+        .then(session => ({...session, type: SessionType.PEER}) as NetworkSession)
         .catch(err => {
             console.error(`Failed to create session: ${err}`);
             throw(err);
         });
 }
 
-async function watchNetworkSession(sessionId): Promise<Session> {
+async function watchNetworkSession(sessionId): Promise<NetworkSession> {
     return fetch("/pong/api/watch_session", {
         method: 'POST',
         body: JSON.stringify({session_id: sessionId}),
         headers: [['Content-Type', 'application/json']]
     })
         .then(sessionResponseHandler)
+        .then(session => ({...session, type: SessionType.OBSERVER} as NetworkSession))
         .catch(err => {
             console.error(`Failed to create session: ${err}`);
             throw(err);
         });
 }
 
-async function sessionResponseHandler(response: Response): Promise<Session> {
+async function sessionResponseHandler(response: Response): Promise<NetworkSession> {
     if (!response.ok) {
         return response.text().then(text => {
             return Promise.reject(`${response.status}: ${text}`)
@@ -63,7 +66,7 @@ async function sessionResponseHandler(response: Response): Promise<Session> {
     return response.json().then(({data}) => {
         console.debug(`session action result: ${JSON.stringify(data)}`)
         return data;
-    }).then((event: SessionEventPayload) => event.session);
+    }).then((event: NetworkSessionEventPayload) => event.session);
 }
 
 async function createEventWebsocket(session: Session): Promise<WebSocket> {
@@ -71,7 +74,7 @@ async function createEventWebsocket(session: Session): Promise<WebSocket> {
         if (session.type === SessionType.LOCAL) {
             return rej("Websocket not allowed for local session!");
         }
-        const url = `pong/ws?session_id=${session.session_id}&connection_type=${session.type.toLowerCase()}`;
+        const url = `/pong/ws?session_id=${session.session_id}&connection_type=${session.type.toLowerCase()}`;
         return createWebsocket(url);
     })
 }

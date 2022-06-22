@@ -63,6 +63,8 @@ const sessionEvents = (session: Session) => readable([], function(set) {
         set(get(events));
     }, 0)
 
+    set(get(events));
+
     return () => {
         clearInterval(interval);
     }

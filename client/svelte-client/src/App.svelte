@@ -9,6 +9,7 @@
     import SessionWrapper from "./components/SessionWrapper.svelte";
     import api from "./api/session";
     import Error from "./components/Error.svelte";
+    import session from "./api/session";
 
     let error: string = null;
     let errorAt: number = null;
@@ -33,7 +34,6 @@
     function sessionCreator(fn) {
         $network.loading = true;
         fn().then(s => {
-            console.log('test')
             $sessionStore = s;
         }).catch(e => {
             error = e;
@@ -47,6 +47,7 @@
         debug = !debug;
     }
 </script>
+
 <main>
     <h1>Welcome to WASM-Pong!</h1>
     {#key errorAt}

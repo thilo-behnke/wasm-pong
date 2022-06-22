@@ -1,5 +1,6 @@
-import type {LocalSession, Session} from "../store/session";
-import {SessionState, SessionType} from "../store/session";
+import type {LocalSession, Session} from "../store/model/session";
+import {SessionState, SessionType} from "../store/model/session";
+import type {SessionEventPayload} from "../store/model/event";
 
 async function createLocalSession(): Promise<LocalSession> {
     await new Promise((res) => {
@@ -24,7 +25,11 @@ async function createNetworkSession(): Promise<Session> {
 }
 
 async function joinNetworkSession(sessionId): Promise<Session> {
-    return fetch("/pong/api/join_session", {method: 'POST', body: JSON.stringify({session_id: sessionId}), headers: [['Content-Type', 'application/json']]})
+    return fetch("/pong/api/join_session", {
+        method: 'POST',
+        body: JSON.stringify({session_id: sessionId}),
+        headers: [['Content-Type', 'application/json']]
+    })
         .then(sessionResponseHandler)
         .catch(err => {
             console.error(`Failed to create session: ${err}`);
@@ -33,7 +38,11 @@ async function joinNetworkSession(sessionId): Promise<Session> {
 }
 
 async function watchNetworkSession(sessionId): Promise<Session> {
-    return fetch("/pong/api/watch_session", {method: 'POST', body: JSON.stringify({session_id: sessionId}), headers: [['Content-Type', 'application/json']] })
+    return fetch("/pong/api/watch_session", {
+        method: 'POST',
+        body: JSON.stringify({session_id: sessionId}),
+        headers: [['Content-Type', 'application/json']]
+    })
         .then(sessionResponseHandler)
         .catch(err => {
             console.error(`Failed to create session: ${err}`);
@@ -41,13 +50,16 @@ async function watchNetworkSession(sessionId): Promise<Session> {
         });
 }
 
-async function sessionResponseHandler(response: Response): Promise<any> {
-    if(!response.ok) {
+async function sessionResponseHandler(response: Response): Promise<Session> {
+    if (!response.ok) {
         return response.text().then(text => {
-           return Promise.reject(`${response.status}: ${text}`)
+            return Promise.reject(`${response.status}: ${text}`)
         });
     }
-    return response.json();
+    return response.json().then(({data}) => {
+        console.debug(`session action result: ${JSON.stringify(data)}`)
+        return data;
+    }).then((event: SessionEventPayload) => event.session);
 }
 
 async function createEventWebsocket(session: Session): Promise<WebSocket> {
@@ -75,7 +87,7 @@ const waitForWebsocket = (websocket, retries, success, fail) => {
         console.error("Websocket not established successfully")
         return
     }
-    if(websocket.readyState !== 1) {
+    if (websocket.readyState !== 1) {
         setTimeout(() => {
             waitForWebsocket(websocket, retries - 1, success, fail)
         }, 100)

@@ -1,5 +1,6 @@
 <script lang="ts">
-    import {LocalSession, Session, sessionInputs} from "../store/session";
+    import {sessionInputs} from "../store/session";
+    import type {LocalSession, Session} from "../store/model/session";
 
     export let session: LocalSession;
 

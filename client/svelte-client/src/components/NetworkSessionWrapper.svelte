@@ -1,7 +1,7 @@
 <script lang="ts">
 
-    import type {NetworkSession} from "../store/session";
     import {sessionInputs} from "../store/session";
+    import type {NetworkSession} from "../store/model/session";
 
     export let session: NetworkSession;
     let networkSessionInputs;

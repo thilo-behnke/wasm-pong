@@ -1,7 +1,8 @@
 <script lang="ts">
-    import {Session, SessionState, SessionType} from "../store/session";
     import LocalSessionWrapper from "./LocalSessionWrapper.svelte";
     import NetworkSessionWrapper from "./NetworkSessionWrapper.svelte";
+    import type {Session} from "../store/model/session";
+    import {SessionState, SessionType} from "../store/model/session";
 
     export let session: Session;
 </script>

@@ -61,7 +61,6 @@
     .game-mode-select {
         display: grid;
         min-width: 20%;
-        max-width: 30%;
     }
 
     .game-mode-select > hr {

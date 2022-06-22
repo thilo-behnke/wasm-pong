@@ -131,7 +131,12 @@ impl Field {
                 continue;
             }
             if *obj_mut.vel() == Vector::zero() {
-                obj_mut.vel_mut().add(&Vector::new(-300., 0.))
+                let go_right = rand::random::<bool>();
+                let start_vel_x = match go_right {
+                    true => 500.,
+                    false => -500.
+                };
+                obj_mut.vel_mut().add(&Vector::new(start_vel_x, 0.))
             }
         }
 
@@ -238,7 +243,7 @@ impl DefaultGameObject {
                 },
                 Vector::new(0., 1.),
                 (field.width as f64) / 25.,
-                (field.height as f64) / 5.,
+                (field.height as f64) / 4.,
             ))),
             Box::new(DefaultPhysicsComp::new(Vector::zero(), true)),
         ))

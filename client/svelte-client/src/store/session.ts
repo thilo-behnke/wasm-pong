@@ -74,45 +74,39 @@ export const sessionInputs = (session: Session) => readable([], function(setInpu
     let player1Inputs = writable([]);
     let player2Inputs = writable([]);
     if (session.type === SessionType.LOCAL) {
-        const p1Sub = player1KeyboardInputs.subscribe(inputs => {
+        player1KeyboardInputs.subscribe(inputs => {
             player1Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])
         })
-        const p2Sub = player2KeyboardInputs.subscribe(inputs => {
+        player2KeyboardInputs.subscribe(inputs => {
             player2Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])
         })
         return () => {
-            onDestroy(p1Sub);
-            onDestroy(p2Sub);
         }
     }
     if (session.type === SessionType.HOST) {
-        const p1Sub = player1KeyboardInputs.subscribe(inputs => {
+        player1KeyboardInputs.subscribe(inputs => {
             player1Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])
         })
-        const p2Sub = inputEvents(session).subscribe(inputs => {
+        inputEvents(session).subscribe(inputs => {
             player2Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])
         })
         return () => {
-            onDestroy(p1Sub);
-            onDestroy(p2Sub);
         }
     }
     if (session.type === SessionType.PEER) {
-        const p1Sub = inputEvents(session).subscribe(inputs => {
+        inputEvents(session).subscribe(inputs => {
             player1Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])
         })
-        const p2Sub = player2KeyboardInputs.subscribe(inputs => {
+        player2KeyboardInputs.subscribe(inputs => {
             player2Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])
         })
         return () => {
-            onDestroy(p1Sub);
-            onDestroy(p2Sub);
         }
     }
     if (session.type === SessionType.OBSERVER) {

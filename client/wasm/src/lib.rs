@@ -38,7 +38,7 @@ pub struct GameObjectDTO {
     pub vel_x: f64,
     pub vel_y: f64,
     pub shape_param_1: u16,
-    pub shape_param_2: u16,
+    pub shape_param_2: u16
 }
 
 impl GameObjectDTO {

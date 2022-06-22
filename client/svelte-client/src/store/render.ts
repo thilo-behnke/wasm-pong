@@ -1,9 +1,12 @@
-const GRID_COLOR = "#CCCCCC";
+import main from "../main";
+
+const mainColor = '#ff3e00';
 
 export const drawObjects = (ctx: CanvasRenderingContext2D, objects, [width, height], debug = false) => {
     objects.forEach(obj => {
         ctx.beginPath();
-        ctx.strokeStyle = GRID_COLOR;
+        ctx.strokeStyle = mainColor;
+        ctx.lineWidth = 2;
 
         const obj_y = height - obj.y;
         const orientation_y = obj.orientation_y * -1;
@@ -11,13 +14,11 @@ export const drawObjects = (ctx: CanvasRenderingContext2D, objects, [width, heig
 
         // rect
         if (obj.shape_param_2) {
-            ctx.moveTo(obj.x, obj_y)
-            ctx.arc(obj.x, obj_y, 10, 0, 2 * Math.PI);
+            ctx.moveTo(obj.x, obj_y);
             ctx.rect(obj.x - obj.shape_param_1 / 2, obj_y - obj.shape_param_2 / 2, obj.shape_param_1, obj.shape_param_2);
         }
         // circle
         else {
-            ctx.moveTo(obj.x, obj_y);
             ctx.arc(obj.x, obj_y, obj.shape_param_1, 0, 2 * Math.PI);
         }
         ctx.stroke();

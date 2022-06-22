@@ -103,7 +103,7 @@
     .game-area__hud {
         display: grid;
         grid-template-rows: max-content 1fr;
-        border: 1px solid lightgrey;
+        border: 2px solid #ff3e00;
         padding: 0.4rem;
     }
 

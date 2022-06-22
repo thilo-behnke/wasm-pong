@@ -3,8 +3,8 @@ use crate::actor::{Actor, Observer, Player};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Session {
-    pub id: u16,
-    pub hash: String,
+    pub id: u16, // internal id
+    pub session_id: String,
     pub state: SessionState,
     pub players: Vec<Player>,
     pub observers: Vec<Observer>
@@ -15,7 +15,7 @@ impl Session {
         Session {
             players: vec![player],
             id,
-            hash,
+            session_id: hash,
             state: SessionState::PENDING,
             observers: vec![]
         }

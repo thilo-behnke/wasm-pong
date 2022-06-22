@@ -138,7 +138,7 @@ mod tests {
         SessionEvent::Created(SessionEventPayload {
             session: Session {
                 id: 1,
-                hash: "abc".to_owned(),
+                session_id: "abc".to_owned(),
                 state: SessionState::PENDING,
                 players: vec![Player { id: "player_1".to_owned() }],
                 observers: vec![Observer {id: "observer_1".to_owned()}]

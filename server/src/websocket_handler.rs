@@ -47,7 +47,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
 
         let session_manager = self.session_manager.lock().await;
         let event_handler_pair = session_manager.split(
-            &self.websocket_session.session.hash,
+            &self.websocket_session.session.session_id,
             self.websocket_session.connection_type.get_topics(),
         );
         if let Err(_) = event_handler_pair {
@@ -77,7 +77,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                         let ws_message = ws_message.unwrap();
                         {
                             let session_id = ws_message.session_id();
-                            if session_id != websocket_session_read_copy.session.hash {
+                            if session_id != websocket_session_read_copy.session.session_id {
                                 eprintln!("Websocket has session {:?} but was asked to write to session {} - skip.", websocket_session_read_copy, session_id);
                                 continue;
                             }

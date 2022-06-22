@@ -33,7 +33,7 @@ impl SessionManager {
     pub fn get_session(&self, session_id: &str) -> Option<Session> {
         self.sessions
             .iter()
-            .find(|s| s.hash == session_id)
+            .find(|s| s.session_id == session_id)
             .map_or_else(|| None, |s| Some(s.clone()))
     }
 
@@ -64,7 +64,7 @@ impl SessionManager {
         player: Player,
     ) -> Result<Session, String> {
         let updated_session = {
-            let session = self.sessions.iter_mut().find(|s| s.hash == session_id);
+            let session = self.sessions.iter_mut().find(|s| s.session_id == session_id);
             if let None = session {
                 let error = format!("Can't join session that does not exist: {}", session_id);
                 return Err(error);
@@ -179,7 +179,7 @@ impl SessionManager {
     fn find_session(&self, session_id: &str) -> Option<Session> {
         self.sessions
             .iter()
-            .find(|s| session_id == s.hash)
+            .find(|s| session_id == s.session_id)
             .map(|s| s.clone())
     }
 }

@@ -24,10 +24,19 @@ async function createNetworkSession(): Promise<Session> {
         });
 }
 
+const joinSessionPath = "/pong/api/join_session"
+
+function createJoinLink(sessionId: string, relative = false): string {
+    let link = `${joinSessionPath}?session_id=${sessionId}`;
+    if (!relative) {
+        link = window.location.origin + link;
+    }
+    return link;
+}
+
 async function joinNetworkSession(sessionId): Promise<Session> {
-    return fetch("/pong/api/join_session", {
+    return fetch(createJoinLink(sessionId, true), {
         method: 'POST',
-        body: JSON.stringify({session_id: sessionId}),
         headers: [['Content-Type', 'application/json']]
     })
         .then(sessionResponseHandler)
@@ -101,5 +110,6 @@ export default {
     createNetworkSession,
     joinNetworkSession,
     watchNetworkSession,
-    createEventWebsocket
+    createEventWebsocket,
+    createJoinLink
 }

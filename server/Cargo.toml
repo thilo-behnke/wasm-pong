@@ -18,6 +18,8 @@ hyper-tungstenite = "0.8.0"
 futures = { version = "0.3.12" }
 async-trait = "0.1.56"
 uuid = { version = "1.1.2", features = ["v4"] }
+log = "0.4"
+env_logger = "0.9.0"
 
 [dev-dependencies]
 rstest = "0.12.0"

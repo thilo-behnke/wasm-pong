@@ -35,5 +35,5 @@ export function isNetworkSession(session: Session): session is NetworkSession {
 }
 
 export function isLocalSession(session: Session): session is LocalSession {
-    return session.type === SessionType.LOCAL
+    return !!session.type && session.type === SessionType.LOCAL
 }

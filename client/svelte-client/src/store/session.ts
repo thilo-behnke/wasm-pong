@@ -43,7 +43,7 @@ const player2KeyboardInputs = derived(
     }
 )
 
-const networkSessionEvents = (session: Session) => readable([], function(set) {
+const networkSessionEvents = (session: NetworkSession) => readable([], function(set) {
     const websocket = writable<WebSocket>(null);
     api.createEventWebsocket(session).then(ws => {
         websocket.set(ws);

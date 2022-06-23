@@ -9,6 +9,8 @@
     import SessionWrapper from "./components/SessionWrapper.svelte";
     import api from "./api/session";
     import Error from "./components/Error.svelte";
+    import SessionInfo from "./components/SessionInfo.svelte";
+    import session from "./api/session";
 
     let error: string = null;
     let errorAt: number = null;
@@ -66,9 +68,14 @@
     {:else}
         <SessionWrapper session={$sessionStore} let:inputs={inputs}>
             <div class="game-area">
-                <Canvas debug={debug} session={$sessionStore} inputs={inputs}>
-                    <Fps></Fps>
-                </Canvas>
+                <div class="game-area__session">
+                    <SessionInfo session={$sessionStore}></SessionInfo>
+                </div>
+                <div class="game-area__canvas">
+                    <Canvas debug={debug} session={$sessionStore} inputs={inputs}>
+                        <Fps></Fps>
+                    </Canvas>
+                </div>
                 <div class="game-area__hud">
                     <GameSettings on:debug-toggle={() => toggleDebug()}></GameSettings>
                     <Input inputs={inputs}></Input>
@@ -95,14 +102,32 @@
 
     .game-area {
         display: grid;
+        grid-template-areas:
+            "session session"
+            "game hud";
+        grid-template-rows: min-content 1fr;
         grid-template-columns: 1fr min-content;
+        grid-row-gap: 1rem;
         grid-column-gap: 1rem;
     }
 
+    .game-area__session {
+        grid-area: session;
+        display: flex;
+        justify-content: center;
+        border: 1px solid #ff3e00;
+        padding: 0.6rem;
+    }
+
+    .game-area__canvas {
+        grid-area: game;
+    }
+
     .game-area__hud {
+        grid-area: hud;
         display: grid;
         grid-template-rows: max-content 1fr;
-        border: 2px solid #ff3e00;
+        border: 1px solid #ff3e00;
         padding: 0.4rem;
     }
 

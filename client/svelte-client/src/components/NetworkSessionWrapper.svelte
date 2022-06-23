@@ -14,6 +14,5 @@
 {#if !session}
     <h3>no session</h3>
 {:else}
-    {session.type.toLowerCase()}
     <slot inputs={$networkSessionInputs}></slot>
 {/if}

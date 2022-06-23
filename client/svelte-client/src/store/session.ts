@@ -58,7 +58,14 @@ const networkEvents = (session: NetworkSession) => readable([], function(set) {
         }
         console.log("ws ready, registering message handler")
         $websocket.onmessage = event => {
+            console.debug("Received event: ", event)
             events.set([...get(events), event])
+        }
+        $websocket.onerror = err => {
+            console.error("ws error: ", err)
+        }
+        $websocket.onclose = event => {
+            console.error("ws closed: ", event)
         }
     });
 
@@ -69,6 +76,7 @@ const networkEvents = (session: NetworkSession) => readable([], function(set) {
     set([]);
 
     return () => {
+        get(websocket).close();
         clearInterval(interval);
     }
 })

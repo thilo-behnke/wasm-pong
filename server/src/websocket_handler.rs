@@ -10,6 +10,7 @@ use hyper_tungstenite::tungstenite::{Error, Message};
 use serde_json::json;
 use tokio::time::sleep;
 use serde::{Serialize, Deserialize};
+use pong::event::event::EventWriter;
 use pong::game_field::Input;
 use crate::event::{HeartBeatEventPayload, InputEventPayload, MoveEventPayload, SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType};
 use crate::actor::Player;
@@ -66,7 +67,14 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                 websocket_session_read_copy
             );
             while let Some(message) = websocket_reader.next().await {
-                match message.unwrap() {
+                if let Err(e) = message {
+                    eprintln!("ws message read failed for session {}: {:?}", websocket_session_read_copy.session.session_id, e);
+                    let reason = format!("ws closed: {:?}", e);
+                    write_session_close_event(&mut event_writer, &websocket_session_read_copy, reason.as_str());
+                    break;
+                }
+                let message = message.unwrap();
+                match message {
                     Message::Text(msg) => {
                         let ws_message = deserialize_ws_event(&msg, &websocket_session_read_copy.connection_type);
                         println!("Received ws message to persist events to kafka");
@@ -143,16 +151,8 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                             "unknown".to_owned()
                         };
 
-                        let session_closed_event = SessionEvent::Closed(SessionEventPayload {
-                            actor: websocket_session_read_copy.player.clone(),
-                            session: websocket_session_read_copy.session.clone(),
-                            reason: format!("ws closed: {}", reason),
-                        });
-                        let msg = json!(session_closed_event).to_string();
-                        let session_event_write_res = event_writer.write_to_session("session", vec![&msg]);
-                        if let Err(e) = session_event_write_res {
-                            eprintln!("Failed to write session closed event: {0}", e)
-                        }
+                        let reason = format!("ws closed: {}", reason);
+                        write_session_close_event(&mut event_writer, &websocket_session_read_copy, reason.as_str());
                         break;
                     }
                     _ => {}
@@ -167,7 +167,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                 websocket_session_write_copy
             );
             loop {
-                println!("Reading messages from kafka.");
+                // println!("Reading messages from kafka.");
                 let messages = event_reader.read_from_session();
                 if let Err(_) = messages {
                     eprintln!(
@@ -179,12 +179,12 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                 // println!("Read messages for websocket_session {:?} from consumer: {:?}", websocket_session_write_copy, messages);
                 let messages = messages.unwrap();
                 if messages.len() == 0 {
-                    println!("No new messages from kafka.");
+                    // println!("No new messages from kafka.");
                 } else {
-                    println!("{} new messages from kafka.", messages.len());
+                    // println!("{} new messages from kafka.", messages.len());
                     let json = serde_json::to_string(&messages).unwrap();
                     let message = Message::from(json);
-                    println!("Sending kafka messages through websocket.");
+                    // println!("Sending kafka messages through websocket.");
                     let send_res = websocket_writer.send(message).await;
                     if let Err(e) = send_res {
                         eprintln!(
@@ -200,6 +200,19 @@ impl WebsocketHandler for DefaultWebsocketHandler {
             }
         });
         Ok(())
+    }
+}
+
+fn write_session_close_event(event_writer: &mut SessionWriter, websocket_session: &WebSocketSession, close_reason: &str) {
+    let session_closed_event = SessionEvent::Closed(SessionEventPayload {
+        actor: websocket_session.player.clone(),
+        session: websocket_session.session.clone(),
+        reason: format!("ws closed: {}", close_reason),
+    });
+    let msg = json!(session_closed_event).to_string();
+    let session_event_write_res = event_writer.write_to_session("session", vec![&msg]);
+    if let Err(e) = session_event_write_res {
+        eprintln!("Failed to write session closed event: {0}", e)
     }
 }
 

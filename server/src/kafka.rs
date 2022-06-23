@@ -97,6 +97,7 @@ impl KafkaEventReaderImpl {
             .with_topic("move".to_owned())
             .with_topic("status".to_owned())
             .with_topic("input".to_owned())
+            .with_topic("session".to_owned())
             .with_fallback_offset(FetchOffset::Earliest)
             .with_group("group".to_owned())
             .with_offset_storage(GroupOffsetStorage::Kafka)

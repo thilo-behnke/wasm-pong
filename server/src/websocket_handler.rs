@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, format};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -39,18 +39,6 @@ impl DefaultWebsocketHandler {
             websocket_session, websocket, session_manager
         }
     }
-
-    fn trace(&self, msg: &str) {
-        trace!("[{}] {}", self.websocket_session.session.session_id, msg)
-    }
-
-    fn info(&self, msg: &str) {
-        info!("[{}] {}", self.websocket_session.session.session_id, msg)
-    }
-
-    fn error(&self, msg: &str) {
-        error!("[{}] {}", self.websocket_session.session.session_id, msg)
-    }
 }
 
 
@@ -58,7 +46,7 @@ impl DefaultWebsocketHandler {
 #[async_trait]
 impl WebsocketHandler for DefaultWebsocketHandler {
     async fn serve(self) -> Result<(), Error> {
-        self.info("serving new websocket connection");
+        info(&self.websocket_session, "serving new websocket connection");
         let websocket = self.websocket.await?;
         let (mut websocket_writer, mut websocket_reader) = websocket.split();
 
@@ -68,9 +56,12 @@ impl WebsocketHandler for DefaultWebsocketHandler {
             self.websocket_session.connection_type.get_topics(),
         );
         if let Err(_) = event_handler_pair {
-            error!(
-                "failed to create event reader/writer pair session: {:?}",
-                self.websocket_session
+            error(
+                &self.websocket_session,
+                &format!(
+                    "failed to create event reader/writer pair session: {:?}",
+                    self.websocket_session
+                )
             );
             return Err(Error::ConnectionClosed); // TODO: Use proper error for this case to close the connection
         }
@@ -78,40 +69,42 @@ impl WebsocketHandler for DefaultWebsocketHandler {
         let (mut event_reader, mut event_writer) = event_handler_pair.unwrap();
         let websocket_session_read_copy = self.websocket_session.clone();
         tokio::spawn(async move {
-            error!(
-                "ready to read messages from ws connection: {:?}",
-                websocket_session_read_copy
+            info(
+                &websocket_session_read_copy,
+                "ready to read messages from ws connection",
             );
             while let Some(message) = websocket_reader.next().await {
                 if let Err(e) = message {
-                    error!("ws message read failed for session {}: {:?}", websocket_session_read_copy.session.session_id, e);
+                    error(&websocket_session_read_copy, &format!("ws message read failed for session: {:?}", e));
                     let reason = format!("ws closed: {:?}", e);
                     write_session_close_event(&mut event_writer, &websocket_session_read_copy, reason.as_str());
                     break;
                 }
                 let message = message.unwrap();
-                trace!("read new message from websocket: {:?}", message);
+                trace(&websocket_session_read_copy, &format!("read new message from websocket: {:?}", message));
                 match message {
                     Message::Text(msg) => {
                         let ws_message = deserialize_ws_event(&msg, &websocket_session_read_copy.connection_type);
-                        trace!("Received ws message to persist events to kafka");
+                        trace(&websocket_session_read_copy, "received ws event to persist to kafka");
                         if let Err(e) = ws_message {
-                            eprintln!("Failed to deserialize ws message to event {}: {}", msg, e);
+                            error(&websocket_session_read_copy, &format!("Failed to deserialize ws message to event: {:?}", e));
                             continue;
                         }
                         let ws_message = ws_message.unwrap();
                         {
                             let session_id = ws_message.session_id();
                             if session_id != websocket_session_read_copy.session.session_id {
-                                eprintln!("Websocket has session {:?} but was asked to write to session {} - skip.", websocket_session_read_copy, session_id);
+                                error(&websocket_session_read_copy, &format!("websocket was asked to write to other session {} - skip.", session_id));
                                 continue;
                             }
                         }
                         match ws_message {
                             WebsocketEvent::Snapshot(_, session_snapshot) => {
+                                trace!("received message is snapshot");
                                 let mut any_error = false;
                                 match session_snapshot {
                                     SessionSnapshot::Host(session_id, payload) => {
+                                        trace!("received message is HOST snapshot");
                                         let move_events = payload.objects.iter().map(|o| {
                                             o.to_move_event(&session_id, payload.ts)
                                         }).collect();
@@ -126,6 +119,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                         // TODO: Status events.
                                     },
                                     SessionSnapshot::Peer(session_id, payload) => {
+                                        trace!("received message is PEER snapshot");
                                         let input_event = InputEventPayload {
                                             inputs: payload.inputs,
                                             player: websocket_session_read_copy.player.id.to_owned(),
@@ -139,10 +133,13 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                     }
                                 }
                                 if any_error {
-                                    eprintln!("At least one event write operation failed for session {:?}", websocket_session_read_copy);
+                                    error(&websocket_session_read_copy, "at least one event write operation failed");
+                                } else {
+                                    debug(&websocket_session_read_copy, "successfully persisted session snapshot");
                                 }
                             },
                             WebsocketEvent::HeartBeat(session_id, heartbeat) => {
+                                trace(&websocket_session_read_copy, "received message is heartbeat");
                                 let event = HeartBeatEventPayload {
                                     session_id: session_id.clone(),
                                     actor_id: heartbeat.player,
@@ -150,21 +147,22 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                 };
                                 let res = write_events(vec![event], "heart_beat", &mut event_writer);
                                 if !res {
-                                    eprintln!("Failed to persist heart beat session {}", session_id);
+                                    error!("failed to persist heart beat.");
                                 }
+                                debug(&websocket_session_read_copy, "successfully persisted heartbeat");
                             }
                         }
                     }
                     Message::Close(msg) => {
+                        info(&websocket_session_read_copy, "ws session closed");
                         // No need to send a reply: tungstenite takes care of this for you.
                         let reason = if let Some(msg) = &msg {
-                            println!(
+                            debug!(
                                 "Received close message with code {} and message: {}",
                                 msg.code, msg.reason
                             );
                             format!("{}: {}", msg.code, msg.reason)
                         } else {
-                            println!("Received close message");
                             "unknown".to_owned()
                         };
 
@@ -175,7 +173,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                     _ => {}
                 }
             }
-            println!("!!!! Exit websocket receiver !!!!")
+            info!("ws receiver terminated")
         });
         let websocket_session_write_copy = self.websocket_session.clone();
         tokio::spawn(async move {
@@ -218,6 +216,24 @@ impl WebsocketHandler for DefaultWebsocketHandler {
         });
         Ok(())
     }
+}
+
+
+// TODO: doable in macro?
+fn trace(websocket_session: &WebSocketSession, msg: &str) {
+    trace!("{} {}", websocket_session.session.session_id, msg)
+}
+
+fn debug(websocket_session: &WebSocketSession, msg: &str) {
+    debug!("[{}] {}", websocket_session.session.session_id, msg)
+}
+
+fn info(websocket_session: &WebSocketSession, msg: &str) {
+    info!("[{}] {}", websocket_session.session.session_id, msg)
+}
+
+fn error(websocket_session: &WebSocketSession, msg: &str) {
+    error!("[{}] {}", websocket_session.session.session_id, msg)
 }
 
 fn write_session_close_event(event_writer: &mut SessionWriter, websocket_session: &WebSocketSession, close_reason: &str) {

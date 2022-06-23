@@ -5,6 +5,7 @@ use hyper::{Body, Client, Method, Request, Uri};
 use kafka::client::ProduceMessage;
 use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage, MessageSet};
 use kafka::producer::{Partitioner, Producer, Record, RequiredAcks, Topics};
+use log::{error, info};
 use serde::Deserialize;
 
 use pong::event::event::{Event, EventReaderImpl, EventWriterImpl};
@@ -33,12 +34,16 @@ pub struct KafkaDefaultEventWriterImpl {
 
 impl KafkaDefaultEventWriterImpl {
     pub fn new(host: &str) -> KafkaDefaultEventWriterImpl {
-        println!("Connecting default producer to kafka host: {}", host);
+        info!("connecting default producer to kafka host: {}", host);
         let producer = Producer::from_hosts(vec![host.to_owned()])
             .with_ack_timeout(Duration::from_secs(1))
             .with_required_acks(RequiredAcks::One)
-            .create()
-            .unwrap();
+            .create();
+        if let Err(e) = producer {
+            error!("failed to connect producer to kafka host {}: {:?}", host, e);
+            panic!("kafka connection failed, no recovery possible.")
+        }
+        let producer = producer.unwrap();
         KafkaDefaultEventWriterImpl { producer }
     }
 }

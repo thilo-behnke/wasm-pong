@@ -180,7 +180,7 @@ async fn handle_http_request(
 
 async fn shutdown_signal() {
     // Wait for the CTRL+C signal
-    let shutdown_received = tokio::signal::ctrl_c()
+    tokio::signal::ctrl_c()
         .await
         .expect("failed to install CTRL+C signal handler");
     info!("received shutdown signal, shutting down now...");

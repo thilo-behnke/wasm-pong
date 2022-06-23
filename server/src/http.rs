@@ -132,7 +132,7 @@ async fn handle_potential_ws_upgrade(session_manager: Arc<Mutex<SessionManager>>
     let websocket_session = WebSocketSession {
         session: session.clone(),
         connection_type: connection_type.unwrap(),
-        player: matching_player.unwrap().clone()
+        player: matching_player.clone()
     };
     println!("Websocket upgrade request is valid, will now upgrade to websocket: {:?}", req);
 

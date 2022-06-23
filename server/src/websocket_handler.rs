@@ -7,6 +7,7 @@ use tokio::sync::Mutex;
 use async_trait::async_trait;
 use futures::{SinkExt, StreamExt};
 use hyper_tungstenite::tungstenite::{Error, Message};
+use log::{debug, error, info, trace};
 use serde_json::json;
 use tokio::time::sleep;
 use serde::{Serialize, Deserialize};
@@ -38,11 +39,26 @@ impl DefaultWebsocketHandler {
             websocket_session, websocket, session_manager
         }
     }
+
+    fn trace(&self, msg: &str) {
+        trace!("[{}] {}", self.websocket_session.session.session_id, msg)
+    }
+
+    fn info(&self, msg: &str) {
+        info!("[{}] {}", self.websocket_session.session.session_id, msg)
+    }
+
+    fn error(&self, msg: &str) {
+        error!("[{}] {}", self.websocket_session.session.session_id, msg)
+    }
 }
+
+
 
 #[async_trait]
 impl WebsocketHandler for DefaultWebsocketHandler {
     async fn serve(self) -> Result<(), Error> {
+        self.info("serving new websocket connection");
         let websocket = self.websocket.await?;
         let (mut websocket_writer, mut websocket_reader) = websocket.split();
 
@@ -52,8 +68,8 @@ impl WebsocketHandler for DefaultWebsocketHandler {
             self.websocket_session.connection_type.get_topics(),
         );
         if let Err(_) = event_handler_pair {
-            eprintln!(
-                "Failed to create event reader/writer pair session: {:?}",
+            error!(
+                "failed to create event reader/writer pair session: {:?}",
                 self.websocket_session
             );
             return Err(Error::ConnectionClosed); // TODO: Use proper error for this case to close the connection
@@ -62,22 +78,23 @@ impl WebsocketHandler for DefaultWebsocketHandler {
         let (mut event_reader, mut event_writer) = event_handler_pair.unwrap();
         let websocket_session_read_copy = self.websocket_session.clone();
         tokio::spawn(async move {
-            println!(
-                "Ready to read messages from ws connection: {:?}",
+            error!(
+                "ready to read messages from ws connection: {:?}",
                 websocket_session_read_copy
             );
             while let Some(message) = websocket_reader.next().await {
                 if let Err(e) = message {
-                    eprintln!("ws message read failed for session {}: {:?}", websocket_session_read_copy.session.session_id, e);
+                    error!("ws message read failed for session {}: {:?}", websocket_session_read_copy.session.session_id, e);
                     let reason = format!("ws closed: {:?}", e);
                     write_session_close_event(&mut event_writer, &websocket_session_read_copy, reason.as_str());
                     break;
                 }
                 let message = message.unwrap();
+                trace!("read new message from websocket: {:?}", message);
                 match message {
                     Message::Text(msg) => {
                         let ws_message = deserialize_ws_event(&msg, &websocket_session_read_copy.connection_type);
-                        println!("Received ws message to persist events to kafka");
+                        trace!("Received ws message to persist events to kafka");
                         if let Err(e) = ws_message {
                             eprintln!("Failed to deserialize ws message to event {}: {}", msg, e);
                             continue;

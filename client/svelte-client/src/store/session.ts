@@ -43,8 +43,10 @@ const player2KeyboardInputs = derived(
     }
 )
 
-const networkSessionEvents = (session: NetworkSession) => readable([], function(set) {
+const networkEvents = (session: NetworkSession) => readable([], function(set) {
     const websocket = writable<WebSocket>(null);
+
+    console.log("creating ws to receive/send websocket events for session: ", JSON.stringify(session))
     api.createEventWebsocket(session).then(ws => {
         websocket.set(ws);
     });
@@ -54,6 +56,7 @@ const networkSessionEvents = (session: NetworkSession) => readable([], function(
         if (!websocket) {
             return;
         }
+        console.log("ws ready, registering message handler")
         $websocket.onmessage = event => {
             events.set([...get(events), event])
         }
@@ -70,8 +73,9 @@ const networkSessionEvents = (session: NetworkSession) => readable([], function(
     }
 })
 
-const networkInputEvents = (session: NetworkSession): Readable<unknown[]> => derived(networkSessionEvents(session), $sessionEvents => $sessionEvents.filter(({input}) => input === 'topic'));
+export const networkSessionStateEvents = (session: NetworkSession): Readable<unknown[]> => derived(networkEvents(session), $sessionEvents => $sessionEvents.filter(({topic}) => topic === 'session'));
 
+const networkInputEvents = (session: NetworkSession): Readable<unknown[]> => derived(networkEvents(session), $sessionEvents => $sessionEvents.filter(({topic}) => topic === 'input'));
 export const sessionInputs = (session: Session) => readable([], function(setInputs) {
     let player1Inputs = writable([]);
     let player2Inputs = writable([]);

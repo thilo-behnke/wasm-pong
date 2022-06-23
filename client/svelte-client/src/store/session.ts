@@ -63,14 +63,14 @@ const sessionEvents = (session: Session) => readable([], function(set) {
         set(get(events));
     }, 0)
 
-    set(get(events));
+    set([]);
 
     return () => {
         clearInterval(interval);
     }
 })
 
-const inputEvents = (session: Session): Readable<unknown[]> => derived(sessionEvents(session), ([$sessionEvents]) => $sessionEvents.filter(({input}) => input === 'topic'));
+const inputEvents = (session: Session): Readable<unknown[]> => derived(sessionEvents(session), $sessionEvents => $sessionEvents.filter(({input}) => input === 'topic'));
 
 export const sessionInputs = (session: Session) => readable([], function(setInputs) {
     let player1Inputs = writable([]);

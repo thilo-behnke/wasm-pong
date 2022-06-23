@@ -91,7 +91,7 @@ async fn handle_potential_ws_upgrade(session_manager: Arc<Mutex<SessionManager>>
         return res;
     }
     let session_id = params.get("session_id").unwrap();
-    let request_player_id = addr.to_string();
+    let request_player_id = addr.ip().to_string();
     let session = session_manager.lock().await.get_session(session_id);
     if let None = session {
         let error = format!("Session does not exist: {}", session_id);

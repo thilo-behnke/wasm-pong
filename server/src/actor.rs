@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "actor_type")]
@@ -19,6 +20,18 @@ impl Actor {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Player {
     pub id: String,
+    pub ip: String,
+    pub nr: u8
+}
+
+impl Player {
+    pub fn new(nr: u8, ip: String) -> Player {
+        Player {
+            ip,
+            id: Uuid::new_v4().to_string(),
+            nr
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

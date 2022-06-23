@@ -4,6 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use futures::{stream::StreamExt};
+use futures::future::err;
 use hyper::{Body, Request, Response, Server, StatusCode};
 use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
@@ -82,6 +83,13 @@ async fn handle_potential_ws_upgrade(session_manager: Arc<Mutex<SessionManager>>
             StatusCode::BAD_REQUEST,
         );
     }
+    if !params.contains_key("player_id") {
+        eprintln!("Missing player id request param for websocket connection, don't upgrade connection to ws.");
+        return build_error_res(
+            "Missing request param: player_id",
+            StatusCode::BAD_REQUEST,
+        );
+    }
     if !params.contains_key("connection_type") {
         eprintln!("Missing connection type request param for websocket connection, don't upgrade connection to ws.");
         let res = build_error_res(
@@ -90,11 +98,12 @@ async fn handle_potential_ws_upgrade(session_manager: Arc<Mutex<SessionManager>>
         );
         return res;
     }
-    let session_id = params.get("session_id").unwrap();
-    let request_player_id = addr.ip().to_string();
-    let session = session_manager.lock().await.get_session(session_id);
+    let request_session_id = *params.get("session_id").unwrap();
+    let request_player_id = *params.get("player_id").unwrap();
+    let request_player_ip = addr.ip().to_string();
+    let session = session_manager.lock().await.get_session(request_session_id);
     if let None = session {
-        let error = format!("Session does not exist: {}", session_id);
+        let error = format!("Session does not exist: {}", request_session_id);
         eprintln!("{}", error);
         return build_error_res(error.as_str(), StatusCode::NOT_FOUND);
     }
@@ -102,6 +111,12 @@ async fn handle_potential_ws_upgrade(session_manager: Arc<Mutex<SessionManager>>
     let matching_player = session.players.iter().find(|p| p.id == request_player_id);
     if let None = matching_player {
         let error = format!("Player is not registered in session: {}", request_player_id);
+        eprintln!("{}", error);
+        return build_error_res(error.as_str(), StatusCode::FORBIDDEN);
+    }
+    let matching_player = matching_player.unwrap();
+    if matching_player.ip != request_player_ip {
+        let error = format!("Player with wrong ip tried to join session: {} (expected) vs {} (actual)", matching_player.ip, request_player_ip);
         eprintln!("{}", error);
         return build_error_res(error.as_str(), StatusCode::FORBIDDEN);
     }

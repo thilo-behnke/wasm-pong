@@ -71,9 +71,7 @@ async fn handle_session_create(
 ) -> Result<Response<Body>, Infallible> {
     println!("Called to create new session: {:?}", req);
     let mut locked = session_manager.lock().await;
-    let player = Player {
-        id: addr.ip().to_string(),
-    };
+    let player = Player::new(1, addr.ip().to_string());
     let session_create_res = locked.create_session(player.clone()).await;
     if let Err(e) = session_create_res {
         return Ok(Response::builder()
@@ -99,9 +97,7 @@ async fn handle_session_join(
     println!("Received request to join session: {:?}", req);
     let mut locked = session_manager.lock().await;
     let body = read_json_body::<SessionJoinDto>(&mut req).await;
-    let player = Player {
-        id: addr.ip().to_string()
-    };
+    let player = Player::new(2, addr.ip().to_string());
     let session_join_res = locked.join_session(body.session_id, player.clone()).await;
     if let Err(e) = session_join_res {
         eprintln!("Failed to join session: {:?}", e);

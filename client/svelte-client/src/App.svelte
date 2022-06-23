@@ -9,7 +9,6 @@
     import SessionWrapper from "./components/SessionWrapper.svelte";
     import api from "./api/session";
     import Error from "./components/Error.svelte";
-    import session from "./api/session";
 
     let error: string = null;
     let errorAt: number = null;

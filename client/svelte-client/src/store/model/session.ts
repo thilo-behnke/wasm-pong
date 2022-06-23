@@ -29,3 +29,11 @@ export type NetworkSession = {
     you: Player
 }
 export type Session = LocalSession | NetworkSession;
+
+export function isNetworkSession(session: Session): session is NetworkSession {
+    return !isLocalSession(session)
+}
+
+export function isLocalSession(session: Session): session is LocalSession {
+    return session.type === SessionType.LOCAL
+}

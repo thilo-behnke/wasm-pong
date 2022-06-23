@@ -66,17 +66,12 @@ async function sessionResponseHandler(response: Response): Promise<NetworkSessio
     return response.json().then(({data}) => {
         console.debug(`session action result: ${JSON.stringify(data)}`)
         return data;
-    }).then((event: NetworkSessionEventPayload) => event.session);
+    }).then((event: NetworkSessionEventPayload) => ({you: event.actor, ...event.session}));
 }
 
-async function createEventWebsocket(session: Session): Promise<WebSocket> {
-    return new Promise((res, rej) => {
-        if (session.type === SessionType.LOCAL) {
-            return rej("Websocket not allowed for local session!");
-        }
-        const url = `/pong/ws?session_id=${session.session_id}&connection_type=${session.type.toLowerCase()}`;
-        return createWebsocket(url);
-    })
+async function createEventWebsocket(session: NetworkSession): Promise<WebSocket> {
+    const url = `/pong/ws?session_id=${session.session_id}&player_id=${session.you.id}&connection_type=${session.type.toLowerCase()}`;
+    return createWebsocket(url);
 }
 
 async function createWebsocket(path: string): Promise<WebSocket> {

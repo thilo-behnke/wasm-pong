@@ -16,7 +16,7 @@
         if (!window.location.search.startsWith("?")) {
             return;
         }
-        const params = window.location.search.slice(1).split("?").map(p => p.split('=')).reduce((acc, [key, val]) => ({...acc, [key]: val}), {}) as any;
+        const params = window.location.search.slice(1).split("&").map(p => p.split('=')).reduce((acc, [key, val]) => ({...acc, [key]: val}), {}) as any;
         console.log(params)
         if (!params.session_id) {
             return;

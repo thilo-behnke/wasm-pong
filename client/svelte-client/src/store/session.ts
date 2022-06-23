@@ -2,8 +2,8 @@ import {derived, get, readable, Readable, writable} from "svelte/store";
 import {keysPressed} from "./io";
 import {onDestroy} from "svelte";
 import api from "../api/session";
-import type {Session} from "./model/session";
-import {SessionType} from "./model/session";
+import type {NetworkSession, Session} from "./model/session";
+import {isLocalSession, SessionType} from "./model/session";
 
 export type Input = {
     input: 'UP' | 'DOWN',
@@ -43,7 +43,7 @@ const player2KeyboardInputs = derived(
     }
 )
 
-const sessionEvents = (session: Session) => readable([], function(set) {
+const networkSessionEvents = (session: Session) => readable([], function(set) {
     const websocket = writable<WebSocket>(null);
     api.createEventWebsocket(session).then(ws => {
         websocket.set(ws);
@@ -70,12 +70,12 @@ const sessionEvents = (session: Session) => readable([], function(set) {
     }
 })
 
-const inputEvents = (session: Session): Readable<unknown[]> => derived(sessionEvents(session), $sessionEvents => $sessionEvents.filter(({input}) => input === 'topic'));
+const networkInputEvents = (session: NetworkSession): Readable<unknown[]> => derived(networkSessionEvents(session), $sessionEvents => $sessionEvents.filter(({input}) => input === 'topic'));
 
 export const sessionInputs = (session: Session) => readable([], function(setInputs) {
     let player1Inputs = writable([]);
     let player2Inputs = writable([]);
-    if (session.type === SessionType.LOCAL) {
+    if (isLocalSession(session)) {
         player1KeyboardInputs.subscribe(inputs => {
             player1Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])
@@ -87,12 +87,13 @@ export const sessionInputs = (session: Session) => readable([], function(setInpu
         return () => {
         }
     }
+
     if (session.type === SessionType.HOST) {
         player1KeyboardInputs.subscribe(inputs => {
             player1Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])
         })
-        inputEvents(session).subscribe(inputs => {
+        networkInputEvents(session).subscribe(inputs => {
             player2Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])
         })
@@ -100,7 +101,7 @@ export const sessionInputs = (session: Session) => readable([], function(setInpu
         }
     }
     if (session.type === SessionType.PEER) {
-        inputEvents(session).subscribe(inputs => {
+        networkInputEvents(session).subscribe(inputs => {
             player1Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])
         })
@@ -112,7 +113,7 @@ export const sessionInputs = (session: Session) => readable([], function(setInpu
         }
     }
     if (session.type === SessionType.OBSERVER) {
-        const events = inputEvents(session);
+        const events = networkInputEvents(session);
         events.subscribe(inputs => {
             player1Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])

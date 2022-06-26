@@ -1,13 +1,15 @@
 import {writable} from "svelte/store";
 
 export type NetworkStore = {
-    loading: boolean
+    loading: boolean,
+    error?: {
+        value: string,
+        at: number
+    }
 }
 
 const initialValue = () => ({
-    loading: false
+    loading: false,
 });
 
-export const network = writable(initialValue())
-
-export const networkContext = Symbol();
+export const network = writable<NetworkStore>(initialValue())

@@ -2,46 +2,36 @@
     import Canvas from "./components/Canvas.svelte";
     import Fps from "./components/Fps.svelte";
     import Input from "./components/Input.svelte";
-    import {sessionStore} from "./store/session";
+    import {localSession, networkSession, SessionStore} from "./store/session";
     import ModeSelect from "./components/ModeSelect.svelte";
-    import {network} from "./store/network";
     import GameSettings from "./components/GameSettings.svelte";
     import SessionWrapper from "./components/SessionWrapper.svelte";
-    import api from "./api/session";
     import Error from "./components/Error.svelte";
     import SessionInfo from "./components/SessionInfo.svelte";
-    import session from "./api/session";
+    import type {Readable} from "svelte/store";
+    import {SessionType} from "./store/model/session";
 
-    let error: string = null;
-    let errorAt: number = null;
+    let sessionStore: Readable<SessionStore>;
     let debug = false;
 
-    function localSession() {
-        sessionCreator(() => api.createLocalSession());
+    $: loading = $sessionStore?.loading;
+    $: error = $sessionStore?.error;
+    $: session = $sessionStore?.session;
+
+    function createLocalSession() {
+        sessionStore = localSession();
     }
 
     function createSession() {
-        sessionCreator(() => api.createNetworkSession());
+        sessionStore = networkSession(SessionType.HOST)
     }
 
     function joinSession(sessionId) {
-        sessionCreator(() => api.joinNetworkSession(sessionId));
+        sessionStore = networkSession(SessionType.PEER, sessionId);
     }
 
     function watchSession(sessionId) {
-        sessionCreator(() => api.watchNetworkSession(sessionId));
-    }
-
-    function sessionCreator(fn) {
-        $network.loading = true;
-        fn().then(s => {
-            $sessionStore = s;
-        }).catch(e => {
-            error = e;
-            errorAt = performance.now();
-        }).finally(() => {
-            $network.loading = false;
-        })
+        sessionStore = networkSession(SessionType.OBSERVER, sessionId);
     }
 
     function toggleDebug() {
@@ -51,14 +41,11 @@
 
 <main>
     <h1>Welcome to WASM-Pong!</h1>
-    {#key errorAt}
-        <Error error={error} duration={5_000}></Error>
-    {/key}
-    {#if !$sessionStore}
+    {#if !session}
         <div class="mode-select">
             <ModeSelect
-                    isLoading={$network.loading}
-                    on:local-create={() => localSession()}
+                    isLoading={loading}
+                    on:local-create={() => createLocalSession()}
                     on:session-create={() => createSession()}
                     on:session-join={({detail: sessionId}) => joinSession(sessionId)}
                     on:session-watch={({detail: sessionId}) => watchSession(sessionId)}
@@ -66,13 +53,16 @@
             ></ModeSelect>
         </div>
     {:else}
-        <SessionWrapper session={$sessionStore} let:inputs={inputs}>
+        {#key error?.at}
+            <Error error={error?.value} duration={5_000}></Error>
+        {/key}
+        <SessionWrapper session={session} let:inputs={inputs}>
             <div class="game-area">
                 <div class="game-area__session">
-                    <SessionInfo session={$sessionStore}></SessionInfo>
+                    <SessionInfo session={session}></SessionInfo>
                 </div>
                 <div class="game-area__canvas">
-                    <Canvas debug={debug} session={$sessionStore} inputs={inputs}>
+                    <Canvas debug={debug} session={session} inputs={inputs}>
                         <Fps></Fps>
                     </Canvas>
                 </div>

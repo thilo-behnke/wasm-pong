@@ -1,9 +1,10 @@
 import {derived, get, readable, Readable, writable} from "svelte/store";
 import {keysPressed} from "./io";
-import {onDestroy} from "svelte";
 import api from "../api/session";
-import type {NetworkSession, Session} from "./model/session";
-import {isLocalSession, SessionType} from "./model/session";
+import session from "../api/session";
+import type {LocalSession, NetworkSession, Session} from "./model/session";
+import {isLocalSession, SessionState, SessionType} from "./model/session";
+import type {NetworkStore} from "./network";
 
 export type Input = {
     input: 'UP' | 'DOWN',
@@ -84,7 +85,6 @@ const networkEvents = (session: NetworkSession) => readable([], function(set) {
 })
 
 export const networkSessionStateEvents = (session: NetworkSession): Readable<unknown[]> => derived(networkEvents(session), $sessionEvents => {
-    console.log("test")
     const sessionEvents = $sessionEvents.filter(({topic}) => topic === 'session').map(({event}) => event);
     if (!sessionEvents.length) {
         return [];
@@ -154,4 +154,44 @@ export const sessionInputs = (session: Session) => readable([], function(setInpu
     throw new Error(`unknown session type ${session.type}`)
 })
 
-export const sessionStore = writable<Session>(null);
+const sessionStore = writable<Session>(null)
+
+export const localSession = () => readable<SessionStore>(null, function(set) {
+    const session: LocalSession = {session_id: "local", type: SessionType.LOCAL, state: SessionState.RUNNING};
+    set({loading: true});
+    setTimeout(() => {
+        set({loading: false, session});
+        sessionStore.set(session);
+    }, 2_000);
+})
+
+export type SessionStore = NetworkStore & {
+    session?: Session
+}
+
+export const networkSession = (type: SessionType.HOST | SessionType.PEER | SessionType.OBSERVER, sessionId?: string) => readable<SessionStore>(null, function(set) {
+    function sessionCreator(fn) {
+        set({loading: true});
+        fn().then(session => {
+            set({loading: false, session});
+            sessionStore.set(session);
+        }).catch(e => {
+            set({loading: false, error: {value: e, at: performance.now()}});
+            sessionStore.set(null);
+        })
+    }
+
+    switch (type) {
+        case SessionType.HOST:
+            sessionCreator(() => api.createNetworkSession());
+            break;
+        case SessionType.PEER:
+            sessionCreator(() => api.joinNetworkSession(sessionId));
+            break;
+        case SessionType.OBSERVER:
+            sessionCreator(() => api.watchNetworkSession(sessionId));
+            break;
+        default:
+            throw new Error("Unable to handle session type: " + type)
+    }
+})

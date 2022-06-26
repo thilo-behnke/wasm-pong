@@ -23,3 +23,9 @@ export type InputEventPayload = {
     ts: number,
 }
 
+export type GameEvent = SessionEventPayload | NetworkSessionEventPayload | InputEventPayload;
+
+export type GameEventWrapper = {
+    topic: string,
+    event: GameEvent
+}

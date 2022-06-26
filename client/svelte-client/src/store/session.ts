@@ -1,10 +1,11 @@
-import {derived, get, readable, Readable, writable} from "svelte/store";
+import {derived, get, readable, writable} from "svelte/store";
 import {keysPressed} from "./io";
 import api from "../api/session";
 import session from "../api/session";
 import type {LocalSession, NetworkSession, Session} from "./model/session";
 import {isLocalSession, SessionState, SessionType} from "./model/session";
 import type {NetworkStore} from "./network";
+import type {GameEventWrapper, SessionEventPayload} from "./model/event";
 
 export type Input = {
     input: 'UP' | 'DOWN',
@@ -44,60 +45,66 @@ const player2KeyboardInputs = derived(
     }
 )
 
-const networkEvents = (session: NetworkSession) => readable([], function(set) {
+const networkEvents = readable<GameEventWrapper[]>([], function(set) {
     const websocket = writable<WebSocket>(null);
+    const sessionId = writable<string>(null)
 
-    console.log("creating ws to receive/send websocket events for session: ", JSON.stringify(session))
-    api.createEventWebsocket(session).then(ws => {
-        console.log("ws successfully established: ", ws)
-
-        ws.onopen = () => {
-            console.debug("ws successfully opened")
+    sessionStore.subscribe(session => {
+        if (!session || isLocalSession(session)) {
+            return;
         }
-        ws.onmessage = event => {
-            console.debug("Received event: ", event)
-            let events = JSON.parse(event.data);
-            // TODO: Hotfix, would be better to have clean serialization in the backend...
-            events = events.map(({event, ...rest}) => ({...rest, event: JSON.parse(event)}))
-            console.debug("Parsed events: ", events)
-            set(events);
-            set([]);
+        if (get(sessionId) === session.session_id) {
+            return;
         }
-        ws.onerror = err => {
-            console.error("ws error: ", err)
-        }
-        ws.onclose = event => {
-            console.error("ws closed: ", event)
-        }
+        console.log("creating ws to receive/send websocket events for session: ", JSON.stringify(session))
+        api.createEventWebsocket(session).then(ws => {
+            console.log("ws successfully established: ", ws)
 
-        websocket.set(ws);
-    });
+            ws.onopen = () => {
+                console.debug("ws successfully opened")
+            }
+            ws.onmessage = event => {
+                console.debug("Received event: ", event)
+                let events = JSON.parse(event.data);
+                // TODO: Hotfix, would be better to have clean serialization in the backend...
+                events = events.map(({event, ...rest}) => ({...rest, event: JSON.parse(event)}))
+                console.debug("Parsed events: ", events)
+                set(events);
+                set([]);
+            }
+            ws.onerror = err => {
+                console.error("ws error: ", err)
+            }
+            ws.onclose = event => {
+                console.error("ws closed: ", event)
+            }
 
-    const interval = setInterval(() => {
-    }, 0)
+            websocket.set(ws);
+        });
 
-    set([]);
+        set([]);
+
+    })
 
     return () => {
         get(websocket).close();
-        clearInterval(interval);
     }
 })
 
-export const networkSessionStateEvents = (session: NetworkSession): Readable<unknown[]> => derived(networkEvents(session), $sessionEvents => {
+export const networkSessionStateEvents = derived(networkEvents, $sessionEvents => {
     const sessionEvents = $sessionEvents.filter(({topic}) => topic === 'session').map(({event}) => event);
     if (!sessionEvents.length) {
         return [];
     }
-    const latestSessionEvent = sessionEvents[sessionEvents.length-1];
+    const latestSessionEvent = sessionEvents[sessionEvents.length-1] as SessionEventPayload;
     const currentSession = get(sessionStore) as NetworkSession;
-    const session = {...latestSessionEvent.session, you: currentSession.you, type: currentSession.type}
+    const session: Session = {...(latestSessionEvent.session as NetworkSession), you: currentSession.you, type: currentSession.type}
     console.debug("updating current session: ", session)
     sessionStore.set(session);
     return sessionEvents;
 });
 
-const networkInputEvents = (session: NetworkSession): Readable<unknown[]> => derived(networkEvents(session), $sessionEvents => $sessionEvents.filter(({topic}) => topic === 'input'));
+const networkInputEvents = derived(networkEvents, $sessionEvents => $sessionEvents.filter(({topic}) => topic === 'input'));
 export const sessionInputs = (session: Session) => readable([], function(setInputs) {
     let player1Inputs = writable([]);
     let player2Inputs = writable([]);
@@ -119,7 +126,7 @@ export const sessionInputs = (session: Session) => readable([], function(setInpu
             player1Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])
         })
-        networkInputEvents(session).subscribe(inputs => {
+        networkInputEvents.subscribe(inputs => {
             player2Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])
         })
@@ -127,7 +134,7 @@ export const sessionInputs = (session: Session) => readable([], function(setInpu
         }
     }
     if (session.type === SessionType.PEER) {
-        networkInputEvents(session).subscribe(inputs => {
+        networkInputEvents.subscribe(inputs => {
             player1Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])
         })
@@ -139,7 +146,7 @@ export const sessionInputs = (session: Session) => readable([], function(setInpu
         }
     }
     if (session.type === SessionType.OBSERVER) {
-        const events = networkInputEvents(session);
+        const events = networkInputEvents;
         events.subscribe(inputs => {
             player1Inputs.set(inputs)
             setInputs([...get(player1Inputs), ...get(player2Inputs)])
@@ -173,7 +180,7 @@ export const networkSession = (type: SessionType.HOST | SessionType.PEER | Sessi
     function sessionCreator(fn) {
         set({loading: true});
         fn().then(session => {
-            set({loading: false, session});
+            set({loading: false, session, events: []});
             sessionStore.set(session);
         }).catch(e => {
             set({loading: false, error: {value: e, at: performance.now()}});

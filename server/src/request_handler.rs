@@ -86,15 +86,9 @@ async fn handle_session_create(
             .body(Body::from(e))
             .unwrap());
     }
-    let session = session_create_res.unwrap();
-    error!("session created by player {:?}: {:?}", player, session);
-    let reason = format!("player {:?} created session", player);
-    let session_created = SessionEvent::Created(SessionEventPayload {
-        session,
-        actor: player,
-        reason
-    });
-    let serialized = json!(session_created);
+    let session_event = session_create_res.unwrap();
+    error!("session created: {:?}", session_event);
+    let serialized = json!(session_event);
     return build_success_res(&serialized.to_string());
 }
 
@@ -116,15 +110,10 @@ async fn handle_session_join(
             .body(Body::from(e))
             .unwrap());
     }
-    let session = session_join_res.unwrap();
-    info!("player {:?} successfully joined session: {:?}", player, session);
+    let session_event = session_join_res.unwrap();
+    info!("player {:?} successfully joined session: {:?}", player, session_event);
     let reason = format!("player {:?} joined session", player);
-    let session_joined = SessionEvent::Joined(SessionEventPayload {
-        actor: player,
-        session,
-        reason
-    });
-    let serialized = json!(session_joined);
+    let serialized = json!(session_event);
     return build_success_res(&serialized.to_string());
 }
 

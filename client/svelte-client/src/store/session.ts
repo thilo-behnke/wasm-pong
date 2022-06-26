@@ -60,7 +60,7 @@ const networkEvents = (session: NetworkSession) => readable([], function(set) {
             // TODO: Hotfix, would be better to have clean serialization in the backend...
             data = data.map(({event, ...rest}) => ({...rest, event: JSON.parse(event)}))
             console.debug("Parsed events: ", data)
-            events.set(data)
+            events.set([...get(events), ...data]);
         }
         ws.onerror = err => {
             console.error("ws error: ", err)
@@ -85,11 +85,12 @@ const networkEvents = (session: NetworkSession) => readable([], function(set) {
 })
 
 export const networkSessionStateEvents = (session: NetworkSession): Readable<unknown[]> => derived(networkEvents(session), $sessionEvents => {
-    const sessionEvents = $sessionEvents.filter(({topic}) => topic === 'session');
+    const sessionEvents = $sessionEvents.filter(({topic}) => topic === 'session').map(({event}) => event);
     if (!sessionEvents.length) {
         return [];
     }
     const latestSessionEvent = sessionEvents[sessionEvents.length-1];
+    console.debug("updating current session: ", latestSessionEvent.session)
     sessionStore.set(latestSessionEvent.session);
     return sessionEvents;
 });

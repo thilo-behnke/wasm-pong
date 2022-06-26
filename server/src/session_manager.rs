@@ -10,6 +10,7 @@ use crate::kafka::{
     KafkaTopicManager,
 };
 use crate::actor::Player;
+use crate::event::{SessionEvent, SessionEventPayload};
 use crate::session::{Session, SessionState};
 
 pub struct SessionManager {
@@ -37,7 +38,7 @@ impl SessionManager {
             .map_or_else(|| None, |s| Some(s.clone()))
     }
 
-    pub async fn create_session(&mut self, player: Player) -> Result<Session, String> {
+    pub async fn create_session(&mut self, player: Player) -> Result<SessionEvent, String> {
         info!("called to create new session by player {:?}", player);
         let add_partition_res = self.topic_manager.add_partition().await;
         if let Err(e) = add_partition_res {
@@ -62,14 +63,19 @@ impl SessionManager {
             );
         }
         info!("successfully persisted create session event.");
-        Ok(session)
+        let session_created = SessionEvent::Created(SessionEventPayload {
+            session,
+            actor: player,
+            reason: format!("session created")
+        });
+        Ok(session_created)
     }
 
     pub async fn join_session(
         &mut self,
         session_id: String,
         player: Player,
-    ) -> Result<Session, String> {
+    ) -> Result<SessionEvent, String> {
         let updated_session = {
             let session = self.sessions.iter_mut().find(|s| s.session_id == session_id);
             if let None = session {
@@ -107,12 +113,17 @@ impl SessionManager {
             }
         };
         println!("sessions = {:?}", self.sessions);
-        Ok(updated_session.clone())
+        let session_joined_event = SessionEvent::Joined(SessionEventPayload {
+            session: updated_session,
+            reason: "session joined".to_owned(),
+            actor: player
+        });
+        Ok(session_joined_event)
     }
 
     fn write_to_producer<T>(&mut self, session_event: T) -> Result<(), String>
     where
-        T: SessionEvent,
+        T: SessionAwareEvent,
     {
         let session_id = session_event.session_id();
         let session_producer = match self.session_producers.get_mut(session_id) {
@@ -233,7 +244,7 @@ impl SessionReader {
     }
 }
 
-pub trait SessionEvent : Serialize {
+pub trait SessionAwareEvent: Serialize {
     fn session_id(&self) -> &str;
 }
 
@@ -254,7 +265,7 @@ impl SessionCreatedEvent {
     }
 }
 
-impl SessionEvent for SessionCreatedEvent {
+impl SessionAwareEvent for SessionCreatedEvent {
     fn session_id(&self) -> &str {
         &self.session.session_id
     }
@@ -277,7 +288,7 @@ impl SessionJoinedEvent {
     }
 }
 
-impl SessionEvent for SessionJoinedEvent {
+impl SessionAwareEvent for SessionJoinedEvent {
     fn session_id(&self) -> &str {
         &self.session.session_id
     }

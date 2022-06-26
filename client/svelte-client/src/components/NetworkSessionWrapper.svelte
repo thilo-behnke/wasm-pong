@@ -11,7 +11,10 @@
     let networkSessionInputs;
     let joinLink;
 
-    $: if(session) {
+    let cachedSessionId;
+
+    $: if(!cachedSessionId && session) {
+        cachedSessionId = session.session_id;
         console.log("NetworkSessionWrapper ready, now setting up sessionEvents")
         sessionEvents = networkSessionStateEvents(session);
         joinLink = api.createJoinLink(session.session_id);
@@ -25,9 +28,7 @@
 {#if !session}
     <h3>no session</h3>
 {:else}
-    {#if sessionEvents}
-        events: {JSON.stringify($sessionEvents)}
-    {/if}
+    {JSON.stringify(session)}
     {#if session.state === SessionState.PENDING}
         <h3>waiting for other player...</h3>
         <CopyToClipboard text={joinLink}></CopyToClipboard>

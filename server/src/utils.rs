@@ -96,3 +96,9 @@ pub mod time_utils {
         return since_the_epoch.as_millis();
     }
 }
+
+pub mod json_utils {
+    pub fn unescape(json: &str) -> String {
+        return json.replace("\\\"", "\"")
+    }
+}

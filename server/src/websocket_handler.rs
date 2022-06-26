@@ -17,6 +17,7 @@ use crate::event::{HeartBeatEventPayload, InputEventPayload, MoveEventPayload, S
 use crate::actor::Player;
 use crate::session::Session;
 use crate::session_manager::{SessionManager, SessionWriter};
+use crate::utils::json_utils::unescape;
 
 #[async_trait]
 pub trait WebsocketHandler {
@@ -189,12 +190,19 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                     continue;
                 }
                 trace(&websocket_session_write_copy, &format!("read messages for websocket_session from consumer: {:?}", events));
-                let messages = events.unwrap().into_iter().map(|e| e.event).collect::<Vec<String>>();
-                if messages.len() == 0 {
+                let event_dtos = events.unwrap().into_iter().map(|e| {
+                    info!("#### {}", e.event);
+                    WebsocketEventDTO {
+                        topic: e.topic,
+                        event: e.event
+                    }
+                }).collect::<Vec<WebsocketEventDTO>>();
+                if event_dtos.len() == 0 {
                     trace(&websocket_session_write_copy, "no new messages from kafka.");
                 } else {
-                    trace(&websocket_session_write_copy, &format!("{} new messages from kafka.", messages.len()));
-                    let json = serde_json::to_string(&messages).unwrap();
+                    trace(&websocket_session_write_copy, &format!("{} new messages from kafka.", event_dtos.len()));
+                    let json = serde_json::to_string(&event_dtos).unwrap();
+                    trace(&websocket_session_write_copy, &format!("sending msg batch to client: {}", json));
                     let message = Message::from(json);
                     trace(&websocket_session_write_copy, "sending kafka messages through websocket.");
                     let send_res = websocket_writer.send(message).await;
@@ -437,4 +445,10 @@ fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter
         any_error = true;
     }
     return any_error;
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct WebsocketEventDTO {
+    pub topic: String,
+    pub event: String
 }

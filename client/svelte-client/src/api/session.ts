@@ -70,6 +70,7 @@ async function sessionResponseHandler(response: Response): Promise<NetworkSessio
 }
 
 async function createEventWebsocket(session: NetworkSession): Promise<WebSocket> {
+    console.debug("creating ws for session: ", session)
     const url = `/pong/ws?session_id=${session.session_id}&player_id=${session.you.id}&connection_type=${session.type.toLowerCase()}`;
     return createWebsocket(url);
 }
@@ -78,6 +79,7 @@ async function createWebsocket(path: string): Promise<WebSocket> {
     return new Promise((res, rej) => {
         const baseUrl = location.host.split(':')[0];
         const websocket = new WebSocket(`ws://${baseUrl}/${path}`);
+        console.debug("ws initialized, not yet ready: ", websocket)
         waitForWebsocket(websocket, 10, () => {
             return res(websocket)
         }, () => rej())
@@ -86,14 +88,16 @@ async function createWebsocket(path: string): Promise<WebSocket> {
 
 const waitForWebsocket = (websocket, retries, success, fail) => {
     if (retries <= 0) {
-        console.error("Websocket not established successfully")
+        console.error("ws not established successfully")
         return
     }
     if (websocket.readyState !== 1) {
+        console.debug("ws not yet ready, sleep and check again in 100ms")
         setTimeout(() => {
             waitForWebsocket(websocket, retries - 1, success, fail)
         }, 100)
     } else {
+        console.debug("ws ready!")
         success()
     }
 }

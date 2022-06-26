@@ -131,14 +131,13 @@ impl SessionManager {
         }
         let json_event = json_event.unwrap();
         info!("preparing to write session event to kafka: {}", json_event);
-        let serialized_event = serde_json::to_string(&session_event).expect("failed to serialize session event");
         let session_event_write = session_producer.write_to_session("session", vec![&json_event]);
         if let Err(e) = session_event_write {
             let message = format!("Failed to write session event to kafka: {:?}", e);
             println!("{}", e);
             return Err(message.to_owned());
         }
-        info!("successfully produced session event: {:?}", serialized_event);
+        info!("successfully produced session event: {:?}", json_event);
         return Ok(());
     }
 

@@ -45,28 +45,31 @@ const player2KeyboardInputs = derived(
 
 const networkEvents = (session: NetworkSession) => readable([], function(set) {
     const websocket = writable<WebSocket>(null);
+    const events = writable([]);
 
     console.log("creating ws to receive/send websocket events for session: ", JSON.stringify(session))
     api.createEventWebsocket(session).then(ws => {
-        websocket.set(ws);
-    });
+        console.log("ws successfully established: ", ws)
 
-    const events = writable([]);
-    derived(websocket, ($websocket: WebSocket) => {
-        if (!websocket) {
-            return;
+        ws.onopen = () => {
+            console.debug("ws successfully opened")
         }
-        console.log("ws ready, registering message handler")
-        $websocket.onmessage = event => {
+        ws.onmessage = event => {
             console.debug("Received event: ", event)
-            events.set([...get(events), event])
+            let data = JSON.parse(event.data);
+            // TODO: Hotfix, would be better to have clean serialization in the backend...
+            data = data.map(({event, ...rest}) => ({...rest, event: JSON.parse(event)}))
+            console.debug("Parsed events: ", data)
+            events.set(data)
         }
-        $websocket.onerror = err => {
+        ws.onerror = err => {
             console.error("ws error: ", err)
         }
-        $websocket.onclose = event => {
+        ws.onclose = event => {
             console.error("ws closed: ", event)
         }
+
+        websocket.set(ws);
     });
 
     const interval = setInterval(() => {
@@ -81,7 +84,15 @@ const networkEvents = (session: NetworkSession) => readable([], function(set) {
     }
 })
 
-export const networkSessionStateEvents = (session: NetworkSession): Readable<unknown[]> => derived(networkEvents(session), $sessionEvents => $sessionEvents.filter(({topic}) => topic === 'session'));
+export const networkSessionStateEvents = (session: NetworkSession): Readable<unknown[]> => derived(networkEvents(session), $sessionEvents => {
+    const sessionEvents = $sessionEvents.filter(({topic}) => topic === 'session');
+    if (!sessionEvents.length) {
+        return [];
+    }
+    const latestSessionEvent = sessionEvents[sessionEvents.length-1];
+    sessionStore.set(latestSessionEvent.session);
+    return sessionEvents;
+});
 
 const networkInputEvents = (session: NetworkSession): Readable<unknown[]> => derived(networkEvents(session), $sessionEvents => $sessionEvents.filter(({topic}) => topic === 'input'));
 export const sessionInputs = (session: Session) => readable([], function(setInputs) {

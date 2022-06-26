@@ -1,11 +1,12 @@
-use log::{error, info};
+use std::collections::HashMap;
+use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 
 use pong::event::event::{Event, EventReader, EventWriter};
 
 use crate::hash::Hasher;
 use crate::kafka::{
-    KafkaDefaultEventWriterImpl, KafkaSessionEventReaderImpl, KafkaSessionEventWriterImpl,
+    KafkaSessionEventReaderImpl, KafkaSessionEventWriterImpl,
     KafkaTopicManager,
 };
 use crate::actor::Player;
@@ -14,7 +15,7 @@ use crate::session::{Session, SessionState};
 pub struct SessionManager {
     kafka_host: String,
     sessions: Vec<Session>,
-    session_producer: EventWriter,
+    session_producers: HashMap<String, SessionWriter>,
     topic_manager: KafkaTopicManager,
 }
 
@@ -25,9 +26,7 @@ impl SessionManager {
             kafka_host: kafka_host.to_owned(),
             sessions: vec![],
             topic_manager: KafkaTopicManager::from(kafka_topic_manager_host),
-            session_producer: EventWriter::new(Box::new(KafkaDefaultEventWriterImpl::new(
-                kafka_host,
-            ))),
+            session_producers: HashMap::new(),
         }
     }
 
@@ -42,21 +41,27 @@ impl SessionManager {
         info!("called to create new session by player {:?}", player);
         let add_partition_res = self.topic_manager.add_partition().await;
         if let Err(e) = add_partition_res {
-            println!("Failed to create partition: {}", e);
+            error!("failed to create partition: {}", e);
             return Err(e);
         }
-        let session_id = add_partition_res.unwrap();
-        let session_hash = Hasher::hash(session_id);
-        let session = Session::new(session_id, session_hash, player.clone());
-        println!("Successfully created session: {:?}", session);
+        let session_partition_id = add_partition_res.unwrap();
+        let session_id = Hasher::hash(session_partition_id);
+        let session = Session::new(session_partition_id, session_id.clone(), player.clone());
+        info!("successfully created session: {:?}", session);
+        self.sessions.push(session.clone());
         let write_res = self.write_to_producer(session_created(session.clone(), player.clone()));
         if let Err(e) = write_res {
-            eprintln!(
-                "Failed to write session created event for {:?} to producer: {}",
+            let index = self.sessions.iter().position(|s| s.session_id == session_id);
+            if let Some(i) = index {
+                debug!("session create event could not be persisted - remove session from cache.");
+                self.sessions.remove(i);
+            }
+            error!(
+                "failed to write session created event for {:?} to producer: {}",
                 session, e
             );
         }
-        self.sessions.push(session.clone());
+        info!("successfully persisted create session event.");
         Ok(session)
     }
 
@@ -107,20 +112,31 @@ impl SessionManager {
 
     fn write_to_producer<T>(&mut self, session_event: T) -> Result<(), String>
     where
-        T: Serialize,
+        T: SessionEvent,
     {
         let json_event = serde_json::to_string(&session_event).unwrap();
-        let session_event_write = self.session_producer.write(Event {
+        let session_id = session_event.session_id();
+        let session_producer = match self.session_producers.get_mut(session_id) {
+            Some(p) => p,
+            None => {
+                let session_writer = self.get_session_writer(session_id).expect("failed to create session writer to persist create event");
+                self.session_producers.insert(session_id.to_owned(), session_writer);
+                self.session_producers.get_mut(session_id).expect("failed to retrieve newly created session writer")
+            }
+        };
+        let session_event = Event {
             topic: "session".to_owned(),
             key: None,
             msg: json_event,
-        });
+        };
+        let serialized_event = serde_json::to_string(&session_event).expect("failed to serialize session event");
+        let session_event_write = session_producer.write_to_session("session", vec![&serialized_event]);
         if let Err(e) = session_event_write {
-            let message = format!("Failed to write session create event to kafka: {:?}", e);
+            let message = format!("Failed to write session event to kafka: {:?}", e);
             println!("{}", e);
             return Err(message.to_owned());
         }
-        println!("Successfully produced session event.");
+        info!("successfully produced session event.");
         return Ok(());
     }
 
@@ -216,6 +232,10 @@ impl SessionReader {
     }
 }
 
+pub trait SessionEvent : Serialize {
+    fn session_id(&self) -> &str;
+}
+
 #[derive(Deserialize, Serialize)]
 struct SessionCreatedEvent {
     event_type: SessionEventType,
@@ -233,6 +253,12 @@ impl SessionCreatedEvent {
     }
 }
 
+impl SessionEvent for SessionCreatedEvent {
+    fn session_id(&self) -> &str {
+        &self.session.session_id
+    }
+}
+
 #[derive(Deserialize, Serialize)]
 struct SessionJoinedEvent {
     event_type: SessionEventType,
@@ -247,6 +273,12 @@ impl SessionJoinedEvent {
             session,
             player,
         }
+    }
+}
+
+impl SessionEvent for SessionJoinedEvent {
+    fn session_id(&self) -> &str {
+        &self.session.session_id
     }
 }
 

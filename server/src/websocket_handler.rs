@@ -179,10 +179,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
         tokio::spawn(async move {
             debug(
                 &websocket_session_write_copy,
-                &format!(
-                    "ready to read messages from kafka: {:?}",
-                    websocket_session_write_copy
-                )
+                "ready to read messages from kafka"
             );
             loop {
                 trace(&websocket_session_write_copy, "reading messages from kafka");

@@ -84,12 +84,14 @@ const networkEvents = (session: NetworkSession) => readable([], function(set) {
 })
 
 export const networkSessionStateEvents = (session: NetworkSession): Readable<unknown[]> => derived(networkEvents(session), $sessionEvents => {
+    console.log("test")
     const sessionEvents = $sessionEvents.filter(({topic}) => topic === 'session').map(({event}) => event);
     if (!sessionEvents.length) {
         return [];
     }
     const latestSessionEvent = sessionEvents[sessionEvents.length-1];
-    const session = {...latestSessionEvent.session, you: latestSessionEvent.actor, type: get(sessionStore).type}
+    const currentSession = get(sessionStore) as NetworkSession;
+    const session = {...latestSessionEvent.session, you: currentSession.you, type: currentSession.type}
     console.debug("updating current session: ", session)
     sessionStore.set(session);
     return sessionEvents;

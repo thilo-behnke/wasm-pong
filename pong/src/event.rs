@@ -8,6 +8,7 @@ pub mod event {
     pub struct Event {
         pub topic: String,
         pub key: Option<String>,
+        #[serde(skip_serializing)]
         pub msg: String,
     }
 

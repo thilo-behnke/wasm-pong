@@ -140,10 +140,10 @@ mod tests {
                 id: 1,
                 session_id: "abc".to_owned(),
                 state: SessionState::PENDING,
-                players: vec![Player { id: "player_1".to_owned() }],
+                players: vec![Player { id: "player_1".to_owned(), nr: 1, ip: "127.0.0.1".to_owned() }],
                 observers: vec![Observer {id: "observer_1".to_owned()}]
             },
-            actor: Player { id: "player_1".to_owned() },
+            actor: Player { id: "player_1".to_owned(), nr: 1, ip: "127.0.0.1".to_owned() },
             reason: "some reason".to_owned(),
         })
     }

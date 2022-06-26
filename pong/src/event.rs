@@ -5,22 +5,21 @@ pub mod event {
     use std::io::Write;
 
     #[derive(Debug, Deserialize, Serialize)]
-    pub struct Event {
+    pub struct EventWrapper {
         pub topic: String,
         pub key: Option<String>,
-        #[serde(skip_serializing)]
-        pub msg: String,
+        pub event: String,
     }
 
     pub trait EventWriterImpl: Send + Sync {
-        fn write(&mut self, events: Vec<Event>) -> Result<(), String>;
+        fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String>;
     }
 
     pub struct FileEventWriterImpl {}
     impl EventWriterImpl for FileEventWriterImpl {
-        fn write(&mut self, events: Vec<Event>) -> Result<(), String> {
+        fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String> {
             let event_buffer = events.iter().fold(vec![], |mut acc, e| {
-                acc.push(e.msg.as_bytes());
+                acc.push(e.event.as_bytes());
                 acc
             }).concat();
             let options = OpenOptions::new()
@@ -41,7 +40,7 @@ pub mod event {
 
     pub struct NoopEventWriterImpl {}
     impl EventWriterImpl for NoopEventWriterImpl {
-        fn write(&mut self, _events: Vec<Event>) -> Result<(), String> {
+        fn write(&mut self, _events: Vec<EventWrapper>) -> Result<(), String> {
             Ok(())
         }
     }
@@ -67,17 +66,17 @@ pub mod event {
             }
         }
 
-        pub fn write(&mut self, event: Event) -> Result<(), String> {
+        pub fn write(&mut self, event: EventWrapper) -> Result<(), String> {
             self.write_all(vec![event])
         }
 
-        pub fn write_all(&mut self, events: Vec<Event>) -> Result<(), String> {
+        pub fn write_all(&mut self, events: Vec<EventWrapper>) -> Result<(), String> {
             self.writer_impl.write(events)
         }
     }
 
     pub trait EventReaderImpl: Send + Sync {
-        fn read(&mut self) -> Result<Vec<Event>, String>;
+        fn read(&mut self) -> Result<Vec<EventWrapper>, String>;
     }
 
     pub struct EventReader {
@@ -89,7 +88,7 @@ pub mod event {
             EventReader { reader_impl }
         }
 
-        pub fn read(&mut self) -> Result<Vec<Event>, String> {
+        pub fn read(&mut self) -> Result<Vec<EventWrapper>, String> {
             self.reader_impl.read()
         }
     }

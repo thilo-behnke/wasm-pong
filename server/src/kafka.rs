@@ -9,7 +9,7 @@ use kafka::producer::{Partitioner, Producer, Record, RequiredAcks, Topics};
 use log::{debug, error, info, trace};
 use serde::Deserialize;
 
-use pong::event::event::{Event, EventReaderImpl, EventWriterImpl};
+use pong::event::event::{EventWrapper, EventReaderImpl, EventWriterImpl};
 use crate::session::Session;
 
 pub struct KafkaSessionEventWriterImpl {
@@ -53,28 +53,28 @@ impl KafkaDefaultEventWriterImpl {
 }
 
 impl EventWriterImpl for KafkaSessionEventWriterImpl {
-    fn write(&mut self, events: Vec<Event>) -> Result<(), String> {
+    fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String> {
         write_events(events, &mut self.producer)
     }
 }
 
 impl EventWriterImpl for KafkaDefaultEventWriterImpl {
-    fn write(&mut self, events: Vec<Event>) -> Result<(), String> {
+    fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String> {
         write_events(events, &mut self.producer)
     }
 }
 
-fn write_events<T>(events: Vec<Event>, producer: &mut Producer<T>) -> Result<(), String> where T : Partitioner {
+fn write_events<T>(events: Vec<EventWrapper>, producer: &mut Producer<T>) -> Result<(), String> where T : Partitioner {
     let mut records_without_key = vec![];
     let mut records_with_key = vec![];
     for event in events.iter() {
         match &event.key {
             Some(key) => {
-                let record = Record::from_key_value(&event.topic, key.clone(), event.msg.clone());
+                let record = Record::from_key_value(&event.topic, key.clone(), event.event.clone());
                 records_with_key.push(record);
             }
             None => {
-                let record = Record::from_value(&event.topic, event.msg.clone());
+                let record = Record::from_value(&event.topic, event.event.clone());
                 records_without_key.push(record);
             }
         }
@@ -128,13 +128,13 @@ impl KafkaEventReaderImpl {
 }
 
 impl EventReaderImpl for KafkaEventReaderImpl {
-    fn read(&mut self) -> Result<Vec<Event>, String> {
+    fn read(&mut self) -> Result<Vec<EventWrapper>, String> {
         self.consume()
     }
 }
 
 impl KafkaEventReaderImpl {
-    fn consume(&mut self) -> Result<Vec<Event>, String> {
+    fn consume(&mut self) -> Result<Vec<EventWrapper>, String> {
         debug!("kafka consumer called to consume messages for {:?} / {:?}", self.topics, self.partitions);
         let polled = self.consumer.poll().unwrap();
         let message_sets: Vec<MessageSet<'_>> = polled.iter().collect();
@@ -145,10 +145,10 @@ impl KafkaEventReaderImpl {
             let partition = ms.partition();
             trace!("querying kafka topic={} partition={}", topic, partition);
             for m in ms.messages() {
-                let event = Event {
+                let event = EventWrapper {
                     topic: String::from(topic),
                     key: Some(std::str::from_utf8(m.key).unwrap().parse().unwrap()),
-                    msg: std::str::from_utf8(m.value).unwrap().parse().unwrap(),
+                    event: std::str::from_utf8(m.value).unwrap().parse().unwrap(),
                 };
                 topic_event_count += 1;
                 events.push(event);
@@ -186,7 +186,7 @@ impl KafkaSessionEventReaderImpl {
 }
 
 impl EventReaderImpl for KafkaSessionEventReaderImpl {
-    fn read(&mut self) -> Result<Vec<Event>, String> {
+    fn read(&mut self) -> Result<Vec<EventWrapper>, String> {
         self.inner.read()
     }
 }

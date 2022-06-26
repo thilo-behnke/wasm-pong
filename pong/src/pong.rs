@@ -158,7 +158,7 @@ pub mod pong_collisions {
 }
 
 pub mod pong_events {
-    use crate::event::event::{Event, EventWriter};
+    use crate::event::event::{EventWrapper, EventWriter};
     use crate::geom::vector::Vector;
     use serde::Serialize;
 

@@ -183,13 +183,13 @@ impl WebsocketHandler for DefaultWebsocketHandler {
             );
             loop {
                 trace(&websocket_session_write_copy, "reading messages from kafka");
-                let messages = event_reader.read_from_session();
-                if let Err(e) = messages {
+                let events = event_reader.read_from_session();
+                if let Err(e) = events {
                     error(&websocket_session_write_copy, &format!("Failed to read messages from kafka: {:?}", e));
                     continue;
                 }
-                trace(&websocket_session_write_copy, &format!("read messages for websocket_session from consumer: {:?}", messages));
-                let messages = messages.unwrap();
+                trace(&websocket_session_write_copy, &format!("read messages for websocket_session from consumer: {:?}", events));
+                let messages = events.unwrap().into_iter().map(|e| e.event).collect::<Vec<String>>();
                 if messages.len() == 0 {
                     trace(&websocket_session_write_copy, "no new messages from kafka.");
                 } else {

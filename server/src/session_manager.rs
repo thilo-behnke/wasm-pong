@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 
-use pong::event::event::{Event, EventReader, EventWriter};
+use pong::event::event::{EventWrapper, EventReader, EventWriter};
 
 use crate::hash::Hasher;
 use crate::kafka::{
@@ -114,7 +114,6 @@ impl SessionManager {
     where
         T: SessionEvent,
     {
-        let json_event = serde_json::to_string(&session_event).unwrap();
         let session_id = session_event.session_id();
         let session_producer = match self.session_producers.get_mut(session_id) {
             Some(p) => p,
@@ -124,19 +123,22 @@ impl SessionManager {
                 self.session_producers.get_mut(session_id).expect("failed to retrieve newly created session writer")
             }
         };
-        let session_event = Event {
-            topic: "session".to_owned(),
-            key: None,
-            msg: json_event,
-        };
+        let json_event = serde_json::to_string(&session_event);
+        if let Err(e) = json_event {
+            let error = format!("failed to serialize session event: {}", e);
+            error!("{}", error);
+            return Err(error);
+        }
+        let json_event = json_event.unwrap();
+        info!("preparing to write session event to kafka: {}", json_event);
         let serialized_event = serde_json::to_string(&session_event).expect("failed to serialize session event");
-        let session_event_write = session_producer.write_to_session("session", vec![&serialized_event]);
+        let session_event_write = session_producer.write_to_session("session", vec![&json_event]);
         if let Err(e) = session_event_write {
             let message = format!("Failed to write session event to kafka: {:?}", e);
             println!("{}", e);
             return Err(message.to_owned());
         }
-        info!("successfully produced session event.");
+        info!("successfully produced session event: {:?}", serialized_event);
         return Ok(());
     }
 
@@ -210,8 +212,8 @@ pub struct SessionWriter {
 impl SessionWriter {
     pub fn write_to_session(&mut self, topic: &str, messages: Vec<&str>) -> Result<(), String> {
         let events = messages.into_iter().map(|e| {
-            Event {
-                msg: e.to_owned(),
+            EventWrapper {
+                event: e.to_owned(),
                 key: Some(self.session.id.to_string()),
                 topic: topic.to_owned(),
             }
@@ -227,7 +229,7 @@ pub struct SessionReader {
 }
 
 impl SessionReader {
-    pub fn read_from_session(&mut self) -> Result<Vec<Event>, String> {
+    pub fn read_from_session(&mut self) -> Result<Vec<EventWrapper>, String> {
         self.reader.read()
     }
 }

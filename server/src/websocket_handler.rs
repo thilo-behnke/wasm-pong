@@ -104,7 +104,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                 let mut any_error = false;
                                 match session_snapshot {
                                     SessionSnapshot::Host(session_id, payload) => {
-                                        trace!("received message is HOST snapshot");
+                                        trace(&websocket_session_read_copy, "received message is HOST snapshot");
                                         let move_events = payload.objects.iter().map(|o| {
                                             o.to_move_event(&session_id, payload.ts)
                                         }).collect();
@@ -119,7 +119,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                         // TODO: Status events.
                                     },
                                     SessionSnapshot::Peer(session_id, payload) => {
-                                        trace!("received message is PEER snapshot");
+                                        trace(&websocket_session_read_copy, "received message is PEER snapshot");
                                         let input_event = InputEventPayload {
                                             inputs: payload.inputs,
                                             player: websocket_session_read_copy.player.id.to_owned(),
@@ -177,34 +177,36 @@ impl WebsocketHandler for DefaultWebsocketHandler {
         });
         let websocket_session_write_copy = self.websocket_session.clone();
         tokio::spawn(async move {
-            println!(
-                "Ready to read messages from kafka: {:?}",
-                websocket_session_write_copy
+            debug(
+                &websocket_session_write_copy,
+                &format!(
+                    "ready to read messages from kafka: {:?}",
+                    websocket_session_write_copy
+                )
             );
             loop {
-                // println!("Reading messages from kafka.");
+                trace(&websocket_session_write_copy, "reading messages from kafka");
                 let messages = event_reader.read_from_session();
-                if let Err(_) = messages {
-                    eprintln!(
-                        "Failed to read messages from kafka for session: {:?}",
-                        websocket_session_write_copy
-                    );
+                if let Err(e) = messages {
+                    error(&websocket_session_write_copy, &format!("Failed to read messages from kafka: {:?}", e));
                     continue;
                 }
-                // println!("Read messages for websocket_session {:?} from consumer: {:?}", websocket_session_write_copy, messages);
+                trace(&websocket_session_write_copy, &format!("read messages for websocket_session from consumer: {:?}", messages));
                 let messages = messages.unwrap();
                 if messages.len() == 0 {
-                    // println!("No new messages from kafka.");
+                    trace(&websocket_session_write_copy, "no new messages from kafka.");
                 } else {
-                    // println!("{} new messages from kafka.", messages.len());
+                    trace(&websocket_session_write_copy, &format!("{} new messages from kafka.", messages.len()));
                     let json = serde_json::to_string(&messages).unwrap();
                     let message = Message::from(json);
-                    // println!("Sending kafka messages through websocket.");
+                    trace(&websocket_session_write_copy, "sending kafka messages through websocket.");
                     let send_res = websocket_writer.send(message).await;
                     if let Err(e) = send_res {
-                        eprintln!(
-                            "Failed to send message to websocket for session {:?}: {:?}",
-                            websocket_session_write_copy, e
+                        error(
+                            &websocket_session_write_copy,
+                            &format!(
+                                "Failed to send message to websocket: {:?}", e
+                            )
                         );
                         break;
                     }
@@ -212,6 +214,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                 // Avoid starvation of read thread (?)
                 // TODO: How to avoid this? This is very bad for performance.
                 sleep(Duration::from_millis(1)).await;
+                trace(&websocket_session_write_copy, "kafka read done, back to sleep")
             }
         });
         Ok(())

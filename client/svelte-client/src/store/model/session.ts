@@ -67,4 +67,10 @@ export type PeerSessionSnapshot = {
     ts: number
 }
 
-export type SessionSnapshot = HostSessionSnapshot | PeerSessionSnapshot;
+export type ObserverSessionSnapshot = {
+    session_id: string,
+    player: string,
+    ts: number
+}
+
+export type SessionSnapshot = HostSessionSnapshot | PeerSessionSnapshot | ObserverSessionSnapshot;

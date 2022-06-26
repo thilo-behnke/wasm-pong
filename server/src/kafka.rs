@@ -70,11 +70,11 @@ fn write_events<T>(events: Vec<Event>, producer: &mut Producer<T>) -> Result<(),
     for event in events.iter() {
         match &event.key {
             Some(key) => {
-                let record = Record::from_key_value(&event.topic, key.clone(), event.payload.clone());
+                let record = Record::from_key_value(&event.topic, key.clone(), event.msg.clone());
                 records_with_key.push(record);
             }
             None => {
-                let record = Record::from_value(&event.topic, event.payload.clone());
+                let record = Record::from_value(&event.topic, event.msg.clone());
                 records_without_key.push(record);
             }
         }
@@ -148,7 +148,7 @@ impl KafkaEventReaderImpl {
                 let event = Event {
                     topic: String::from(topic),
                     key: Some(std::str::from_utf8(m.key).unwrap().parse().unwrap()),
-                    payload: std::str::from_utf8(m.value).unwrap().parse().unwrap(),
+                    msg: std::str::from_utf8(m.value).unwrap().parse().unwrap(),
                 };
                 topic_event_count += 1;
                 events.push(event);

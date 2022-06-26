@@ -3,16 +3,13 @@ pub mod event {
     use std::fmt::Debug;
     use std::fs::OpenOptions;
     use std::io::Write;
-    use serde::de::DeserializeOwned;
 
     #[derive(Debug, Deserialize, Serialize)]
     pub struct Event {
         pub topic: String,
         pub key: Option<String>,
-        pub payload: Box<dyn EventPayload>,
+        pub msg: String,
     }
-
-    pub trait EventPayload : Debug + DeserializeOwned + Serialize {}
 
     pub trait EventWriterImpl: Send + Sync {
         fn write(&mut self, events: Vec<Event>) -> Result<(), String>;
@@ -22,14 +19,7 @@ pub mod event {
     impl EventWriterImpl for FileEventWriterImpl {
         fn write(&mut self, events: Vec<Event>) -> Result<(), String> {
             let event_buffer = events.iter().fold(vec![], |mut acc, e| {
-                let serialized_msg = serde_json::to_string(&e.payload);
-                if let Err(e) = serialized_msg {
-                    // TODO: Improve error handling.
-                    return acc;
-                }
-                let serialized_msg = serialized_msg.unwrap();
-                let bytes = serialized_msg.into_bytes();
-                acc.push(bytes);
+                acc.push(e.msg.as_bytes());
                 acc
             }).concat();
             let options = OpenOptions::new()

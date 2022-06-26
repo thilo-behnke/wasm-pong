@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 
-use pong::event::event::{Event, EventPayload, EventReader, EventWriter};
+use pong::event::event::{Event, EventReader, EventWriter};
 
 use crate::hash::Hasher;
 use crate::kafka::{
@@ -127,7 +127,7 @@ impl SessionManager {
         let session_event = Event {
             topic: "session".to_owned(),
             key: None,
-            payload: json_event,
+            msg: json_event,
         };
         let serialized_event = serde_json::to_string(&session_event).expect("failed to serialize session event");
         let session_event_write = session_producer.write_to_session("session", vec![&serialized_event]);
@@ -208,10 +208,10 @@ pub struct SessionWriter {
 }
 
 impl SessionWriter {
-    pub fn write_to_session<T>(&mut self, topic: &str, events: Vec<&EventPayload>) -> Result<(), String> where T : SessionEvent {
-        let events = events.into_iter().map(|e| {
+    pub fn write_to_session(&mut self, topic: &str, messages: Vec<&str>) -> Result<(), String> {
+        let events = messages.into_iter().map(|e| {
             Event {
-                payload: e,
+                msg: e.to_owned(),
                 key: Some(self.session.id.to_string()),
                 topic: topic.to_owned(),
             }

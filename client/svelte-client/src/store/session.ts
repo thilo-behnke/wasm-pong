@@ -49,7 +49,7 @@ const networkEvents = readable<GameEventWrapper[]>([], function(set) {
     const websocket = writable<WebSocket>(null);
     const sessionId = writable<string>(null)
 
-    sessionStore.subscribe(session => {
+    const unsubscribe = sessionStore.subscribe(session => {
         if (!session || isLocalSession(session)) {
             return;
         }
@@ -89,6 +89,7 @@ const networkEvents = readable<GameEventWrapper[]>([], function(set) {
 
     return () => {
         get(websocket).close();
+        unsubscribe();
     }
 })
 
@@ -111,55 +112,63 @@ export const sessionInputs = readable([], function(setInputs) {
     let player2Inputs = writable([]);
     setInputs([]);
 
-    sessionStore.subscribe(session => {
+    const unsubscribe = sessionStore.subscribe(session => {
         if (isLocalSession(session)) {
-            player1KeyboardInputs.subscribe(inputs => {
+            const unsub1 = player1KeyboardInputs.subscribe(inputs => {
                 player1Inputs.set(inputs)
                 setInputs([...get(player1Inputs), ...get(player2Inputs)])
             })
-            player2KeyboardInputs.subscribe(inputs => {
+            const unsub2 = player2KeyboardInputs.subscribe(inputs => {
                 player2Inputs.set(inputs)
                 setInputs([...get(player1Inputs), ...get(player2Inputs)])
             })
             return () => {
+                unsub1();
+                unsub2();
             }
         }
 
         if (session.type === SessionType.HOST) {
-            player1KeyboardInputs.subscribe(inputs => {
+            const unsub1 = player1KeyboardInputs.subscribe(inputs => {
                 player1Inputs.set(inputs)
                 setInputs([...get(player1Inputs), ...get(player2Inputs)])
             })
-            networkInputEvents.subscribe(inputs => {
+            const unsub2 = networkInputEvents.subscribe(inputs => {
                 player2Inputs.set(inputs)
                 setInputs([...get(player1Inputs), ...get(player2Inputs)])
             })
             return () => {
+                unsub1();
+                unsub2();
             }
         }
         if (session.type === SessionType.PEER) {
-            networkInputEvents.subscribe(inputs => {
+            const unsub1 = networkInputEvents.subscribe(inputs => {
                 player1Inputs.set(inputs)
                 setInputs([...get(player1Inputs), ...get(player2Inputs)])
             })
-            player2KeyboardInputs.subscribe(inputs => {
+            const unsub2 = player2KeyboardInputs.subscribe(inputs => {
                 player2Inputs.set(inputs)
                 setInputs([...get(player1Inputs), ...get(player2Inputs)])
             })
             return () => {
+                unsub1();
+                unsub2();
             }
         }
         if (session.type === SessionType.OBSERVER) {
             const events = networkInputEvents;
-            events.subscribe(inputs => {
+            const unsub1 = events.subscribe(inputs => {
                 player1Inputs.set(inputs)
                 setInputs([...get(player1Inputs), ...get(player2Inputs)])
             })
-            events.subscribe(inputs => {
+            const unsub2 = events.subscribe(inputs => {
                 player2Inputs.set(inputs)
                 setInputs([...get(player1Inputs), ...get(player2Inputs)])
             })
             return () => {
+                unsub1();
+                unsub2();
             }
         }
         throw new Error(`unknown session type ${session.type}`)
@@ -193,7 +202,7 @@ export const networkSession = (type: SessionType.HOST | SessionType.PEER | Sessi
         })
     }
 
-    sessionStore.subscribe(session => {
+    const unsubscribe = sessionStore.subscribe(session => {
         set({loading: false, session})
     })
 
@@ -209,5 +218,9 @@ export const networkSession = (type: SessionType.HOST | SessionType.PEER | Sessi
             break;
         default:
             throw new Error("Unable to handle session type: " + type)
+    }
+
+    return () => {
+        unsubscribe();
     }
 })

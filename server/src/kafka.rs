@@ -160,7 +160,7 @@ impl KafkaEventReaderImpl {
             self.consumer.consume_messageset(ms).unwrap();
         }
         self.consumer.commit_consumed().unwrap();
-        debug!("kafka consumed {} messages for {:?} / {:?}", events.len(), self.topics, self.partitions);
+        trace!("kafka consumed {} messages for {:?} / {:?}", events.len(), self.topics, self.partitions);
         Ok(events)
     }
 }

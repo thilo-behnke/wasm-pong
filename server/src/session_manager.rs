@@ -1,3 +1,4 @@
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 
 use pong::event::event::{Event, EventReader, EventWriter};
@@ -38,6 +39,7 @@ impl SessionManager {
     }
 
     pub async fn create_session(&mut self, player: Player) -> Result<Session, String> {
+        info!("called to create new session by player {:?}", player);
         let add_partition_res = self.topic_manager.add_partition().await;
         if let Err(e) = add_partition_res {
             println!("Failed to create partition: {}", e);
@@ -129,12 +131,12 @@ impl SessionManager {
     ) -> Result<(SessionReader, SessionWriter), String> {
         let reader = self.get_session_reader(session_id, read_topics);
         if let Err(e) = reader {
-            println!("Failed to create session reader: {:?}", e);
+            error!("Failed to create session reader for session {}: {:?}", session_id, e);
             return Err("Failed to create session reader".to_string());
         }
         let writer = self.get_session_writer(session_id);
         if let Err(e) = writer {
-            println!("Failed to create session writer: {:?}", e);
+            error!("Failed to create session writer for session {}: {:?}", session_id, e);
             return Err("Failed to create session writer".to_string());
         }
         return Ok((reader.unwrap(), writer.unwrap()));

@@ -93,6 +93,8 @@ const networkEvents = readable<GameEventWrapper[]>([], function(set) {
     }
 })
 
+// TODO: Use websocket to write snapshots.
+
 export const networkSessionStateEvents = derived(networkEvents, $sessionEvents => {
     const sessionEvents = $sessionEvents.filter(({topic}) => topic === 'session').map(({event}) => event);
     if (!sessionEvents.length) {

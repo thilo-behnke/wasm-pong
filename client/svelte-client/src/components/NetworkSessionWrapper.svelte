@@ -7,8 +7,6 @@
     import api from "../api/session";
 
     export let session: NetworkSession;
-    let sessionEvents;
-    let networkSessionInputs;
     let joinLink;
 
     let cachedSessionId;
@@ -16,26 +14,22 @@
     $: if(!cachedSessionId && session) {
         cachedSessionId = session.session_id;
         console.log("NetworkSessionWrapper ready, now setting up sessionEvents")
-        sessionEvents = networkSessionStateEvents(session);
         joinLink = api.createJoinLink(session.session_id);
-    }
-
-    $: if (session && session.state === SessionState.RUNNING) {
-        networkSessionInputs = sessionInputs(session)
     }
 </script>
 
 {#if !session}
     <h3>no session</h3>
 {:else}
-    {JSON.stringify($sessionEvents)}
+    {JSON.stringify(session)}
+    {JSON.stringify($networkSessionStateEvents)}
     {#if session.state === SessionState.PENDING}
         <h3>waiting for other player...</h3>
         <CopyToClipboard text={joinLink}></CopyToClipboard>
     {:else if session.state === SessionState.CLOSED}
         <h3>game over!</h3>
     {:else if session.state === SessionState.RUNNING}
-        <slot inputs={$networkSessionInputs}></slot>
+        <slot inputs={$sessionInputs}></slot>
     {:else }
         <h3>unknown game state</h3>
     {/if}

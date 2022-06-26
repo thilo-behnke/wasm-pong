@@ -56,6 +56,7 @@ const networkEvents = readable<GameEventWrapper[]>([], function(set) {
         if (get(sessionId) === session.session_id) {
             return;
         }
+        sessionId.set(session.session_id);
         console.log("creating ws to receive/send websocket events for session: ", JSON.stringify(session))
         api.createEventWebsocket(session).then(ws => {
             console.log("ws successfully established: ", ws)
@@ -105,60 +106,64 @@ export const networkSessionStateEvents = derived(networkEvents, $sessionEvents =
 });
 
 const networkInputEvents = derived(networkEvents, $sessionEvents => $sessionEvents.filter(({topic}) => topic === 'input'));
-export const sessionInputs = (session: Session) => readable([], function(setInputs) {
+export const sessionInputs = readable([], function(setInputs) {
     let player1Inputs = writable([]);
     let player2Inputs = writable([]);
-    if (isLocalSession(session)) {
-        player1KeyboardInputs.subscribe(inputs => {
-            player1Inputs.set(inputs)
-            setInputs([...get(player1Inputs), ...get(player2Inputs)])
-        })
-        player2KeyboardInputs.subscribe(inputs => {
-            player2Inputs.set(inputs)
-            setInputs([...get(player1Inputs), ...get(player2Inputs)])
-        })
-        return () => {
-        }
-    }
+    setInputs([]);
 
-    if (session.type === SessionType.HOST) {
-        player1KeyboardInputs.subscribe(inputs => {
-            player1Inputs.set(inputs)
-            setInputs([...get(player1Inputs), ...get(player2Inputs)])
-        })
-        networkInputEvents.subscribe(inputs => {
-            player2Inputs.set(inputs)
-            setInputs([...get(player1Inputs), ...get(player2Inputs)])
-        })
-        return () => {
+    sessionStore.subscribe(session => {
+        if (isLocalSession(session)) {
+            player1KeyboardInputs.subscribe(inputs => {
+                player1Inputs.set(inputs)
+                setInputs([...get(player1Inputs), ...get(player2Inputs)])
+            })
+            player2KeyboardInputs.subscribe(inputs => {
+                player2Inputs.set(inputs)
+                setInputs([...get(player1Inputs), ...get(player2Inputs)])
+            })
+            return () => {
+            }
         }
-    }
-    if (session.type === SessionType.PEER) {
-        networkInputEvents.subscribe(inputs => {
-            player1Inputs.set(inputs)
-            setInputs([...get(player1Inputs), ...get(player2Inputs)])
-        })
-        player2KeyboardInputs.subscribe(inputs => {
-            player2Inputs.set(inputs)
-            setInputs([...get(player1Inputs), ...get(player2Inputs)])
-        })
-        return () => {
+
+        if (session.type === SessionType.HOST) {
+            player1KeyboardInputs.subscribe(inputs => {
+                player1Inputs.set(inputs)
+                setInputs([...get(player1Inputs), ...get(player2Inputs)])
+            })
+            networkInputEvents.subscribe(inputs => {
+                player2Inputs.set(inputs)
+                setInputs([...get(player1Inputs), ...get(player2Inputs)])
+            })
+            return () => {
+            }
         }
-    }
-    if (session.type === SessionType.OBSERVER) {
-        const events = networkInputEvents;
-        events.subscribe(inputs => {
-            player1Inputs.set(inputs)
-            setInputs([...get(player1Inputs), ...get(player2Inputs)])
-        })
-        events.subscribe(inputs => {
-            player2Inputs.set(inputs)
-            setInputs([...get(player1Inputs), ...get(player2Inputs)])
-        })
-        return () => {
+        if (session.type === SessionType.PEER) {
+            networkInputEvents.subscribe(inputs => {
+                player1Inputs.set(inputs)
+                setInputs([...get(player1Inputs), ...get(player2Inputs)])
+            })
+            player2KeyboardInputs.subscribe(inputs => {
+                player2Inputs.set(inputs)
+                setInputs([...get(player1Inputs), ...get(player2Inputs)])
+            })
+            return () => {
+            }
         }
-    }
-    throw new Error(`unknown session type ${session.type}`)
+        if (session.type === SessionType.OBSERVER) {
+            const events = networkInputEvents;
+            events.subscribe(inputs => {
+                player1Inputs.set(inputs)
+                setInputs([...get(player1Inputs), ...get(player2Inputs)])
+            })
+            events.subscribe(inputs => {
+                player2Inputs.set(inputs)
+                setInputs([...get(player1Inputs), ...get(player2Inputs)])
+            })
+            return () => {
+            }
+        }
+        throw new Error(`unknown session type ${session.type}`)
+    })
 })
 
 const sessionStore = writable<Session>(null)
@@ -180,13 +185,17 @@ export const networkSession = (type: SessionType.HOST | SessionType.PEER | Sessi
     function sessionCreator(fn) {
         set({loading: true});
         fn().then(session => {
-            set({loading: false, session, events: []});
+            set({loading: false, session});
             sessionStore.set(session);
         }).catch(e => {
             set({loading: false, error: {value: e, at: performance.now()}});
             sessionStore.set(null);
         })
     }
+
+    sessionStore.subscribe(session => {
+        set({loading: false, session})
+    })
 
     switch (type) {
         case SessionType.HOST:

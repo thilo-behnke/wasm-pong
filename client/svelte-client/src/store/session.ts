@@ -2,10 +2,10 @@ import {derived, get, readable, writable} from "svelte/store";
 import {keysPressed} from "./io";
 import api from "../api/session";
 import session from "../api/session";
-import type {LocalSession, NetworkSession, Session} from "./model/session";
+import type {LocalSession, NetworkSession, Session, SessionSnapshot} from "./model/session";
 import {isLocalSession, SessionState, SessionType} from "./model/session";
 import type {NetworkStore} from "./network";
-import type {GameEventWrapper, SessionEventPayload} from "./model/event";
+import type {GameEvent, GameEventWrapper, SessionEventPayload} from "./model/event";
 
 export type Input = {
     input: 'UP' | 'DOWN',
@@ -17,7 +17,7 @@ const player1KeyboardInputs = derived(
     keysPressed,
     $keysPressed => {
         return $keysPressed.map((key): Input => {
-            switch(key.toLowerCase()) {
+            switch (key.toLowerCase()) {
                 case 'w':
                     return {input: 'UP', obj_id: 0, player: 1};
                 case 's':
@@ -33,7 +33,7 @@ const player2KeyboardInputs = derived(
     keysPressed,
     $keysPressed => {
         return $keysPressed.map((key): Input => {
-            switch(key.toLowerCase()) {
+            switch (key.toLowerCase()) {
                 case 'arrowup':
                     return {input: 'UP', obj_id: 1, player: 2}
                 case 'arrowdown':
@@ -45,9 +45,16 @@ const player2KeyboardInputs = derived(
     }
 )
 
-const networkEvents = readable<GameEventWrapper[]>([], function(set) {
+export type NetworkEventStore = {
+    initialized: boolean,
+    consume?: () => GameEvent[],
+    produce?: (snapshot: SessionSnapshot) => void
+}
+
+const networkEvents = readable<NetworkEventStore>({initialized: false}, function (set) {
     const websocket = writable<WebSocket>(null);
     const sessionId = writable<string>(null)
+    const eventBuffer = writable<GameEventWrapper[]>([]);
 
     const unsubscribe = sessionStore.subscribe(session => {
         if (!session || isLocalSession(session)) {
@@ -70,8 +77,7 @@ const networkEvents = readable<GameEventWrapper[]>([], function(set) {
                 // TODO: Hotfix, would be better to have clean serialization in the backend...
                 events = events.map(({event, ...rest}) => ({...rest, event: JSON.parse(event)}))
                 console.debug("Parsed events: ", events)
-                set(events);
-                set([]);
+                eventBuffer.set([...get(eventBuffer), ...events]);
             }
             ws.onerror = err => {
                 console.error("ws error: ", err)
@@ -81,6 +87,18 @@ const networkEvents = readable<GameEventWrapper[]>([], function(set) {
             }
 
             websocket.set(ws);
+
+            set({
+                initialized: true,
+                consume: () => {
+                    const events = get(eventBuffer);
+                    eventBuffer.set([]);
+                    return events;
+                },
+                produce: snapshot => {
+                    get(websocket).send(JSON.stringify(snapshot))
+                }
+            });
         });
 
         set([]);
@@ -100,16 +118,20 @@ export const networkSessionStateEvents = derived(networkEvents, $sessionEvents =
     if (!sessionEvents.length) {
         return [];
     }
-    const latestSessionEvent = sessionEvents[sessionEvents.length-1] as SessionEventPayload;
+    const latestSessionEvent = sessionEvents[sessionEvents.length - 1] as SessionEventPayload;
     const currentSession = get(sessionStore) as NetworkSession;
-    const session: Session = {...(latestSessionEvent.session as NetworkSession), you: currentSession.you, type: currentSession.type}
+    const session: Session = {
+        ...(latestSessionEvent.session as NetworkSession),
+        you: currentSession.you,
+        type: currentSession.type
+    }
     console.debug("updating current session: ", session)
     sessionStore.set(session);
     return sessionEvents;
 });
 
 const networkInputEvents = derived(networkEvents, $sessionEvents => $sessionEvents.filter(({topic}) => topic === 'input'));
-export const sessionInputs = readable([], function(setInputs) {
+export const sessionInputs = readable([], function (setInputs) {
     let player1Inputs = writable([]);
     let player2Inputs = writable([]);
     setInputs([]);
@@ -179,7 +201,7 @@ export const sessionInputs = readable([], function(setInputs) {
 
 const sessionStore = writable<Session>(null)
 
-export const localSession = () => readable<SessionStore>(null, function(set) {
+export const localSession = () => readable<SessionStore>(null, function (set) {
     const session: LocalSession = {session_id: "local", type: SessionType.LOCAL, state: SessionState.RUNNING};
     set({loading: true});
     setTimeout(() => {
@@ -192,7 +214,7 @@ export type SessionStore = NetworkStore & {
     session?: Session
 }
 
-export const networkSession = (type: SessionType.HOST | SessionType.PEER | SessionType.OBSERVER, sessionId?: string) => readable<SessionStore>(null, function(set) {
+export const networkSession = (type: SessionType.HOST | SessionType.PEER | SessionType.OBSERVER, sessionId?: string) => readable<SessionStore>(null, function (set) {
     function sessionCreator(fn) {
         set({loading: true});
         fn().then(session => {

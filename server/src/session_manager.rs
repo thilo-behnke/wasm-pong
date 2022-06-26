@@ -50,7 +50,12 @@ impl SessionManager {
         let session = Session::new(session_partition_id, session_id.clone(), player.clone());
         info!("successfully created session: {:?}", session);
         self.sessions.push(session.clone());
-        let write_res = self.write_to_producer(session_created(session.clone(), player.clone()));
+        let session_created = SessionEvent::Created(SessionEventPayload {
+            session: session.clone(),
+            actor: player,
+            reason: format!("session created")
+        });
+        let write_res = self.write_to_producer(&session_created);
         if let Err(e) = write_res {
             let index = self.sessions.iter().position(|s| s.session_id == session_id);
             if let Some(i) = index {
@@ -63,11 +68,6 @@ impl SessionManager {
             );
         }
         info!("successfully persisted create session event.");
-        let session_created = SessionEvent::Created(SessionEventPayload {
-            session,
-            actor: player,
-            reason: format!("session created")
-        });
         Ok(session_created)
     }
 
@@ -102,9 +102,14 @@ impl SessionManager {
             session.state = SessionState::RUNNING;
             session.clone()
         };
+        let session_joined_event = SessionEvent::Joined(SessionEventPayload {
+            session: updated_session.clone(),
+            reason: "session joined".to_owned(),
+            actor: player
+        });
         {
             let write_res =
-                self.write_to_producer(session_joined(updated_session.clone(), player.clone()));
+                self.write_to_producer(&session_joined_event);
             if let Err(e) = write_res {
                 eprintln!(
                     "Failed to write session joined event for {:?} to producer: {}",
@@ -113,17 +118,10 @@ impl SessionManager {
             }
         };
         println!("sessions = {:?}", self.sessions);
-        let session_joined_event = SessionEvent::Joined(SessionEventPayload {
-            session: updated_session,
-            reason: "session joined".to_owned(),
-            actor: player
-        });
         Ok(session_joined_event)
     }
 
-    fn write_to_producer<T>(&mut self, session_event: T) -> Result<(), String>
-    where
-        T: SessionAwareEvent,
+    fn write_to_producer(&mut self, session_event: &SessionEvent) -> Result<(), String>
     {
         let session_id = session_event.session_id();
         let session_producer = match self.session_producers.get_mut(session_id) {
@@ -242,68 +240,4 @@ impl SessionReader {
     pub fn read_from_session(&mut self) -> Result<Vec<EventWrapper>, String> {
         self.reader.read()
     }
-}
-
-pub trait SessionAwareEvent: Serialize {
-    fn session_id(&self) -> &str;
-}
-
-#[derive(Deserialize, Serialize)]
-struct SessionCreatedEvent {
-    event_type: SessionEventType,
-    session: Session,
-    player: Player,
-}
-
-impl SessionCreatedEvent {
-    pub fn new(session: Session, player: Player) -> SessionCreatedEvent {
-        SessionCreatedEvent {
-            event_type: SessionEventType::CREATED,
-            session,
-            player,
-        }
-    }
-}
-
-impl SessionAwareEvent for SessionCreatedEvent {
-    fn session_id(&self) -> &str {
-        &self.session.session_id
-    }
-}
-
-#[derive(Deserialize, Serialize)]
-struct SessionJoinedEvent {
-    event_type: SessionEventType,
-    session: Session,
-    player: Player,
-}
-
-impl SessionJoinedEvent {
-    pub fn new(session: Session, player: Player) -> SessionJoinedEvent {
-        SessionJoinedEvent {
-            event_type: SessionEventType::JOINED,
-            session,
-            player,
-        }
-    }
-}
-
-impl SessionAwareEvent for SessionJoinedEvent {
-    fn session_id(&self) -> &str {
-        &self.session.session_id
-    }
-}
-
-fn session_created(session: Session, player: Player) -> SessionCreatedEvent {
-    SessionCreatedEvent::new(session, player)
-}
-
-fn session_joined(session: Session, player: Player) -> SessionJoinedEvent {
-    SessionJoinedEvent::new(session, player)
-}
-
-#[derive(Deserialize, Serialize)]
-enum SessionEventType {
-    CREATED,
-    JOINED,
 }

@@ -69,11 +69,25 @@ pub enum SessionEvent {
     Closed(SessionEventPayload),
 }
 
+impl SessionEvent {
+    pub fn session_id(&self) -> &str {
+        return match self {
+            SessionEvent::Created(e) | SessionEvent::Joined(e) | SessionEvent::Closed(e) => e.session_id()
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct SessionEventPayload {
     pub session: Session,
     pub actor: Player,
     pub reason: String,
+}
+
+impl SessionEventPayload {
+    pub fn session_id(&self) -> &str {
+        return &self.session.session_id;
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

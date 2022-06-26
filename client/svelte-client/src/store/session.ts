@@ -45,7 +45,6 @@ const player2KeyboardInputs = derived(
 
 const networkEvents = (session: NetworkSession) => readable([], function(set) {
     const websocket = writable<WebSocket>(null);
-    const events = writable([]);
 
     console.log("creating ws to receive/send websocket events for session: ", JSON.stringify(session))
     api.createEventWebsocket(session).then(ws => {
@@ -56,11 +55,12 @@ const networkEvents = (session: NetworkSession) => readable([], function(set) {
         }
         ws.onmessage = event => {
             console.debug("Received event: ", event)
-            let data = JSON.parse(event.data);
+            let events = JSON.parse(event.data);
             // TODO: Hotfix, would be better to have clean serialization in the backend...
-            data = data.map(({event, ...rest}) => ({...rest, event: JSON.parse(event)}))
-            console.debug("Parsed events: ", data)
-            events.set([...get(events), ...data]);
+            events = events.map(({event, ...rest}) => ({...rest, event: JSON.parse(event)}))
+            console.debug("Parsed events: ", events)
+            set(events);
+            set([]);
         }
         ws.onerror = err => {
             console.error("ws error: ", err)
@@ -73,7 +73,6 @@ const networkEvents = (session: NetworkSession) => readable([], function(set) {
     });
 
     const interval = setInterval(() => {
-        set(get(events));
     }, 0)
 
     set([]);
@@ -90,8 +89,9 @@ export const networkSessionStateEvents = (session: NetworkSession): Readable<unk
         return [];
     }
     const latestSessionEvent = sessionEvents[sessionEvents.length-1];
-    console.debug("updating current session: ", latestSessionEvent.session)
-    sessionStore.set(latestSessionEvent.session);
+    const session = {...latestSessionEvent.session, you: latestSessionEvent.actor, type: get(sessionStore).type}
+    console.debug("updating current session: ", session)
+    sessionStore.set(session);
     return sessionEvents;
 });
 

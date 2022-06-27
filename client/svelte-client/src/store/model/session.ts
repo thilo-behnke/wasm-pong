@@ -67,10 +67,22 @@ export type PeerSessionSnapshot = {
     ts: number
 }
 
-export type ObserverSessionSnapshot = {
+export type SessionSnapshot = HostSessionSnapshot | PeerSessionSnapshot;
+
+export type Heartbeat = {
     session_id: string,
     player: string,
     ts: number
 }
 
-export type SessionSnapshot = HostSessionSnapshot | PeerSessionSnapshot | ObserverSessionSnapshot;
+export enum MessageType {
+    Snapshot = "SessionSnapshot", Heartbeat = "HeartBeat"
+}
+
+export type Message = {
+    msg_type: MessageType.Snapshot,
+    payload: SessionSnapshot
+} | {
+    msg_type: MessageType.Heartbeat,
+    payload: Heartbeat
+}

@@ -24,11 +24,8 @@
             case SessionType.PEER:
                 networkEvents.produce({inputs: $sessionInputs, session_id: session.session_id, player: session.you.id, ts: Date.now()})
                 break;
-            case SessionType.OBSERVER:
-                networkEvents.produce({session_id: session.session_id, player: session.you.id, ts: Date.now()})
-                break;
             default:
-                throw new Error("session snapshot update not implemented for session type " + session.type);
+                // noop
         }
     }
 </script>

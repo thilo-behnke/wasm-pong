@@ -2,10 +2,10 @@ import {derived, get, readable, writable} from "svelte/store";
 import {keysPressed} from "./io";
 import api from "../api/session";
 import session from "../api/session";
-import type {LocalSession, NetworkSession, Session, SessionSnapshot} from "./model/session";
-import {isLocalSession, SessionState, SessionType} from "./model/session";
+import type {LocalSession, Message, NetworkSession, Session, SessionSnapshot} from "./model/session";
+import {isLocalSession, MessageType, SessionState, SessionType} from "./model/session";
 import type {NetworkStore} from "./network";
-import type {GameEvent, GameEventWrapper, SessionEventPayload} from "./model/event";
+import type {GameEventWrapper, SessionEventPayload} from "./model/event";
 
 const sessionStore = writable<Session>(null)
 
@@ -51,9 +51,10 @@ function createNetworkEvents() {
     const {subscribe, set, update} = writable<GameEventWrapper[]>([]);
 
     const websocket = writable<WebSocket>(null);
-    const sessionId = writable<string>(null)
+    const sessionId = writable<string>(null);
+    const lastSnapshot = writable<SessionSnapshot>(null);
 
-    const unsubscribe = sessionStore.subscribe(session => {
+    const unsubscribeSession = sessionStore.subscribe(session => {
         if (!session || isLocalSession(session)) {
             return;
         }
@@ -87,19 +88,32 @@ function createNetworkEvents() {
         });
     })
 
-    function produce(sessionSnapshot: SessionSnapshot) {
+    const interval = setInterval(() => {
+        const last = get(lastSnapshot);
+        if (last === null) {
+            return;
+        }
+        const now = Date.now();
+        if (now - last.ts < 1_000) {
+            return
+        }
+        console.debug("sending heartbeat")
+        sendMessage({msg_type: MessageType.Heartbeat, payload: {session_id: last.session_id, player: last.player, ts: now}});
+    }, 1_000)
+
+    function sendMessage(message: Message) {
         const ws = get(websocket);
         if (!ws) {
             return;
         }
-        console.debug("producing snapshot to ws: ", sessionSnapshot);
-        ws.send(JSON.stringify(sessionSnapshot));
+        console.debug("producing message to ws: ", message);
+        ws.send(JSON.stringify(message));
     }
 
-    // return () => {
-    //     get(websocket).close();
-    //     unsubscribe();
-    // }
+    function produce(snapshot: SessionSnapshot) {
+        lastSnapshot.set(snapshot);
+        sendMessage({msg_type: MessageType.Snapshot, payload: snapshot});
+    }
 
     // TODO: Handle unsubscribe
     return {

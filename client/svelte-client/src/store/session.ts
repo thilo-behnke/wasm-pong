@@ -47,11 +47,6 @@ const player2KeyboardInputs = derived(
     }
 )
 
-export type NetworkEventStore = {
-    subscribe: any,
-    produce: (snapshot: SessionSnapshot) => void
-}
-
 function createNetworkEvents() {
     const {subscribe, set, update} = writable<GameEventWrapper[]>([]);
 
@@ -94,6 +89,9 @@ function createNetworkEvents() {
 
     function produce(sessionSnapshot: SessionSnapshot) {
         const ws = get(websocket);
+        if (!ws) {
+            return;
+        }
         console.debug("producing snapshot to ws: ", sessionSnapshot);
         ws.send(JSON.stringify(sessionSnapshot));
     }
@@ -110,7 +108,7 @@ function createNetworkEvents() {
     }
 }
 
-const networkEvents = createNetworkEvents();
+export const networkEvents = createNetworkEvents();
 
 // TODO: Use websocket to write snapshots.
 

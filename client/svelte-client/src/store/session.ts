@@ -7,6 +7,8 @@ import {isLocalSession, SessionState, SessionType} from "./model/session";
 import type {NetworkStore} from "./network";
 import type {GameEvent, GameEventWrapper, SessionEventPayload} from "./model/event";
 
+const sessionStore = writable<Session>(null)
+
 export type Input = {
     input: 'UP' | 'DOWN',
     obj_id: number,
@@ -46,15 +48,15 @@ const player2KeyboardInputs = derived(
 )
 
 export type NetworkEventStore = {
-    initialized: boolean,
-    consume?: () => GameEvent[],
-    produce?: (snapshot: SessionSnapshot) => void
+    subscribe: any,
+    produce: (snapshot: SessionSnapshot) => void
 }
 
-const networkEvents = readable<NetworkEventStore>({initialized: false}, function (set) {
+function createNetworkEvents() {
+    const {subscribe, set, update} = writable<GameEventWrapper[]>([]);
+
     const websocket = writable<WebSocket>(null);
     const sessionId = writable<string>(null)
-    const eventBuffer = writable<GameEventWrapper[]>([]);
 
     const unsubscribe = sessionStore.subscribe(session => {
         if (!session || isLocalSession(session)) {
@@ -77,7 +79,7 @@ const networkEvents = readable<NetworkEventStore>({initialized: false}, function
                 // TODO: Hotfix, would be better to have clean serialization in the backend...
                 events = events.map(({event, ...rest}) => ({...rest, event: JSON.parse(event)}))
                 console.debug("Parsed events: ", events)
-                eventBuffer.set([...get(eventBuffer), ...events]);
+                set(events);
             }
             ws.onerror = err => {
                 console.error("ws error: ", err)
@@ -87,29 +89,28 @@ const networkEvents = readable<NetworkEventStore>({initialized: false}, function
             }
 
             websocket.set(ws);
-
-            set({
-                initialized: true,
-                consume: () => {
-                    const events = get(eventBuffer);
-                    eventBuffer.set([]);
-                    return events;
-                },
-                produce: snapshot => {
-                    get(websocket).send(JSON.stringify(snapshot))
-                }
-            });
         });
-
-        set([]);
-
     })
 
-    return () => {
-        get(websocket).close();
-        unsubscribe();
+    function produce(sessionSnapshot: SessionSnapshot) {
+        const ws = get(websocket);
+        console.debug("producing snapshot to ws: ", sessionSnapshot);
+        ws.send(JSON.stringify(sessionSnapshot));
     }
-})
+
+    // return () => {
+    //     get(websocket).close();
+    //     unsubscribe();
+    // }
+
+    // TODO: Handle unsubscribe
+    return {
+        subscribe,
+        produce
+    }
+}
+
+const networkEvents = createNetworkEvents();
 
 // TODO: Use websocket to write snapshots.
 
@@ -196,10 +197,12 @@ export const sessionInputs = readable([], function (setInputs) {
             }
         }
         throw new Error(`unknown session type ${session.type}`)
-    })
-})
+    });
 
-const sessionStore = writable<Session>(null)
+    return () => {
+        unsubscribe();
+    }
+})
 
 export const localSession = () => readable<SessionStore>(null, function (set) {
     const session: LocalSession = {session_id: "local", type: SessionType.LOCAL, state: SessionState.RUNNING};

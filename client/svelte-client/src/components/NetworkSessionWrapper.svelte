@@ -21,7 +21,6 @@
 {#if !session}
     <h3>no session</h3>
 {:else}
-    {JSON.stringify(session)}
     {JSON.stringify($networkSessionStateEvents)}
     {#if session.state === SessionState.PENDING}
         <h3>waiting for other player...</h3>

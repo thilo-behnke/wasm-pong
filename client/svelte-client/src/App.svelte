@@ -41,6 +41,9 @@
 
 <main>
     <h1>Welcome to WASM-Pong!</h1>
+    {#key error?.at}
+        <Error error={error?.value} duration={5_000}></Error>
+    {/key}
     {#if !session}
         <div class="mode-select">
             <ModeSelect
@@ -53,9 +56,6 @@
             ></ModeSelect>
         </div>
     {:else}
-        {#key error?.at}
-            <Error error={error?.value} duration={5_000}></Error>
-        {/key}
         <SessionWrapper session={session} let:inputs={inputs}>
             <div class="game-area">
                 <div class="game-area__session">

@@ -107,7 +107,8 @@ function createNetworkEvents() {
             return;
         }
         console.debug("producing message to ws: ", message);
-        ws.send(JSON.stringify(message));
+        // TODO: Hotfix, double serialize to ease deserialization on server.
+        ws.send(JSON.stringify({msg_type: message.msg_type, payload: JSON.stringify(message.payload)}));
     }
 
     function produce(snapshot: SessionSnapshot) {

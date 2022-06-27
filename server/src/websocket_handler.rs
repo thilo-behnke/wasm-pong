@@ -430,7 +430,7 @@ fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter
     for event in events {
         let serialized = serde_json::to_string(&event);
         if let Err(e) = serialized {
-            eprintln!("Failed to serialize event {:?} in topic {}: {:?}", event, topic, e);
+            error!("Failed to serialize event {:?} in topic {}: {:?}", event, topic, e);
             any_error = true;
             continue;
         }
@@ -441,7 +441,7 @@ fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter
     let to_send = to_send.iter().map(|e| e.as_str()).collect();
     let write_res = event_writer.write_to_session(topic, to_send);
     if let Err(e) = write_res {
-        eprintln!("Failed to write at least one event to topic {}: {:?}", topic, e);
+        error!("Failed to write at least one event to topic {}: {:?}", topic, e);
         any_error = true;
     }
     return any_error;

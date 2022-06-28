@@ -1,6 +1,6 @@
 <script lang="ts">
 
-    import {networkEvents, networkSessionStateEvents, sessionInputs} from "../store/session";
+    import {keyboardInputs, networkEvents, networkSessionStateEvents, sessionInputs} from "../store/session";
     import type {NetworkSession} from "../store/model/session";
     import {SessionState, SessionType} from "../store/model/session";
     import CopyToClipboard from "./CopyToClipboard.svelte";
@@ -11,18 +11,24 @@
 
     let cachedSessionId;
 
+    let relevantKeyboardEvents;
+    $: relevantKeyboardEvents = $keyboardInputs.filter(({player}) => player === session.you.nr);
+
     $: if(!cachedSessionId && session) {
         cachedSessionId = session.session_id;
         console.log("NetworkSessionWrapper ready, now setting up sessionEvents")
         joinLink = api.createJoinLink(session.session_id);
     }
+
     $: if(session) {
         switch(session.type) {
             case SessionType.HOST:
-                networkEvents.produce({inputs: $sessionInputs, session_id: session.session_id, objects: [], player: session.you.id, ts: Date.now()})
+                console.debug("sending host snapshot")
+                networkEvents.produce({inputs: relevantKeyboardEvents, session_id: session.session_id, objects: [], player_id: session.you.id, ts: Date.now()})
                 break;
             case SessionType.PEER:
-                networkEvents.produce({inputs: $sessionInputs, session_id: session.session_id, player: session.you.id, ts: Date.now()})
+                console.debug("sending peer snapshot")
+                networkEvents.produce({inputs: relevantKeyboardEvents, session_id: session.session_id, player_id: session.you.id, ts: Date.now()})
                 break;
             default:
                 // noop

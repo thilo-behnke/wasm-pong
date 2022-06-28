@@ -45,7 +45,7 @@ pub struct MoveEventPayload {
 pub struct InputEventPayload {
     pub session_id: String,
     pub inputs: Vec<Input>,
-    pub player: String,
+    pub player_id: String,
     pub ts: u128,
 }
 

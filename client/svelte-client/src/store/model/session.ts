@@ -56,14 +56,14 @@ export type HostSessionSnapshot = {
     session_id: string,
     inputs: Input[],
     objects: GameObject[],
-    player: string,
+    player_id: string,
     ts: number
 }
 
 export type PeerSessionSnapshot = {
     session_id: string,
     inputs: Input[],
-    player: string,
+    player_id: string,
     ts: number
 }
 
@@ -71,7 +71,7 @@ export type SessionSnapshot = HostSessionSnapshot | PeerSessionSnapshot;
 
 export type Heartbeat = {
     session_id: string,
-    player: string,
+    player_id: string,
     ts: number
 }
 

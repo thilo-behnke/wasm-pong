@@ -109,25 +109,37 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                         let move_events = payload.objects.iter().map(|o| {
                                             o.to_move_event(&session_id, payload.ts)
                                         }).collect();
-                                        any_error = write_events(move_events, "move", &mut event_writer) || any_error;
+                                        debug(&websocket_session_read_copy, &format!("host: created move events from snapshot: {:?}", move_events));
+                                        any_error = !write_events(move_events, "move", &mut event_writer) || any_error;
+                                        if any_error {
+                                            debug(&websocket_session_read_copy, "host: move events write failed");
+                                        }
                                         let input_event = InputEventPayload {
                                             inputs: payload.inputs,
-                                            player: websocket_session_read_copy.player.id.to_owned(),
+                                            player_id: websocket_session_read_copy.player.id.to_owned(),
                                             ts: payload.ts,
                                             session_id: session_id.to_owned()
                                         };
-                                        any_error = write_events(vec![input_event], "input", &mut event_writer) || any_error;
+                                        debug(&websocket_session_read_copy, &format!("host: created input event from snapshot: {:?}", input_event));
+                                        any_error = !write_events(vec![input_event], "input", &mut event_writer) || any_error;
+                                        if any_error {
+                                            debug(&websocket_session_read_copy, "peer: input event write failed");
+                                        }
                                         // TODO: Status events.
                                     },
                                     SessionSnapshot::Peer(session_id, payload) => {
                                         trace(&websocket_session_read_copy, "received message is PEER snapshot");
                                         let input_event = InputEventPayload {
                                             inputs: payload.inputs,
-                                            player: websocket_session_read_copy.player.id.to_owned(),
+                                            player_id: websocket_session_read_copy.player.id.to_owned(),
                                             ts: payload.ts,
                                             session_id: session_id.to_owned()
                                         };
-                                        any_error = write_events(vec![input_event], "input", &mut event_writer) || any_error;
+                                        debug(&websocket_session_read_copy, &format!("peer: created input event from snapshot: {:?}", input_event));
+                                        any_error = !write_events(vec![input_event], "input", &mut event_writer) || any_error;
+                                        if any_error {
+                                            debug(&websocket_session_read_copy, "peer: input event write failed");
+                                        }
                                     },
                                     SessionSnapshot::Observer(_, _) => {
                                         // noop
@@ -143,14 +155,15 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                 trace(&websocket_session_read_copy, "received message is heartbeat");
                                 let event = HeartBeatEventPayload {
                                     session_id: session_id.clone(),
-                                    actor_id: heartbeat.player,
+                                    actor_id: heartbeat.player_id,
                                     ts: heartbeat.ts
                                 };
                                 let res = write_events(vec![event], "heart_beat", &mut event_writer);
                                 if !res {
                                     error!("failed to persist heart beat.");
+                                } else {
+                                    debug(&websocket_session_read_copy, "successfully persisted heartbeat");
                                 }
-                                debug(&websocket_session_read_copy, "successfully persisted heartbeat");
                             }
                         }
                     }
@@ -348,7 +361,7 @@ enum WebsocketEventType {
 
 #[derive(Deserialize)]
 struct HeartBeatMessage {
-    pub player: String,
+    pub player_id: String,
     pub session_id: String,
     pub ts: u128
 }
@@ -374,7 +387,7 @@ struct HostSessionSnapshotDTO {
     pub session_id: String,
     pub inputs: Vec<Input>,
     pub objects: Vec<GameObjectStateDTO>,
-    pub player: String,
+    pub player_id: String,
     pub ts: u128
 }
 
@@ -382,7 +395,7 @@ struct HostSessionSnapshotDTO {
 struct PeerSessionSnapshotDTO {
     pub session_id: String,
     pub inputs: Vec<Input>,
-    pub player: String,
+    pub player_id: String,
     pub ts: u128
 }
 
@@ -425,6 +438,10 @@ impl GameObjectStateDTO {
 }
 
 fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter) -> bool where T : Serialize + Debug {
+    if events.len() == 0 {
+        debug!("called to write 0 events - noop");
+        return true;
+    }
     let mut any_error = false;
     let mut to_send = vec![];
     for event in events {
@@ -444,7 +461,7 @@ fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter
         error!("Failed to write at least one event to topic {}: {:?}", topic, e);
         any_error = true;
     }
-    return any_error;
+    return !any_error;
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -6,6 +6,7 @@ import type {LocalSession, Message, NetworkSession, Session, SessionSnapshot} fr
 import {isLocalSession, MessageType, SessionState, SessionType} from "./model/session";
 import type {NetworkStore} from "./network";
 import type {GameEventWrapper, SessionEventPayload} from "./model/event";
+import {isInputEvent} from "./model/event";
 
 const sessionStore = writable<Session>(null)
 
@@ -15,36 +16,31 @@ export type Input = {
     player: number
 }
 
+export const keyboardInputs = derived(keysPressed, $keysPressed => {
+    return $keysPressed.map((key): Input => {
+        switch (key.toLowerCase()) {
+            case 'w':
+                return {input: 'UP', obj_id: 0, player: 1};
+            case 's':
+                return {input: 'DOWN', obj_id: 0, player: 1}
+            case 'arrowup':
+                return {input: 'UP', obj_id: 1, player: 2}
+            case 'arrowdown':
+                return {input: 'DOWN', obj_id: 1, player: 2}
+            default:
+                return null
+        }
+    }).filter(it => !!it);
+})
+
 const player1KeyboardInputs = derived(
-    keysPressed,
-    $keysPressed => {
-        return $keysPressed.map((key): Input => {
-            switch (key.toLowerCase()) {
-                case 'w':
-                    return {input: 'UP', obj_id: 0, player: 1};
-                case 's':
-                    return {input: 'DOWN', obj_id: 0, player: 1}
-                default:
-                    return null
-            }
-        }).filter(it => !!it);
-    }
+    keyboardInputs,
+    $keyboardInputs => $keyboardInputs.filter(({player}) => player === 1)
 )
 
 const player2KeyboardInputs = derived(
-    keysPressed,
-    $keysPressed => {
-        return $keysPressed.map((key): Input => {
-            switch (key.toLowerCase()) {
-                case 'arrowup':
-                    return {input: 'UP', obj_id: 1, player: 2}
-                case 'arrowdown':
-                    return {input: 'DOWN', obj_id: 1, player: 2}
-                default:
-                    return null
-            }
-        }).filter(it => !!it);
-    }
+    keyboardInputs,
+    $keyboardInputs => $keyboardInputs.filter(({player}) => player === 2)
 )
 
 function createNetworkEvents() {
@@ -98,7 +94,7 @@ function createNetworkEvents() {
             return
         }
         console.debug("sending heartbeat")
-        sendMessage({msg_type: MessageType.Heartbeat, payload: {session_id: last.session_id, player: last.player, ts: now}});
+        sendMessage({msg_type: MessageType.Heartbeat, payload: {session_id: last.session_id, player_id: last.player_id, ts: now}});
     }, 1_000)
 
     function sendMessage(message: Message) {
@@ -125,8 +121,6 @@ function createNetworkEvents() {
 
 export const networkEvents = createNetworkEvents();
 
-// TODO: Use websocket to write snapshots.
-
 export const networkSessionStateEvents = derived(networkEvents, $sessionEvents => {
     const sessionEvents = $sessionEvents.filter(({topic}) => topic === 'session').map(({event}) => event);
     if (!sessionEvents.length) {
@@ -144,7 +138,13 @@ export const networkSessionStateEvents = derived(networkEvents, $sessionEvents =
     return sessionEvents;
 });
 
-const networkInputEvents = derived(networkEvents, $sessionEvents => $sessionEvents.filter(({topic}) => topic === 'input'));
+const networkInputEvents = derived([networkEvents, sessionStore], ([$sessionEvents, $sessionStore]) => $sessionEvents.filter(wrapper => {
+    if (!isInputEvent(wrapper)) {
+        return false;
+    }
+    return wrapper.event.player_id !== ($sessionStore as NetworkSession).you.id
+}).map(({event}) => event));
+
 export const sessionInputs = readable([], function (setInputs) {
     let player1Inputs = writable([]);
     let player2Inputs = writable([]);

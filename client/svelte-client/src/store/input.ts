@@ -19,8 +19,8 @@ export const playerKeyboardInputs = derived(keysPressed, $keysPressed => {
     }).filter(it => !!it);
 })
 
-export const getPlayerKeyboardInputs = (player_nr: number) => readable([], set => {
+export const getPlayerKeyboardInputs = (player_nr: number) => readable<Input[]>([], set => {
     return playerKeyboardInputs.subscribe(inputs => {
-        return inputs.filter(({player}) => player === player_nr);
+        set(inputs.filter(({player}) => player === player_nr));
     })
 })

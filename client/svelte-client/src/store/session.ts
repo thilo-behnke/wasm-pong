@@ -1,13 +1,14 @@
-import {derived, get, readable, writable} from "svelte/store";
+import {derived, get, Readable, readable, Unsubscriber, writable} from "svelte/store";
 import {keysPressed} from "./io";
 import api from "../api/session";
 import session from "../api/session";
-import type {LocalSession, Message, NetworkSession, Session, SessionSnapshot} from "./model/session";
+import type {Heartbeat, LocalSession, Message, NetworkSession, Session, SessionSnapshot} from "./model/session";
 import {isLocalSession, isNetworkSession, MessageType, SessionState, SessionType} from "./model/session";
 import type {NetworkStore} from "./network";
 import type {GameEventWrapper, InputEventPayload, InputEventWrapper, SessionEventPayload} from "./model/event";
 import {isInputEvent} from "./model/event";
 import {getPlayerKeyboardInputs, playerKeyboardInputs} from "./input";
+import type {Subscriber} from "svelte/types/runtime/store";
 
 const sessionStore = writable<Session>(null)
 
@@ -16,6 +17,7 @@ function createNetworkEvents() {
 
     const websocket = writable<WebSocket>(null);
     const sessionId = writable<string>(null);
+    const playerId = writable<string>(null);
     const lastSnapshot = writable<SessionSnapshot>(null);
 
     const unsubscribeSession = sessionStore.subscribe(session => {
@@ -26,6 +28,7 @@ function createNetworkEvents() {
             return;
         }
         sessionId.set(session.session_id);
+        playerId.set(session.you.id);
         console.log("creating ws to receive/send websocket events for session: ", JSON.stringify(session))
         api.createEventWebsocket(session).then(ws => {
             console.log("ws successfully established: ", ws)
@@ -54,15 +57,13 @@ function createNetworkEvents() {
 
     const interval = setInterval(() => {
         const last = get(lastSnapshot);
-        if (last === null) {
-            return;
-        }
         const now = Date.now();
-        if (now - last.ts < 1_000) {
+        if (last && now - last.ts < 1_000) {
             return
         }
         console.debug("sending heartbeat")
-        sendMessage({msg_type: MessageType.Heartbeat, payload: {session_id: last.session_id, player_id: last.player_id, ts: now}});
+        const heartbeat: Message = {msg_type: MessageType.Heartbeat, payload: {session_id: get(sessionId), player_id: get(playerId), ts: now}};
+        sendMessage(heartbeat);
     }, 1_000)
 
     function sendMessage(message: Message) {
@@ -80,14 +81,26 @@ function createNetworkEvents() {
         sendMessage({msg_type: MessageType.Snapshot, payload: snapshot});
     }
 
-    // TODO: Handle unsubscribe
+    const customSubscribe = (run: Subscriber<GameEventWrapper[]>, invalidate): Unsubscriber => {
+        const unsubscribe = subscribe(run, invalidate);
+        return () => {
+            unsubscribeSession();
+            clearInterval(interval);
+            unsubscribe();
+        }
+    }
+
     return {
-        subscribe,
+        subscribe: customSubscribe,
         produce
     }
 }
 
-export const networkEvents = createNetworkEvents();
+export type NetworkEventStore = Readable<GameEventWrapper[]> & {
+    produce: (snapshot: SessionSnapshot) => void
+}
+
+export const networkEvents: NetworkEventStore = createNetworkEvents();
 
 export const networkSessionStateEvents = derived(networkEvents, $sessionEvents => {
     const sessionEvents = $sessionEvents.filter(({topic}) => topic === 'session').map(({event}) => event);

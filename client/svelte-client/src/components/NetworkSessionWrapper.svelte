@@ -5,31 +5,36 @@
     import {SessionState, SessionType} from "../store/model/session";
     import CopyToClipboard from "./CopyToClipboard.svelte";
     import api from "../api/session";
-    import {playerKeyboardInputs} from "../store/input";
+    import type {Readable} from "svelte/store";
+    import type {Input} from "../store/model/input";
+    import {getPlayerKeyboardInputs} from "../store/input";
 
     export let session: NetworkSession;
     let joinLink;
 
     let cachedSessionId;
 
-    let relevantKeyboardEvents;
-    $: relevantKeyboardEvents = $playerKeyboardInputs.filter(({player}) => player === session.you.nr);
+    let relevantKeyboardEvents: Readable<Input[]>;
+    $: if (!cachedSessionId && session) {
+    }
 
     $: if(!cachedSessionId && session) {
         cachedSessionId = session.session_id;
         console.log("NetworkSessionWrapper ready, now setting up sessionEvents")
         joinLink = api.createJoinLink(session.session_id);
+
+        relevantKeyboardEvents = getPlayerKeyboardInputs(session.you.nr);
     }
 
-    $: if(session) {
+    $: if(session && session.state === SessionState.RUNNING) {
         switch(session.type) {
             case SessionType.HOST:
                 console.debug("sending host snapshot")
-                networkEvents.produce({inputs: relevantKeyboardEvents, session_id: session.session_id, objects: [], player_id: session.you.id, ts: Date.now()})
+                networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, objects: [], player_id: session.you.id, ts: Date.now()})
                 break;
             case SessionType.PEER:
                 console.debug("sending peer snapshot")
-                networkEvents.produce({inputs: relevantKeyboardEvents, session_id: session.session_id, player_id: session.you.id, ts: Date.now()})
+                networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, player_id: session.you.id, ts: Date.now()})
                 break;
             default:
                 // noop

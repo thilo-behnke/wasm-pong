@@ -8,15 +8,13 @@
     import type {Readable} from "svelte/store";
     import type {Input} from "../store/model/input";
     import {getPlayerKeyboardInputs} from "../store/input";
+    import {gameField} from "../store/engine";
 
     export let session: NetworkSession;
+
     let joinLink;
-
     let cachedSessionId;
-
     let relevantKeyboardEvents: Readable<Input[]>;
-    $: if (!cachedSessionId && session) {
-    }
 
     $: if(!cachedSessionId && session) {
         cachedSessionId = session.session_id;
@@ -31,7 +29,7 @@
         switch(session.type) {
             case SessionType.HOST:
                 console.debug("sending host snapshot")
-                networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, objects: [], player_id: session.you.id, ts: Date.now()})
+                networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, objects: $gameField, player_id: session.you.id, ts: Date.now()})
                 break;
             case SessionType.PEER:
                 console.debug("sending peer snapshot")
@@ -53,7 +51,7 @@
     {:else if session.state === SessionState.CLOSED}
         <h3>game over!</h3>
     {:else if session.state === SessionState.RUNNING}
-        <slot inputs={$sessionInputs}></slot>
+        <slot inputs={$sessionInputs} objects={$gameField} tick={gameField.tick}></slot>
     {:else }
         <h3>unknown game state</h3>
     {/if}

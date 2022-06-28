@@ -1,5 +1,8 @@
+import {FieldWrapper} from "wasm-app";
 import {derived, Writable, writable} from "svelte/store";
 import {getContext, onMount} from "svelte";
+import type {GameObject} from "./model/session";
+import type {Input} from "./model/input";
 
 export const engineCanvas = writable();
 export const engineCtx = writable();
@@ -54,3 +57,22 @@ function deriveObject (obj) {
         }, {});
     });
 }
+
+function createGameFieldStore() {
+    const {subscribe, set} = writable<GameObject[]>([]);
+
+    const field = FieldWrapper.new();
+
+    function tick (inputs: Input[], dt: number) {
+        field.tick(inputs, dt);
+
+        set(JSON.parse(field.objects()))
+    }
+
+    return {
+        subscribe,
+        tick
+    }
+}
+
+export const gameField = createGameFieldStore();

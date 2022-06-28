@@ -1,20 +1,20 @@
 <script lang="ts">
     import {FieldWrapper} from "wasm-app";
-    import {onMount, setContext} from "svelte";
+    import {createEventDispatcher, onMount, setContext} from "svelte";
     import {drawObjects} from "../store/render";
     import {engineCanvas, engineCtx, height, pixelRatio, props, renderContext, width} from "../store/engine";
     import type {Input} from "../store/model/input";
-    import type {Session} from "../store/model/session";
+    import type {GameObject, Session} from "../store/model/session";
     import {SessionType} from "../store/model/session";
 
     export let inputs: Input[] = []
+    export let objects: GameObject[] = []
     export let session: Session;
 
     export let killLoopOnError = true;
     export let debug = false;
 
-    // TODO: Put field into store, canvas is only allowed to call method tick(). Parent can extract objects to include them into snapshot.
-    const field = FieldWrapper.new();
+    const dispatch = createEventDispatcher();
 
     let canvas: any;
     let ctx: any;
@@ -46,7 +46,6 @@
 
         return createLoop((elapsed, dt) => {
             tick(dt);
-            const objects = JSON.parse(field.objects());
             render(objects, dt);
         });
     })
@@ -79,7 +78,7 @@
     }
 
     function tick(dt) {
-        field.tick(renderOnly ? [] : inputs, dt);
+        dispatch('tick', [renderOnly ? [] : inputs, dt]);
     }
 
     function render(objects, dt) {

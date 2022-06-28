@@ -1,20 +1,14 @@
 <script lang="ts">
     import {FieldWrapper} from "wasm-app";
-    import {getContext, onMount, setContext} from "svelte";
-    import {get, writable} from "svelte/store";
+    import {onMount, setContext} from "svelte";
     import {drawObjects} from "../store/render";
-    import {
-        engineCanvas,
-        engineCtx,
-        height,
-        pixelRatio,
-        props,
-        renderContext,
-        width
-    } from "../store/engine";
-    import {Input} from "../store/session";
+    import {engineCanvas, engineCtx, height, pixelRatio, props, renderContext, width} from "../store/engine";
+    import type {Input} from "../store/model/input";
+    import type {Session} from "../store/model/session";
+    import {SessionType} from "../store/model/session";
 
     export let inputs: Input[] = []
+    export let session: Session;
 
     export let killLoopOnError = true;
     export let debug = false;
@@ -25,6 +19,12 @@
     let ctx: any;
     let frame: number;
     let listeners = [];
+
+    let renderOnly = false;
+
+    $: if(session) {
+        renderOnly = session.type === SessionType.PEER || session.type === SessionType.OBSERVER;
+    }
 
     onMount(() => {
         ctx = canvas.getContext('2d');
@@ -78,7 +78,7 @@
     }
 
     function tick(dt) {
-        field.tick([...inputs], dt);
+        field.tick(renderOnly ? [] : inputs, dt);
     }
 
     function render(objects, dt) {

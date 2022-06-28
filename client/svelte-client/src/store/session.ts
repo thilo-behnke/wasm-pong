@@ -9,6 +9,8 @@ import type {GameEventWrapper, InputEventPayload, InputEventWrapper, SessionEven
 import {isInputEvent} from "./model/event";
 import {getPlayerKeyboardInputs, playerKeyboardInputs} from "./input";
 import type {Subscriber} from "svelte/types/runtime/store";
+import {combined} from "./utils";
+import type {Input} from "./model/input";
 
 const sessionStore = writable<Session>(null)
 
@@ -126,79 +128,52 @@ const networkInputEvents = derived([networkEvents, sessionStore], ([$sessionEven
     return wrapper.event.player_id !== ($sessionStore as NetworkSession).you.id
 }).map(({event}) => event as InputEventPayload));
 
-const getPlayerNetworkInputEvents = (player_nr: number) => derived(networkInputEvents, $networkInputEvents => {
+const getPlayerNetworkInputEvents = (player_nr: number): Readable<Input[]> => derived(networkInputEvents, $networkInputEvents => {
     const session = get(sessionStore);
     if (!isNetworkSession(session)) {
-        return [];
+        return [] as Input[];
     }
     const player = session.players.find(({nr}) => player_nr === nr);
     if (!player) {
-        return [];
+        return [] as Input[];
     }
-    return $networkInputEvents.filter(({player_id}) => player.id === player_id);
+    const inputEvents = $networkInputEvents.filter(({player_id}) => player.id === player_id);
+    if (!inputEvents.length) {
+        return [] as Input[];
+    }
+    return inputEvents[inputEvents.length - 1].inputs
 });
 
 export const sessionInputs = readable([], function (setInputs) {
-    let player1Inputs = writable([]);
-    let player2Inputs = writable([]);
     setInputs([]);
 
     const unsubscribe = sessionStore.subscribe(session => {
-        if (isLocalSession(session)) {
-            return playerKeyboardInputs.subscribe(inputs => {
-                setInputs(inputs);
-            });
-        }
-
-        if (session.type === SessionType.HOST) {
-            const unsub1 = getPlayerKeyboardInputs(1).subscribe(inputs => {
-                player1Inputs.set(inputs)
-                setInputs([...get(player1Inputs), ...get(player2Inputs)])
-            })
-            const unsub2 = getPlayerNetworkInputEvents(2).subscribe(inputs => {
-                player2Inputs.set(inputs)
-                setInputs([...get(player1Inputs), ...get(player2Inputs)])
-            })
-            return () => {
-                unsub1();
-                unsub2();
-            }
-        }
-        if (session.type === SessionType.PEER) {
-            const unsub1 = getPlayerNetworkInputEvents(1).subscribe(inputs => {
-                player1Inputs.set(inputs)
-                setInputs([...get(player1Inputs), ...get(player2Inputs)])
-            })
-            const unsub2 = getPlayerKeyboardInputs(2).subscribe(inputs => {
-                player2Inputs.set(inputs)
-                setInputs([...get(player1Inputs), ...get(player2Inputs)])
-            })
-            return () => {
-                unsub1();
-                unsub2();
-            }
-        }
-        if (session.type === SessionType.OBSERVER) {
-            const unsub1 = getPlayerNetworkInputEvents(1).subscribe(inputs => {
-                player1Inputs.set(inputs)
-                setInputs([...get(player1Inputs), ...get(player2Inputs)])
-            })
-            const unsub2 = getPlayerNetworkInputEvents(2).subscribe(inputs => {
-                player2Inputs.set(inputs)
-                setInputs([...get(player1Inputs), ...get(player2Inputs)])
-            })
-            return () => {
-                unsub1();
-                unsub2();
-            }
-        }
-        throw new Error(`unknown session type ${session.type}`)
+        return getInputStore(session).subscribe(input => {
+            setInputs(input);
+        });
     });
 
     return () => {
         unsubscribe();
     }
 })
+
+const getInputStore = (session: Session): Readable<Input[]> => {
+    if (isLocalSession(session)) {
+        return playerKeyboardInputs;
+    }
+    const sessionType = session.type;
+    if (sessionType === SessionType.HOST) {
+        return combined(getPlayerKeyboardInputs(1), getPlayerNetworkInputEvents(2));
+    }
+    if (sessionType === SessionType.PEER) {
+        return combined(getPlayerNetworkInputEvents(1), getPlayerKeyboardInputs(2));
+    }
+    if (sessionType === SessionType.OBSERVER) {
+        return combined(getPlayerNetworkInputEvents(1), getPlayerNetworkInputEvents(2));
+    }
+    throw new Error(`unknown session type ${session.type}`)
+}
 
 export const localSession = () => readable<SessionStore>(null, function (set) {
     const session: LocalSession = {session_id: "local", type: SessionType.LOCAL, state: SessionState.RUNNING};

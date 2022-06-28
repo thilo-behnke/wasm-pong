@@ -27,6 +27,7 @@
     }
 
     $: if(session && session.state === SessionState.RUNNING) {
+        // TODO: Include objects
         switch(session.type) {
             case SessionType.HOST:
                 console.debug("sending host snapshot")

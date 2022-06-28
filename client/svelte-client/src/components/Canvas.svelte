@@ -13,6 +13,7 @@
     export let killLoopOnError = true;
     export let debug = false;
 
+    // TODO: Put field into store, canvas is only allowed to call method tick(). Parent can extract objects to include them into snapshot.
     const field = FieldWrapper.new();
 
     let canvas: any;

@@ -1,5 +1,5 @@
-import type {Input} from "../session";
 import type {NetworkSession, Session} from "./session";
+import type {Input} from "./input";
 
 export type SessionEventPayload = {
     actor: { id: string },

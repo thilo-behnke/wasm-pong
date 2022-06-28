@@ -1,4 +1,4 @@
-import type {Input} from "../session";
+import type {Input} from "./input";
 
 export enum SessionState {
     PENDING = 'PENDING', RUNNING = 'RUNNING', CLOSED = 'CLOSED'

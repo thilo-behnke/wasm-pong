@@ -3,45 +3,13 @@ import {keysPressed} from "./io";
 import api from "../api/session";
 import session from "../api/session";
 import type {LocalSession, Message, NetworkSession, Session, SessionSnapshot} from "./model/session";
-import {isLocalSession, MessageType, SessionState, SessionType} from "./model/session";
+import {isLocalSession, isNetworkSession, MessageType, SessionState, SessionType} from "./model/session";
 import type {NetworkStore} from "./network";
-import type {GameEventWrapper, SessionEventPayload} from "./model/event";
+import type {GameEventWrapper, InputEventPayload, InputEventWrapper, SessionEventPayload} from "./model/event";
 import {isInputEvent} from "./model/event";
+import {getPlayerKeyboardInputs, playerKeyboardInputs} from "./input";
 
 const sessionStore = writable<Session>(null)
-
-export type Input = {
-    input: 'UP' | 'DOWN',
-    obj_id: number,
-    player: number
-}
-
-export const keyboardInputs = derived(keysPressed, $keysPressed => {
-    return $keysPressed.map((key): Input => {
-        switch (key.toLowerCase()) {
-            case 'w':
-                return {input: 'UP', obj_id: 0, player: 1};
-            case 's':
-                return {input: 'DOWN', obj_id: 0, player: 1}
-            case 'arrowup':
-                return {input: 'UP', obj_id: 1, player: 2}
-            case 'arrowdown':
-                return {input: 'DOWN', obj_id: 1, player: 2}
-            default:
-                return null
-        }
-    }).filter(it => !!it);
-})
-
-const player1KeyboardInputs = derived(
-    keyboardInputs,
-    $keyboardInputs => $keyboardInputs.filter(({player}) => player === 1)
-)
-
-const player2KeyboardInputs = derived(
-    keyboardInputs,
-    $keyboardInputs => $keyboardInputs.filter(({player}) => player === 2)
-)
 
 function createNetworkEvents() {
     const {subscribe, set, update} = writable<GameEventWrapper[]>([]);
@@ -143,7 +111,19 @@ const networkInputEvents = derived([networkEvents, sessionStore], ([$sessionEven
         return false;
     }
     return wrapper.event.player_id !== ($sessionStore as NetworkSession).you.id
-}).map(({event}) => event));
+}).map(({event}) => event as InputEventPayload));
+
+const getPlayerNetworkInputEvents = (player_nr: number) => derived(networkInputEvents, $networkInputEvents => {
+    const session = get(sessionStore);
+    if (!isNetworkSession(session)) {
+        return [];
+    }
+    const player = session.players.find(({nr}) => player_nr === nr);
+    if (!player) {
+        return [];
+    }
+    return $networkInputEvents.filter(({player_id}) => player.id === player_id);
+});
 
 export const sessionInputs = readable([], function (setInputs) {
     let player1Inputs = writable([]);
@@ -152,26 +132,17 @@ export const sessionInputs = readable([], function (setInputs) {
 
     const unsubscribe = sessionStore.subscribe(session => {
         if (isLocalSession(session)) {
-            const unsub1 = player1KeyboardInputs.subscribe(inputs => {
-                player1Inputs.set(inputs)
-                setInputs([...get(player1Inputs), ...get(player2Inputs)])
-            })
-            const unsub2 = player2KeyboardInputs.subscribe(inputs => {
-                player2Inputs.set(inputs)
-                setInputs([...get(player1Inputs), ...get(player2Inputs)])
-            })
-            return () => {
-                unsub1();
-                unsub2();
-            }
+            return playerKeyboardInputs.subscribe(inputs => {
+                setInputs(inputs);
+            });
         }
 
         if (session.type === SessionType.HOST) {
-            const unsub1 = player1KeyboardInputs.subscribe(inputs => {
+            const unsub1 = getPlayerKeyboardInputs(1).subscribe(inputs => {
                 player1Inputs.set(inputs)
                 setInputs([...get(player1Inputs), ...get(player2Inputs)])
             })
-            const unsub2 = networkInputEvents.subscribe(inputs => {
+            const unsub2 = getPlayerNetworkInputEvents(2).subscribe(inputs => {
                 player2Inputs.set(inputs)
                 setInputs([...get(player1Inputs), ...get(player2Inputs)])
             })
@@ -181,11 +152,11 @@ export const sessionInputs = readable([], function (setInputs) {
             }
         }
         if (session.type === SessionType.PEER) {
-            const unsub1 = networkInputEvents.subscribe(inputs => {
+            const unsub1 = getPlayerNetworkInputEvents(1).subscribe(inputs => {
                 player1Inputs.set(inputs)
                 setInputs([...get(player1Inputs), ...get(player2Inputs)])
             })
-            const unsub2 = player2KeyboardInputs.subscribe(inputs => {
+            const unsub2 = getPlayerKeyboardInputs(2).subscribe(inputs => {
                 player2Inputs.set(inputs)
                 setInputs([...get(player1Inputs), ...get(player2Inputs)])
             })
@@ -195,12 +166,11 @@ export const sessionInputs = readable([], function (setInputs) {
             }
         }
         if (session.type === SessionType.OBSERVER) {
-            const events = networkInputEvents;
-            const unsub1 = events.subscribe(inputs => {
+            const unsub1 = getPlayerNetworkInputEvents(1).subscribe(inputs => {
                 player1Inputs.set(inputs)
                 setInputs([...get(player1Inputs), ...get(player2Inputs)])
             })
-            const unsub2 = events.subscribe(inputs => {
+            const unsub2 = getPlayerNetworkInputEvents(2).subscribe(inputs => {
                 player2Inputs.set(inputs)
                 setInputs([...get(player1Inputs), ...get(player2Inputs)])
             })

@@ -1,10 +1,11 @@
 <script lang="ts">
 
-    import {keyboardInputs, networkEvents, networkSessionStateEvents, sessionInputs} from "../store/session";
+    import {networkEvents, networkSessionStateEvents, sessionInputs} from "../store/session";
     import type {NetworkSession} from "../store/model/session";
     import {SessionState, SessionType} from "../store/model/session";
     import CopyToClipboard from "./CopyToClipboard.svelte";
     import api from "../api/session";
+    import {playerKeyboardInputs} from "../store/input";
 
     export let session: NetworkSession;
     let joinLink;
@@ -12,7 +13,7 @@
     let cachedSessionId;
 
     let relevantKeyboardEvents;
-    $: relevantKeyboardEvents = $keyboardInputs.filter(({player}) => player === session.you.nr);
+    $: relevantKeyboardEvents = $playerKeyboardInputs.filter(({player}) => player === session.you.nr);
 
     $: if(!cachedSessionId && session) {
         cachedSessionId = session.session_id;

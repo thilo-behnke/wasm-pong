@@ -197,6 +197,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
             );
             loop {
                 trace(&websocket_session_write_copy, "reading messages from kafka");
+                // TODO: Should perform more filtering, e.g. inputs of player are not relevant.
                 let events = event_reader.read_from_session();
                 if let Err(e) = events {
                     error(&websocket_session_write_copy, &format!("Failed to read messages from kafka: {:?}", e));

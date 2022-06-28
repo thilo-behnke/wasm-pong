@@ -16,6 +16,8 @@
     let cachedSessionId;
     let relevantKeyboardEvents: Readable<Input[]>;
 
+    // TODO: objects must come from events for peer and observer
+
     $: if(!cachedSessionId && session) {
         cachedSessionId = session.session_id;
         console.log("NetworkSessionWrapper ready, now setting up sessionEvents")
@@ -24,21 +26,17 @@
         relevantKeyboardEvents = getPlayerKeyboardInputs(session.you.nr);
     }
 
-    $: if(session && session.state === SessionState.RUNNING) {
-        // TODO: Include objects
-        switch(session.type) {
-            case SessionType.HOST:
-                console.debug("sending host snapshot")
-                networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, objects: $gameField, player_id: session.you.id, ts: Date.now()})
-                break;
-            case SessionType.PEER:
-                console.debug("sending peer snapshot")
-                networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, player_id: session.you.id, ts: Date.now()})
-                break;
-            default:
-                // noop
-        }
+    $: if(session && session.type === SessionType.HOST && session.state === SessionState.RUNNING) {
+        console.debug("sending host snapshot")
+        networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, objects: $gameField, player_id: session.you.id, ts: Date.now()})
     }
+
+    // TODO: keyboard events must be sent every tick, not only if a key is pressed
+    $: if(session && session.type === SessionType.PEER && session.state === SessionState.RUNNING) {
+        console.debug("sending host snapshot")
+        networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, player_id: session.you.id, ts: Date.now()})
+    }
+
 </script>
 
 {#if !session}

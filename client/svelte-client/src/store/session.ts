@@ -58,13 +58,17 @@ function createNetworkEvents() {
     })
 
     const interval = setInterval(() => {
+        const cachedSessionId = get(sessionId);
+        if (!cachedSessionId) {
+            return;
+        }
         const last = get(lastSnapshot);
         const now = Date.now();
         if (last && now - last.ts < 1_000) {
             return
         }
         console.debug("sending heartbeat")
-        const heartbeat: Message = {msg_type: MessageType.Heartbeat, payload: {session_id: get(sessionId), player_id: get(playerId), ts: now}};
+        const heartbeat: Message = {msg_type: MessageType.Heartbeat, payload: {session_id: cachedSessionId, player_id: get(playerId), ts: now}};
         sendMessage(heartbeat);
     }, 1_000)
 

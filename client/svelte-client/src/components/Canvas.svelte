@@ -78,7 +78,7 @@
     }
 
     function tick(dt) {
-        field.tick(inputs, dt);
+        field.tick([...inputs], dt);
     }
 
     function render(objects, dt) {

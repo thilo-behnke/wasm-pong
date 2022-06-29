@@ -36,6 +36,8 @@
         networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, player_id: session.you.id, ts: $gameField.lastTick})
     }
 
+    $: console.debug($networkSessionStateEvents)
+
     const tick = (dt: number) => {
         if (session.type === SessionType.HOST) {
             gameField.tick($sessionInputs, dt)
@@ -50,14 +52,13 @@
 {#if !session}
     <h3>no session</h3>
 {:else}
-    {JSON.stringify($networkSessionStateEvents)}
     {#if session.state === SessionState.PENDING}
         <h3>waiting for other player...</h3>
         <CopyToClipboard text={joinLink}></CopyToClipboard>
     {:else if session.state === SessionState.CLOSED}
         <h3>game over!</h3>
     {:else if session.state === SessionState.RUNNING}
-        <slot inputs={$sessionInputs} objects={$gameField.objects} tick={tick} events={$networkEvents}></slot>
+        <slot inputs={$sessionInputs} objects={$gameField.objects} tick={tick} events={$networkSessionStateEvents}></slot>
     {:else }
         <h3>unknown game state</h3>
     {/if}

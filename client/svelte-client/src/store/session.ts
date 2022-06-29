@@ -1,26 +1,16 @@
 import {derived, get, Readable, readable, Unsubscriber, writable} from "svelte/store";
-import {keysPressed} from "./io";
 import api from "../api/session";
-import session from "../api/session";
-import type {
-    GameObject,
-    Heartbeat,
-    LocalSession,
-    Message,
-    NetworkSession,
-    Session,
-    SessionSnapshot
-} from "./model/session";
+import type {LocalSession, Message, NetworkSession, Session, SessionSnapshot} from "./model/session";
 import {isLocalSession, isNetworkSession, MessageType, SessionState, SessionType} from "./model/session";
 import type {NetworkStore} from "./network";
-import type {GameEventWrapper, InputEventPayload, InputEventWrapper, SessionEventPayload} from "./model/event";
-import {isInputEvent, isMoveEvent} from "./model/event";
+import type {GameEventWrapper, InputEventPayload, SessionEventPayload} from "./model/event";
+import {isInputEvent, isMoveEvent, isSessionEvent} from "./model/event";
 import {getPlayerKeyboardInputs, playerKeyboardInputs} from "./input";
 import type {Subscriber} from "svelte/types/runtime/store";
 import {combined} from "./utils";
 import type {Input} from "./model/input";
 
-const sessionStore = writable<Session>(null)
+const initialSession = writable<Session>(null);
 
 function createNetworkEvents() {
     const {subscribe, set, update} = writable<GameEventWrapper[]>([]);
@@ -30,7 +20,7 @@ function createNetworkEvents() {
     const playerId = writable<string>(null);
     const lastSnapshot = writable<SessionSnapshot>(null);
 
-    const unsubscribeSession = sessionStore.subscribe(session => {
+    const unsubscribeSession = initialSession.subscribe(session => {
         if (!session || isLocalSession(session)) {
             return;
         }
@@ -116,21 +106,21 @@ export type NetworkEventStore = Readable<GameEventWrapper[]> & {
 
 export const networkEvents: NetworkEventStore = createNetworkEvents();
 
-export const networkSessionStateEvents = derived(networkEvents, $sessionEvents => {
-    const sessionEvents = $sessionEvents.filter(({topic}) => topic === 'session').map(({event}) => event);
-    if (!sessionEvents.length) {
-        return [];
+export const networkSessionStateEvents = readable<SessionEventPayload[]>([], set => {
+    const cache = writable<SessionEventPayload[]>([]);
+
+    const unsub = networkEvents.subscribe(events => {
+        const sessionEvents = events.filter(isSessionEvent).map(({event}) => event);
+        if (!sessionEvents.length) {
+            return [];
+        }
+        cache.set([...get(cache), ...sessionEvents]);
+        set(get(cache))
+    })
+
+    return () => {
+        unsub();
     }
-    const latestSessionEvent = sessionEvents[sessionEvents.length - 1] as SessionEventPayload;
-    const currentSession = get(sessionStore) as NetworkSession;
-    const session: Session = {
-        ...(latestSessionEvent.session as NetworkSession),
-        you: currentSession.you,
-        type: currentSession.type
-    }
-    console.debug("updating current session: ", session)
-    sessionStore.set(session);
-    return sessionEvents;
 });
 
 export const networkMoveEvents = derived(networkEvents, $sessionEvents => {
@@ -142,7 +132,7 @@ export const networkMoveEvents = derived(networkEvents, $sessionEvents => {
     return moveEvents.slice(moveEvents.length - 7)
 })
 
-const networkInputEvents = derived([networkEvents, sessionStore], ([$sessionEvents, $sessionStore]) => $sessionEvents.filter(wrapper => {
+const networkInputEvents = derived([networkEvents, initialSession], ([$sessionEvents, $sessionStore]) => $sessionEvents.filter(wrapper => {
     if (!isInputEvent(wrapper)) {
         return false;
     }
@@ -150,7 +140,7 @@ const networkInputEvents = derived([networkEvents, sessionStore], ([$sessionEven
 }).map(({event}) => event as InputEventPayload));
 
 const getPlayerNetworkInputEvents = (player_nr: number): Readable<Input[]> => derived(networkInputEvents, $networkInputEvents => {
-    const session = get(sessionStore);
+    const session = get(initialSession);
     if (!isNetworkSession(session)) {
         return [] as Input[];
     }
@@ -168,7 +158,7 @@ const getPlayerNetworkInputEvents = (player_nr: number): Readable<Input[]> => de
 export const sessionInputs = readable([], function (setInputs) {
     setInputs([]);
 
-    const unsubscribe = sessionStore.subscribe(session => {
+    const unsubscribe = initialSession.subscribe(session => {
         return getInputStore(session).subscribe(input => {
             setInputs(input);
         });
@@ -201,7 +191,7 @@ export const localSession = () => readable<SessionStore>(null, function (set) {
     set({loading: true});
     setTimeout(() => {
         set({loading: false, session});
-        sessionStore.set(session);
+        initialSession.set(session);
     }, 2_000);
 })
 
@@ -209,15 +199,30 @@ export type SessionStore = NetworkStore & {
     session?: Session
 }
 
+export const sessionStore = derived(networkSessionStateEvents, $sessionEvents => {
+    if (!$sessionEvents.length) {
+        return get(initialSession);
+    }
+    const latestSessionEvent = $sessionEvents[$sessionEvents.length - 1] as SessionEventPayload;
+    const currentSession = get(initialSession) as NetworkSession;
+    const session: Session = {
+        ...(latestSessionEvent.session as NetworkSession),
+        you: currentSession.you,
+        type: currentSession.type
+    }
+    console.debug("updating current session: ", session)
+    return session;
+})
+
 export const networkSession = (type: SessionType.HOST | SessionType.PEER | SessionType.OBSERVER, sessionId?: string) => readable<SessionStore>(null, function (set) {
     function sessionCreator(fn) {
         set({loading: true});
         fn().then(session => {
             set({loading: false, session});
-            sessionStore.set(session);
+            initialSession.set(session);
         }).catch(e => {
             set({loading: false, error: {value: e, at: performance.now()}});
-            sessionStore.set(null);
+            initialSession.set(null);
         })
     }
 

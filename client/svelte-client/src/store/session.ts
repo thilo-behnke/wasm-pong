@@ -158,7 +158,7 @@ const getPlayerNetworkInputEvents = (player_nr: number): Readable<Input[]> => de
 export const sessionInputs = readable([], function (setInputs) {
     setInputs([]);
 
-    const unsubscribe = initialSession.subscribe(session => {
+    const unsubscribe = sessionStore.subscribe(session => {
         return getInputStore(session).subscribe(input => {
             setInputs(input);
         });

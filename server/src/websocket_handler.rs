@@ -15,7 +15,7 @@ use pong::event::event::EventWriter;
 use pong::game_field::Input;
 use crate::event::{HeartBeatEventPayload, InputEventPayload, MoveEventPayload, SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType};
 use crate::actor::Player;
-use crate::session::Session;
+use crate::session::{Session, SessionState};
 use crate::session_manager::{SessionManager, SessionWriter};
 use crate::utils::json_utils::unescape;
 
@@ -259,9 +259,11 @@ fn error(websocket_session: &WebSocketSession, msg: &str) {
 }
 
 fn write_session_close_event(event_writer: &mut SessionWriter, websocket_session: &WebSocketSession, close_reason: &str) {
+    let mut updated_session = websocket_session.session.clone();
+    updated_session.state = SessionState::CLOSED;
     let session_closed_event = SessionEvent::Closed(SessionEventPayload {
         actor: websocket_session.player.clone(),
-        session: websocket_session.session.clone(),
+        session: updated_session,
         reason: format!("ws closed: {}", close_reason),
     });
     let msg = json!(session_closed_event).to_string();

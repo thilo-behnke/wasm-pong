@@ -1,19 +1,22 @@
+use std::collections::HashMap;
+use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 
-use pong::event::event::{Event, EventReader, EventWriter};
+use pong::event::event::{EventWrapper, EventReader, EventWriter};
 
 use crate::hash::Hasher;
 use crate::kafka::{
-    KafkaDefaultEventWriterImpl, KafkaSessionEventReaderImpl, KafkaSessionEventWriterImpl,
+    KafkaSessionEventReaderImpl, KafkaSessionEventWriterImpl,
     KafkaTopicManager,
 };
-use crate::player::Player;
+use crate::actor::Player;
+use crate::event::{SessionEvent, SessionEventPayload};
 use crate::session::{Session, SessionState};
 
 pub struct SessionManager {
     kafka_host: String,
     sessions: Vec<Session>,
-    session_producer: EventWriter,
+    session_producers: HashMap<String, SessionWriter>,
     topic_manager: KafkaTopicManager,
 }
 
@@ -24,47 +27,57 @@ impl SessionManager {
             kafka_host: kafka_host.to_owned(),
             sessions: vec![],
             topic_manager: KafkaTopicManager::from(kafka_topic_manager_host),
-            session_producer: EventWriter::new(Box::new(KafkaDefaultEventWriterImpl::new(
-                kafka_host,
-            ))),
+            session_producers: HashMap::new(),
         }
     }
 
     pub fn get_session(&self, session_id: &str) -> Option<Session> {
         self.sessions
             .iter()
-            .find(|s| s.hash == session_id)
+            .find(|s| s.session_id == session_id)
             .map_or_else(|| None, |s| Some(s.clone()))
     }
 
-    pub async fn create_session(&mut self, player: Player) -> Result<Session, String> {
+    pub async fn create_session(&mut self, player: Player) -> Result<SessionEvent, String> {
+        info!("called to create new session by player {:?}", player);
         let add_partition_res = self.topic_manager.add_partition().await;
         if let Err(e) = add_partition_res {
-            println!("Failed to create partition: {}", e);
+            error!("failed to create partition: {}", e);
             return Err(e);
         }
-        let session_id = add_partition_res.unwrap();
-        let session_hash = Hasher::hash(session_id);
-        let session = Session::new(session_id, session_hash, player.clone());
-        println!("Successfully created session: {:?}", session);
-        let write_res = self.write_to_producer(session_created(session.clone(), player.clone()));
+        let session_partition_id = add_partition_res.unwrap();
+        let session_id = Hasher::hash(session_partition_id);
+        let session = Session::new(session_partition_id, session_id.clone(), player.clone());
+        info!("successfully created session: {:?}", session);
+        self.sessions.push(session.clone());
+        let session_created = SessionEvent::Created(SessionEventPayload {
+            session: session.clone(),
+            actor: player,
+            reason: format!("session created")
+        });
+        let write_res = self.write_to_producer(&session_created);
         if let Err(e) = write_res {
-            eprintln!(
-                "Failed to write session created event for {:?} to producer: {}",
+            let index = self.sessions.iter().position(|s| s.session_id == session_id);
+            if let Some(i) = index {
+                debug!("session create event could not be persisted - remove session from cache.");
+                self.sessions.remove(i);
+            }
+            error!(
+                "failed to write session created event for {:?} to producer: {}",
                 session, e
             );
         }
-        self.sessions.push(session.clone());
-        Ok(session)
+        info!("successfully persisted create session event.");
+        Ok(session_created)
     }
 
     pub async fn join_session(
         &mut self,
         session_id: String,
         player: Player,
-    ) -> Result<Session, String> {
+    ) -> Result<SessionEvent, String> {
         let updated_session = {
-            let session = self.sessions.iter_mut().find(|s| s.hash == session_id);
+            let session = self.sessions.iter_mut().find(|s| s.session_id == session_id);
             if let None = session {
                 let error = format!("Can't join session that does not exist: {}", session_id);
                 return Err(error);
@@ -89,9 +102,14 @@ impl SessionManager {
             session.state = SessionState::RUNNING;
             session.clone()
         };
+        let session_joined_event = SessionEvent::Joined(SessionEventPayload {
+            session: updated_session.clone(),
+            reason: "session joined".to_owned(),
+            actor: player
+        });
         {
             let write_res =
-                self.write_to_producer(session_joined(updated_session.clone(), player.clone()));
+                self.write_to_producer(&session_joined_event);
             if let Err(e) = write_res {
                 eprintln!(
                     "Failed to write session joined event for {:?} to producer: {}",
@@ -100,25 +118,35 @@ impl SessionManager {
             }
         };
         println!("sessions = {:?}", self.sessions);
-        Ok(updated_session.clone())
+        Ok(session_joined_event)
     }
 
-    fn write_to_producer<T>(&mut self, session_event: T) -> Result<(), String>
-    where
-        T: Serialize,
+    fn write_to_producer(&mut self, session_event: &SessionEvent) -> Result<(), String>
     {
-        let json_event = serde_json::to_string(&session_event).unwrap();
-        let session_event_write = self.session_producer.write(Event {
-            topic: "session".to_owned(),
-            key: None,
-            msg: json_event,
-        });
+        let session_id = session_event.session_id();
+        let session_producer = match self.session_producers.get_mut(session_id) {
+            Some(p) => p,
+            None => {
+                let session_writer = self.get_session_writer(session_id).expect("failed to create session writer to persist create event");
+                self.session_producers.insert(session_id.to_owned(), session_writer);
+                self.session_producers.get_mut(session_id).expect("failed to retrieve newly created session writer")
+            }
+        };
+        let json_event = serde_json::to_string(&session_event);
+        if let Err(e) = json_event {
+            let error = format!("failed to serialize session event: {}", e);
+            error!("{}", error);
+            return Err(error);
+        }
+        let json_event = json_event.unwrap();
+        info!("preparing to write session event to kafka: {}", json_event);
+        let session_event_write = session_producer.write_to_session("session", vec![&json_event]);
         if let Err(e) = session_event_write {
-            let message = format!("Failed to write session create event to kafka: {:?}", e);
+            let message = format!("Failed to write session event to kafka: {:?}", e);
             println!("{}", e);
             return Err(message.to_owned());
         }
-        println!("Successfully produced session event.");
+        info!("successfully produced session event: {:?}", json_event);
         return Ok(());
     }
 
@@ -129,12 +157,12 @@ impl SessionManager {
     ) -> Result<(SessionReader, SessionWriter), String> {
         let reader = self.get_session_reader(session_id, read_topics);
         if let Err(e) = reader {
-            println!("Failed to create session reader: {:?}", e);
+            error!("Failed to create session reader for session {}: {:?}", session_id, e);
             return Err("Failed to create session reader".to_string());
         }
         let writer = self.get_session_writer(session_id);
         if let Err(e) = writer {
-            println!("Failed to create session writer: {:?}", e);
+            error!("Failed to create session writer for session {}: {:?}", session_id, e);
             return Err("Failed to create session writer".to_string());
         }
         return Ok((reader.unwrap(), writer.unwrap()));
@@ -179,7 +207,7 @@ impl SessionManager {
     fn find_session(&self, session_id: &str) -> Option<Session> {
         self.sessions
             .iter()
-            .find(|s| session_id == s.hash)
+            .find(|s| session_id == s.session_id)
             .map(|s| s.clone())
     }
 }
@@ -190,13 +218,15 @@ pub struct SessionWriter {
 }
 
 impl SessionWriter {
-    pub fn write_to_session(&mut self, topic: &str, msg: &str) -> Result<(), String> {
-        let event = Event {
-            msg: msg.to_owned(),
-            key: Some(self.session.id.to_string()),
-            topic: topic.to_owned(),
-        };
-        self.writer.write(event)
+    pub fn write_to_session(&mut self, topic: &str, messages: Vec<&str>) -> Result<(), String> {
+        let events = messages.into_iter().map(|e| {
+            EventWrapper {
+                event: e.to_owned(),
+                key: Some(self.session.id.to_string()),
+                topic: topic.to_owned(),
+            }
+        }).collect();
+        self.writer.write_all(events)
     }
 }
 
@@ -207,55 +237,7 @@ pub struct SessionReader {
 }
 
 impl SessionReader {
-    pub fn read_from_session(&mut self) -> Result<Vec<Event>, String> {
+    pub fn read_from_session(&mut self) -> Result<Vec<EventWrapper>, String> {
         self.reader.read()
     }
-}
-
-#[derive(Deserialize, Serialize)]
-struct SessionCreatedEvent {
-    event_type: SessionEventType,
-    session: Session,
-    player: Player,
-}
-
-impl SessionCreatedEvent {
-    pub fn new(session: Session, player: Player) -> SessionCreatedEvent {
-        SessionCreatedEvent {
-            event_type: SessionEventType::CREATED,
-            session,
-            player,
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize)]
-struct SessionJoinedEvent {
-    event_type: SessionEventType,
-    session: Session,
-    player: Player,
-}
-
-impl SessionJoinedEvent {
-    pub fn new(session: Session, player: Player) -> SessionJoinedEvent {
-        SessionJoinedEvent {
-            event_type: SessionEventType::JOINED,
-            session,
-            player,
-        }
-    }
-}
-
-fn session_created(session: Session, player: Player) -> SessionCreatedEvent {
-    SessionCreatedEvent::new(session, player)
-}
-
-fn session_joined(session: Session, player: Player) -> SessionJoinedEvent {
-    SessionJoinedEvent::new(session, player)
-}
-
-#[derive(Deserialize, Serialize)]
-enum SessionEventType {
-    CREATED,
-    JOINED,
 }

@@ -5,19 +5,23 @@ pub mod event {
     use std::io::Write;
 
     #[derive(Debug, Deserialize, Serialize)]
-    pub struct Event {
+    pub struct EventWrapper {
         pub topic: String,
         pub key: Option<String>,
-        pub msg: String,
+        pub event: String,
     }
 
     pub trait EventWriterImpl: Send + Sync {
-        fn write(&mut self, event: Event) -> Result<(), String>;
+        fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String>;
     }
 
     pub struct FileEventWriterImpl {}
     impl EventWriterImpl for FileEventWriterImpl {
-        fn write(&mut self, event: Event) -> Result<(), String> {
+        fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String> {
+            let event_buffer = events.iter().fold(vec![], |mut acc, e| {
+                acc.push(e.event.as_bytes());
+                acc
+            }).concat();
             let options = OpenOptions::new()
                 .read(true)
                 .create(true)
@@ -27,7 +31,7 @@ pub mod event {
                 return Err(format!("{}", e));
             }
             let mut file = options.unwrap();
-            match file.write(event.msg.as_bytes()) {
+            match file.write(&*event_buffer) {
                 Ok(_) => Ok(()),
                 Err(e) => Err(format!("{}", e)),
             }
@@ -36,7 +40,7 @@ pub mod event {
 
     pub struct NoopEventWriterImpl {}
     impl EventWriterImpl for NoopEventWriterImpl {
-        fn write(&mut self, _event: Event) -> Result<(), String> {
+        fn write(&mut self, _events: Vec<EventWrapper>) -> Result<(), String> {
             Ok(())
         }
     }
@@ -62,13 +66,17 @@ pub mod event {
             }
         }
 
-        pub fn write(&mut self, event: Event) -> Result<(), String> {
-            self.writer_impl.write(event)
+        pub fn write(&mut self, event: EventWrapper) -> Result<(), String> {
+            self.write_all(vec![event])
+        }
+
+        pub fn write_all(&mut self, events: Vec<EventWrapper>) -> Result<(), String> {
+            self.writer_impl.write(events)
         }
     }
 
     pub trait EventReaderImpl: Send + Sync {
-        fn read(&mut self) -> Result<Vec<Event>, String>;
+        fn read(&mut self) -> Result<Vec<EventWrapper>, String>;
     }
 
     pub struct EventReader {
@@ -80,7 +88,7 @@ pub mod event {
             EventReader { reader_impl }
         }
 
-        pub fn read(&mut self) -> Result<Vec<Event>, String> {
+        pub fn read(&mut self) -> Result<Vec<EventWrapper>, String> {
             self.reader_impl.read()
         }
     }

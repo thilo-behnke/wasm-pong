@@ -11,14 +11,14 @@ ADD ./wasm/pong /build/pong
 WORKDIR /build/client/wasm
 RUN wasm-pack build
 
-FROM node:12 as www_build_stage
+FROM node:12 as svelte_build_stage
 
 RUN mkdir /build
 
-ADD ./www /build/www
-RUN ls /build/www
-RUN mkdir /build/www/node_modules
-WORKDIR /build/www
+ADD ./svelte-client /build/svelte-client
+RUN ls /build/svelte-client
+RUN mkdir /build/svelte-client/node_modules
+WORKDIR /build/svelte-client
 
 COPY --from=rust_build_stage /build/client/wasm/pkg/ /build/wasm/pkg/
 
@@ -27,7 +27,7 @@ RUN npm run build
 
 FROM nginx:latest
 
-COPY --from=www_build_stage /build/www/dist/ /usr/share/nginx/pong/web
+COPY --from=svelte_build_stage /build/svelte-client/dist/ /usr/share/nginx/pong/web
 
 COPY ./nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY ./nginx/nginx.conf /etc/nginx/nginx.conf

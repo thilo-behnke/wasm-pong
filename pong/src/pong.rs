@@ -158,7 +158,7 @@ pub mod pong_collisions {
 }
 
 pub mod pong_events {
-    use crate::event::event::{Event, EventWriter};
+    use crate::event::event::{EventWrapper, EventWriter};
     use crate::geom::vector::Vector;
     use serde::Serialize;
 
@@ -185,14 +185,16 @@ pub mod pong_events {
 
     impl PongEventWriter for DefaultPongEventWriter {
         fn write(&mut self, event: PongEventType) -> Result<(), String> {
-            let out_event = match event {
-                PongEventType::GameObjUpdate(ref update) => Event {
-                    topic: String::from("obj_update"),
-                    key: Some(update.obj_id.clone().to_string()),
-                    msg: serde_json::to_string(&event).unwrap(),
-                },
-            };
-            self.writer.write(out_event)
+            // TODO: Fix
+            // let out_event = match event {
+            //     PongEventType::GameObjUpdate(ref update) => Event {
+            //         topic: String::from("obj_update"),
+            //         key: Some(update.obj_id.clone().to_string()),
+            //         msg: serde_json::to_string(&event).unwrap(),
+            //     },
+            // };
+            // self.writer.write(out_event)
+            Ok(())
         }
     }
 

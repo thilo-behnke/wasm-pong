@@ -1,12 +1,13 @@
 use serde::{Serialize, Deserialize};
-use crate::player::Player;
+use crate::actor::{Actor, Observer, Player};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Session {
-    pub id: u16,
-    pub hash: String,
+    pub id: u16, // internal id
+    pub session_id: String,
     pub state: SessionState,
     pub players: Vec<Player>,
+    pub observers: Vec<Observer>
 }
 
 impl Session {
@@ -14,8 +15,9 @@ impl Session {
         Session {
             players: vec![player],
             id,
-            hash,
+            session_id: hash,
             state: SessionState::PENDING,
+            observers: vec![]
         }
     }
 
@@ -35,7 +37,7 @@ impl Session {
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub enum SessionState {
     PENDING, // 1 player is missing
-    RUNNING, // game is playing
-    CLOSED,  // game is over
+    RUNNING, // store is playing
+    CLOSED,  // store is over
 }
 

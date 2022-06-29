@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use serde::{Deserialize, Serialize};
 
 use crate::collision::collision::{
     CollisionRegistry, Collisions,
@@ -18,13 +19,13 @@ use crate::pong::pong_events::{
 };
 use crate::utils::utils::{DefaultLoggerFactory, Logger, LoggerFactory, NoopLogger};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum InputType {
     UP,
     DOWN,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Input {
     pub input: InputType,
     pub obj_id: u16,
@@ -130,7 +131,12 @@ impl Field {
                 continue;
             }
             if *obj_mut.vel() == Vector::zero() {
-                obj_mut.vel_mut().add(&Vector::new(-300., 0.))
+                let go_right = rand::random::<bool>();
+                let start_vel_x = match go_right {
+                    true => 500.,
+                    false => -500.
+                };
+                obj_mut.vel_mut().add(&Vector::new(start_vel_x, 0.))
             }
         }
 
@@ -218,6 +224,11 @@ impl Field {
     pub fn objs(&self) -> Vec<&Rc<RefCell<Box<dyn GameObject>>>> {
         self.objs.iter().collect()
     }
+
+    pub fn set_dimensions(&mut self, width: u16, height: u16) {
+        self.width = width;
+        self.height = height;
+    }
 }
 
 impl DefaultGameObject {
@@ -232,7 +243,7 @@ impl DefaultGameObject {
                 },
                 Vector::new(0., 1.),
                 (field.width as f64) / 25.,
-                (field.height as f64) / 5.,
+                (field.height as f64) / 4.,
             ))),
             Box::new(DefaultPhysicsComp::new(Vector::zero(), true)),
         ))

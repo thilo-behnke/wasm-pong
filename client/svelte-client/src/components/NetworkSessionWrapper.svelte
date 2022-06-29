@@ -1,6 +1,6 @@
 <script lang="ts">
 
-    import {networkEvents, networkSessionStateEvents, sessionInputs} from "../store/session";
+    import {networkEvents, networkMoveEvents, networkSessionStateEvents, sessionInputs} from "../store/session";
     import type {NetworkSession} from "../store/model/session";
     import {SessionState, SessionType} from "../store/model/session";
     import CopyToClipboard from "./CopyToClipboard.svelte";
@@ -36,6 +36,15 @@
         networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, player_id: session.you.id, ts: $gameField.lastTick})
     }
 
+    const tick = (dt: number) => {
+        if (session.type === SessionType.HOST) {
+            gameField.tick($sessionInputs, dt)
+            return;
+        }
+        // peer and observer directly override game field state
+        gameField.update($networkMoveEvents)
+    }
+
 </script>
 
 {#if !session}
@@ -48,7 +57,7 @@
     {:else if session.state === SessionState.CLOSED}
         <h3>game over!</h3>
     {:else if session.state === SessionState.RUNNING}
-        <slot inputs={$sessionInputs} objects={$gameField.objects} tick={gameField.tick}></slot>
+        <slot inputs={$sessionInputs} objects={$gameField.objects} tick={tick}></slot>
     {:else }
         <h3>unknown game state</h3>
     {/if}

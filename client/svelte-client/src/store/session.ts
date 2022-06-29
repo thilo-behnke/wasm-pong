@@ -2,11 +2,19 @@ import {derived, get, Readable, readable, Unsubscriber, writable} from "svelte/s
 import {keysPressed} from "./io";
 import api from "../api/session";
 import session from "../api/session";
-import type {Heartbeat, LocalSession, Message, NetworkSession, Session, SessionSnapshot} from "./model/session";
+import type {
+    GameObject,
+    Heartbeat,
+    LocalSession,
+    Message,
+    NetworkSession,
+    Session,
+    SessionSnapshot
+} from "./model/session";
 import {isLocalSession, isNetworkSession, MessageType, SessionState, SessionType} from "./model/session";
 import type {NetworkStore} from "./network";
 import type {GameEventWrapper, InputEventPayload, InputEventWrapper, SessionEventPayload} from "./model/event";
-import {isInputEvent} from "./model/event";
+import {isInputEvent, isMoveEvent} from "./model/event";
 import {getPlayerKeyboardInputs, playerKeyboardInputs} from "./input";
 import type {Subscriber} from "svelte/types/runtime/store";
 import {combined} from "./utils";
@@ -124,6 +132,15 @@ export const networkSessionStateEvents = derived(networkEvents, $sessionEvents =
     sessionStore.set(session);
     return sessionEvents;
 });
+
+export const networkMoveEvents = derived(networkEvents, $sessionEvents => {
+    const moveEvents = $sessionEvents.filter(isMoveEvent).map(({event}) => event);
+    if (!moveEvents.length) {
+        return [];
+    }
+    // TODO: How to know number of objects?
+    return moveEvents.slice(moveEvents.length - 7)
+})
 
 const networkInputEvents = derived([networkEvents, sessionStore], ([$sessionEvents, $sessionStore]) => $sessionEvents.filter(wrapper => {
     if (!isInputEvent(wrapper)) {

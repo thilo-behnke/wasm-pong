@@ -1,4 +1,4 @@
-import type {NetworkSession, Session} from "./session";
+import type {GameObject, NetworkSession, Session} from "./session";
 import type {Input} from "./input";
 
 export type SessionEventPayload = {
@@ -34,12 +34,21 @@ export type InputEventWrapper = {
     event: InputEventPayload
 }
 
-export type GameEventWrapper = SessionEvenWrapper | InputEventWrapper;
+export type MoveEventWrapper = {
+    topic: 'move',
+    event: GameObject
+}
+
+export type GameEventWrapper = SessionEvenWrapper | InputEventWrapper | MoveEventWrapper;
 
 export const isSessionEvent = (event: GameEventWrapper): event is SessionEvenWrapper => {
-    return event.topic == 'session';
+    return event.topic === 'session';
 }
 
 export const isInputEvent = (event: GameEventWrapper): event is InputEventWrapper => {
-    return event.topic == 'input';
+    return event.topic === 'input';
+}
+
+export const isMoveEvent = (event: GameEventWrapper): event is MoveEventWrapper => {
+    return event.topic === 'move';
 }

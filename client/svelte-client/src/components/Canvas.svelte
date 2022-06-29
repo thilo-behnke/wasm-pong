@@ -78,7 +78,7 @@
     }
 
     function tick(dt) {
-        dispatch('tick', [renderOnly ? [] : inputs, dt]);
+        dispatch('tick', [dt]);
     }
 
     function render(objects, dt) {

@@ -64,7 +64,7 @@ export type GameFieldState = {
     objects: GameObject[]
 }
 
-function createGameFieldStore(): Readable<GameFieldState> & {tick: (inputs: Input[], dt: number) => void} {
+function createGameFieldStore(): Readable<GameFieldState> & {tick: (inputs: Input[], dt: number) => void, update: (objects: GameObject[]) => void} {
     const {subscribe, set} = writable<GameFieldState>({lastTick: 0, objects: []});
 
     const field = FieldWrapper.new();
@@ -77,9 +77,14 @@ function createGameFieldStore(): Readable<GameFieldState> & {tick: (inputs: Inpu
         set({objects, lastTick});
     }
 
+    function update(objects: GameObject[]) {
+        set({objects, lastTick: Date.now()})
+    }
+
     return {
         subscribe,
-        tick
+        tick,
+        update
     }
 }
 

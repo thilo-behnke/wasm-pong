@@ -20,6 +20,7 @@
     .session-info {
         display: flex;
         flex-flow: row wrap;
+        font-size: 0.9rem;
     }
 
     .session-info > span + span {

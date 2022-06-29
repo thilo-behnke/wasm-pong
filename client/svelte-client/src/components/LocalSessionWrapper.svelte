@@ -11,5 +11,5 @@
 </script>
 
 {#if session && sessionInputs}
-    <slot inputs={$sessionInputs} objects={$gameField.objects} tick={tick}></slot>
+    <slot inputs={$sessionInputs} objects={$gameField.objects} tick={tick} events={[]}></slot>
 {/if}

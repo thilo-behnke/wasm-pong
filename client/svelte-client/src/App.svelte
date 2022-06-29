@@ -10,6 +10,7 @@
     import SessionInfo from "./components/SessionInfo.svelte";
     import type {Readable} from "svelte/store";
     import {SessionType} from "./store/model/session";
+    import EvenTicker from "./components/EvenTicker.svelte";
 
     let sessionStore: Readable<SessionStore>;
     let debug = false;
@@ -56,7 +57,7 @@
             ></ModeSelect>
         </div>
     {:else}
-        <SessionWrapper session={session} let:inputs={inputs} let:objects={objects} let:tick={tick}>
+        <SessionWrapper session={session} let:inputs={inputs} let:objects={objects} let:tick={tick} let:events={events}>
             <div class="game-area">
                 <div class="game-area__session">
                     <SessionInfo session={session}></SessionInfo>
@@ -70,6 +71,9 @@
                     <GameSettings on:debug-toggle={() => toggleDebug()}></GameSettings>
                     <Input inputs={inputs}></Input>
                 </div>
+                <div class="game-area__events">
+                    <EvenTicker events={events}></EvenTicker>
+                </div>
             </div>
         </SessionWrapper>
     {/if}
@@ -81,6 +85,8 @@
         flex-flow: column;
         justify-content: start;
         align-items: center;
+        width: 600px;
+        margin: auto;
     }
 
     .mode-select {
@@ -94,7 +100,8 @@
         display: grid;
         grid-template-areas:
             "session session"
-            "game hud";
+            "game hud"
+            "events events";
         grid-template-rows: min-content 1fr;
         grid-template-columns: 1fr min-content;
         grid-row-gap: 1rem;
@@ -119,6 +126,14 @@
         grid-template-rows: max-content 1fr;
         border: 1px solid #ff3e00;
         padding: 0.4rem;
+    }
+
+    .game-area__events {
+        grid-area: events;
+        display: grid;
+        border: 1px solid #ff3e00;
+        padding: 0.4rem;
+        height: 300px;
     }
 
     @media (min-width: 640px) {

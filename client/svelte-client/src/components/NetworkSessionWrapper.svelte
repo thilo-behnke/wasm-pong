@@ -28,13 +28,12 @@
 
     $: if(session && session.type === SessionType.HOST && session.state === SessionState.RUNNING) {
         console.debug("sending host snapshot")
-        networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, objects: $gameField, player_id: session.you.id, ts: Date.now()})
+        networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, objects: $gameField.objects, player_id: session.you.id, ts: $gameField.lastTick})
     }
 
-    // TODO: keyboard events must be sent every tick, not only if a key is pressed
     $: if(session && session.type === SessionType.PEER && session.state === SessionState.RUNNING) {
         console.debug("sending host snapshot")
-        networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, player_id: session.you.id, ts: Date.now()})
+        networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, player_id: session.you.id, ts: $gameField.lastTick})
     }
 
 </script>

@@ -48,7 +48,7 @@
     {:else if session.state === SessionState.CLOSED}
         <h3>game over!</h3>
     {:else if session.state === SessionState.RUNNING}
-        <slot inputs={$sessionInputs} objects={$gameField} tick={gameField.tick}></slot>
+        <slot inputs={$sessionInputs} objects={$gameField.objects} tick={gameField.tick}></slot>
     {:else }
         <h3>unknown game state</h3>
     {/if}

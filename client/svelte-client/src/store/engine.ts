@@ -65,11 +65,11 @@ export type GameFieldState = {
 }
 
 function createGameFieldStore(): Readable<GameFieldState> & {tick: (inputs: Input[], dt: number) => void} {
-    const {subscribe, set} = writable<GameFieldState>(null);
+    const {subscribe, set} = writable<GameFieldState>({lastTick: 0, objects: []});
 
     const field = FieldWrapper.new();
 
-    function tick (inputs: Input[], dt: number) {
+    function tick(inputs: Input[], dt: number) {
         field.tick(inputs, dt);
 
         const objects = JSON.parse(field.objects());

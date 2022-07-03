@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 use pong::game_field::Input;
-use crate::actor::Player;
+use crate::actor::{Actor, Player};
 use crate::session::Session;
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -72,13 +72,14 @@ pub struct HeartBeatEventPayload {
 pub enum SessionEvent {
     Created(SessionEventPayload),
     Joined(SessionEventPayload),
+    ObserverAdded(SessionEventPayload),
     Closed(SessionEventPayload),
 }
 
 impl SessionEvent {
     pub fn session_id(&self) -> &str {
         return match self {
-            SessionEvent::Created(e) | SessionEvent::Joined(e) | SessionEvent::Closed(e) => e.session_id()
+            SessionEvent::Created(e) | SessionEvent::Joined(e) | SessionEvent::ObserverAdded(e) | SessionEvent::Closed(e) => e.session_id()
         }
     }
 }
@@ -86,7 +87,7 @@ impl SessionEvent {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct SessionEventPayload {
     pub session: Session,
-    pub actor: Player,
+    pub actor: Actor,
     pub reason: String,
 }
 

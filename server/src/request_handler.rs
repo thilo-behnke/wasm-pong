@@ -8,7 +8,7 @@ use serde_json::json;
 use tokio::sync::Mutex;
 use serde::{Deserialize};
 use crate::event::{SessionEvent, SessionEventPayload, SessionEventType};
-use crate::actor::Player;
+use crate::actor::{Actor, Observer, Player};
 use crate::session_manager::SessionManager;
 use crate::utils::http_utils::{build_error_res, build_success_res, get_query_params, read_json_body};
 
@@ -41,6 +41,7 @@ impl RequestHandler for DefaultRequestHandler {
                 handle_session_create(&self.session_manager, req, addr).await
             }
             (&Method::POST, "/join_session") => handle_session_join(&self.session_manager, req, addr).await,
+            (&Method::POST, "/watch_session") => handle_session_watch(&self.session_manager, req, addr).await,
             _ => Ok(Response::new("unknown".into())),
         }
     }
@@ -113,6 +114,31 @@ async fn handle_session_join(
     let session_event = session_join_res.unwrap();
     info!("player {:?} successfully joined session: {:?}", player, session_event);
     let reason = format!("player {:?} joined session", player);
+    let serialized = json!(session_event);
+    return build_success_res(&serialized.to_string());
+}
+
+async fn handle_session_watch(
+    session_manager: &Arc<Mutex<SessionManager>>,
+    mut req: Request<Body>,
+    addr: SocketAddr,
+) -> Result<Response<Body>, Infallible> {
+    info!("called watch_session");
+    debug!("req: {:?}", req);
+    let mut locked = session_manager.lock().await;
+    let body = read_json_body::<SessionJoinDto>(&mut req).await;
+    let observer = Observer::new(addr.ip().to_string());
+    let sesssion_add_observer_res = locked.watch_session(body.session_id, observer.clone()).await;
+    if let Err(e) = sesssion_add_observer_res {
+        error!("Failed to join session: {:?}", e);
+        return Ok(Response::builder()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .body(Body::from(e))
+            .unwrap());
+    }
+    let session_event = sesssion_add_observer_res.unwrap();
+    info!("observer {:?} successfully joined session: {:?}", observer, session_event);
+    let reason = format!("observer {:?} joined session", observer);
     let serialized = json!(session_event);
     return build_success_res(&serialized.to_string());
 }

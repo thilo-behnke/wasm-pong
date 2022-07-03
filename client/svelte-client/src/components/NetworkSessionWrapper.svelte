@@ -15,6 +15,7 @@
     export let session: NetworkSession;
 
     let joinLink;
+    let watchLink;
     let cachedSessionId;
     let relevantKeyboardEvents: Readable<Input[]>;
 
@@ -24,6 +25,7 @@
         cachedSessionId = session.session_id;
         console.log("NetworkSessionWrapper ready, now setting up sessionEvents")
         joinLink = api.createJoinLink(session.session_id);
+        watchLink = api.createWatchLink(session.session_id);
 
         relevantKeyboardEvents = getPlayerKeyboardInputs(session.you.nr);
     }
@@ -50,6 +52,7 @@
     {:else if session.state === SessionState.CLOSED}
         <h3>game over!</h3>
     {:else if session.state === SessionState.RUNNING}
+        <CopyToClipboard text={watchLink}></CopyToClipboard>
         {#if session.type === SessionType.HOST}
             <TickWrapper inputs={$sessionInputs} let:tick={tick} let:inputs={inputs} let:handleError={handleError}>
                 <slot inputs={inputs} tick={tick} events={$networkSessionStateEvents}></slot>

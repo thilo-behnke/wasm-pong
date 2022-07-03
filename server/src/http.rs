@@ -12,6 +12,7 @@ use hyper_tungstenite::HyperWebsocket;
 use hyper_tungstenite::tungstenite::{Error};
 use log::{debug, error, info};
 use tokio::sync::Mutex;
+use crate::actor::Actor;
 
 use crate::request_handler::{DefaultRequestHandler, RequestHandler};
 use crate::session_manager::{SessionManager};
@@ -84,7 +85,7 @@ async fn handle_potential_ws_upgrade(session_manager: Arc<Mutex<SessionManager>>
             StatusCode::BAD_REQUEST,
         );
     }
-    if !params.contains_key("player_id") {
+    if !params.contains_key("actor_id") {
         error!("Missing player id request param for websocket connection, don't upgrade connection to ws.");
         return build_error_res(
             "Missing request param: player_id",
@@ -100,7 +101,7 @@ async fn handle_potential_ws_upgrade(session_manager: Arc<Mutex<SessionManager>>
         return res;
     }
     let request_session_id = *params.get("session_id").unwrap();
-    let request_player_id = *params.get("player_id").unwrap();
+    let request_actor_id = *params.get("actor_id").unwrap();
     let request_player_ip = addr.ip().to_string();
     let session = session_manager.lock().await.get_session(request_session_id);
     if let None = session {
@@ -109,18 +110,6 @@ async fn handle_potential_ws_upgrade(session_manager: Arc<Mutex<SessionManager>>
         return build_error_res(error.as_str(), StatusCode::NOT_FOUND);
     }
     let session = session.unwrap();
-    let matching_player = session.players.iter().find(|p| p.id == request_player_id);
-    if let None = matching_player {
-        let error = format!("Player is not registered in session: {}", request_player_id);
-        error!("{}", error);
-        return build_error_res(error.as_str(), StatusCode::FORBIDDEN);
-    }
-    let matching_player = matching_player.unwrap();
-    if matching_player.ip != request_player_ip {
-        let error = format!("Player with wrong ip tried to join session: {} (expected) vs {} (actual)", matching_player.ip, request_player_ip);
-        error!("{}", error);
-        return build_error_res(error.as_str(), StatusCode::FORBIDDEN);
-    }
     let connection_type_raw = params.get("connection_type").unwrap();
     let connection_type =
         WebSocketConnectionType::from_str(connection_type_raw);
@@ -130,10 +119,37 @@ async fn handle_potential_ws_upgrade(session_manager: Arc<Mutex<SessionManager>>
         error!("{}", error);
         return build_error_res(error.as_str(), StatusCode::BAD_REQUEST);
     }
+    let connection_type = connection_type.unwrap();
+    let actor = match connection_type {
+        WebSocketConnectionType::OBSERVER => {
+            let matching_observer = session.observers.iter().find(|o| o.id == request_actor_id);
+            if let None = matching_observer {
+                let error = format!("Observer is not registered in session: {}", request_actor_id);
+                error!("{}", error);
+                return build_error_res(error.as_str(), StatusCode::FORBIDDEN);
+            }
+            Actor::Observer(matching_observer.unwrap().clone())
+        },
+        _ => {
+            let matching_player = session.players.iter().find(|p| p.id == request_actor_id);
+            if let None = matching_player {
+                let error = format!("Player is not registered in session: {}", request_actor_id);
+                error!("{}", error);
+                return build_error_res(error.as_str(), StatusCode::FORBIDDEN);
+            }
+            let matching_player = matching_player.unwrap();
+            if matching_player.ip != request_player_ip {
+                let error = format!("Player with wrong ip tried to join session: {} (expected) vs {} (actual)", matching_player.ip, request_player_ip);
+                error!("{}", error);
+                return build_error_res(error.as_str(), StatusCode::FORBIDDEN);
+            }
+            Actor::Player(matching_player.clone())
+        }
+    };
     let websocket_session = WebSocketSession {
         session: session.clone(),
-        connection_type: connection_type.unwrap(),
-        player: matching_player.clone()
+        connection_type,
+        actor
     };
     debug!("websocket upgrade request is valid, will now upgrade to websocket: {:?}", req);
 

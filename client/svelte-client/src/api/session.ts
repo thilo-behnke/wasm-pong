@@ -1,6 +1,6 @@
-import type {LocalSession, NetworkSession, Session} from "../store/model/session";
+import type {LocalSession, NetworkSession} from "../store/model/session";
 import {SessionState, SessionType} from "../store/model/session";
-import type {NetworkSessionEventPayload, SessionEventPayload} from "../store/model/event";
+import type {NetworkSessionEventPayload} from "../store/model/event";
 
 async function createLocalSession(): Promise<LocalSession> {
     await new Promise((res) => {
@@ -26,7 +26,11 @@ async function createNetworkSession(): Promise<NetworkSession> {
 }
 
 function createJoinLink(sessionId: string): string {
-    return `${window.location.origin}${window.location.pathname}?session_id=${sessionId}`;
+    return `${window.location.origin}${window.location.pathname}?join=${sessionId}`;
+}
+
+function createWatchLink(sessionId: string): string {
+    return `${window.location.origin}${window.location.pathname}?watch=${sessionId}`;
 }
 
 async function joinNetworkSession(sessionId): Promise<NetworkSession> {
@@ -71,7 +75,7 @@ async function sessionResponseHandler(response: Response): Promise<NetworkSessio
 
 async function createEventWebsocket(session: NetworkSession): Promise<WebSocket> {
     console.debug("creating ws for session: ", session)
-    const url = `/pong/ws?session_id=${session.session_id}&player_id=${session.you.id}&connection_type=${session.type.toLowerCase()}`;
+    const url = `/pong/ws?session_id=${session.session_id}&actor_id=${session.you.id}&connection_type=${session.type.toLowerCase()}`;
     return createWebsocket(url);
 }
 
@@ -108,5 +112,6 @@ export default {
     joinNetworkSession,
     watchNetworkSession,
     createEventWebsocket,
-    createJoinLink
+    createJoinLink,
+    createWatchLink
 }

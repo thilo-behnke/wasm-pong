@@ -8,8 +8,11 @@ export enum SessionType {
     LOCAL = 'LOCAL', HOST = 'HOST', PEER = 'PEER', OBSERVER = 'OBSERVER'
 }
 
-export type Player = {
+export type Actor = {
     id: string,
+}
+
+export type Player = Actor & {
     nr: number
 }
 
@@ -25,8 +28,14 @@ export type GameObject = {
     y: number,
 }
 
-export type Observer = {
-    id: string
+export type Observer = Actor
+
+export const isPlayer = (actor: Actor): actor is Player => {
+    return !!(actor as Player).nr
+}
+
+export const isObserver = (actor: Actor): actor is Observer => {
+    return !isPlayer(actor);
 }
 
 export type LocalSession = {
@@ -40,8 +49,9 @@ export type NetworkSession = {
     type: SessionType.HOST | SessionType.PEER | SessionType.OBSERVER,
     state: SessionState,
     players: Player[],
-    you: Player
+    you: Actor
 }
+
 export type Session = LocalSession | NetworkSession;
 
 export function isNetworkSession(session: Session): session is NetworkSession {

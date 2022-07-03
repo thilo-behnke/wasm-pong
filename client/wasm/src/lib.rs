@@ -1,6 +1,6 @@
 mod utils;
 
-use pong::game_field::{Field, Input, InputType};
+use pong::game_field::{Field, GameState, Input, InputType};
 use pong::game_object::game_object::{GameObject};
 use pong::geom::shape::ShapeType;
 use pong::pong::pong_events::{NoopPongEventWriter};
@@ -143,7 +143,7 @@ impl FieldWrapper {
         self.field.height
     }
 
-    pub fn tick(&mut self, inputs_js: &JsValue, ms_diff_js: JsValue) {
+    pub fn tick(&mut self, inputs_js: JsValue, ms_diff_js: JsValue) {
         let input_dtos: Vec<InputDTO> = inputs_js.into_serde().unwrap();
         let inputs = input_dtos
             .into_iter()
@@ -164,6 +164,10 @@ impl FieldWrapper {
         let json = json!(objs);
         serde_json::to_string(&json).unwrap()
     }
+    //
+    // pub fn game_state(&self) -> String {
+    //     serde_json::to_string(&self.field.game_state).unwrap()
+    // }
 
     pub fn set_dimensions(&mut self, width_js: JsValue, height_js: JsValue) {
         let width = width_js.as_f64().unwrap();

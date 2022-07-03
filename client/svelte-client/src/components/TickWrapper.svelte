@@ -37,5 +37,6 @@
         }
     }
 </script>
+{JSON.stringify($gameField)}
 
 <slot tick={$gameField} inputs={inputs} handleError={handleError}></slot>

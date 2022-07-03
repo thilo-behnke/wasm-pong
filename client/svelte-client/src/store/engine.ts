@@ -59,26 +59,35 @@ function deriveObject (obj) {
     });
 }
 
+export type GameScore = {
+    player1: number,
+    player2: number,
+}
+
 export type GameFieldState = {
     ts: number,
-    objects: GameObject[]
+    objects: GameObject[],
+    score: GameScore
 }
 
 function createGameFieldStore(): Readable<GameFieldState> & {tick: (inputs: Input[], dt: number) => void, update: (objects: GameObject[]) => void} {
-    const {subscribe, set} = writable<GameFieldState>({ts: 0, objects: []});
+    const {subscribe, set} = writable<GameFieldState>({ts: 0, objects: [], score: {player1: 0, player2: 0}});
 
     const field = FieldWrapper.new();
 
     function tick(inputs: Input[], dt: number) {
-        field.tick(inputs, dt);
+        field.tick([], dt);
+        // field.tick(inputs, dt);
 
         const objects = JSON.parse(field.objects());
         const ts = Date.now();
-        set({objects, ts});
+        // const score = JSON.parse(field.game_state()) as {goals_player_1: number, goals_player_2: number};
+        // set({objects, ts, score: {player1: score.goals_player_1, player2: score.goals_player_2}});
+        set({objects, ts, score: {player1: 0, player2: 0}});
     }
 
     function update(objects: GameObject[]) {
-        set({objects, ts: Date.now()})
+        set({objects, ts: Date.now(), score: {player1: 0, player2: 0}})
     }
 
     return {

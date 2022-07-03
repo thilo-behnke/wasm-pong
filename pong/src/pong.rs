@@ -15,14 +15,13 @@ pub mod pong_collisions {
         player: &Rc<RefCell<Box<dyn GameObject>>>,
     ) {
         let mut ball = RefCell::borrow_mut(&ball);
+        let ball_pos = ball.pos().clone();
+        let mut ball_dimensions = ball.shape().dimensions();
+        ball_dimensions.scalar_multiplication(0.5);
+        let ball_height = ball_dimensions.y;
 
         // player is crushing the ball out of bounds
-        let ball_pos = ball.pos().clone();
-        let ball_height = {
-            let ball_dimensions = ball.shape().dimensions();
-            ball_dimensions.y
-        };
-        if is_in_range(ball_pos.y, stats.dimensions.1 - ball_height / 2., stats.dimensions.1 + ball_height / 2.) || is_in_range(ball_pos.y, 0. - ball_height / 2., 0. + ball_height / 2.) {
+        if is_in_range(ball_pos.y, stats.dimensions.1 - ball_height, stats.dimensions.1 + ball_height) || is_in_range(ball_pos.y, 0. - ball_height, 0. + ball_height) {
             let mut player = player.borrow_mut();
             *player.vel_mut() = Vector::zero();
             return;
@@ -54,10 +53,23 @@ pub mod pong_collisions {
 
         // move out of collision
         let mut b_to_a = ball.pos().clone();
+        let mut player_dimensions = player.shape().dimensions().clone();
+        player_dimensions.scalar_multiplication(0.5);
+        let mut combined_dimensions = Vector::zero();
+        combined_dimensions.add(&player_dimensions);
+        combined_dimensions.add(&ball_dimensions);
+
         b_to_a.sub(&player.pos());
         b_to_a.normalize();
-        b_to_a.scalar_multiplication(5.);
-        ball.pos_mut().add(&b_to_a);
+        b_to_a.multiply(&combined_dimensions);
+        let mut buffer = Vector::new(5., 5.);
+        let mut b_to_a_norm = b_to_a.clone();
+        b_to_a_norm.normalize();
+        buffer.multiply(&b_to_a_norm);
+        b_to_a.add(&buffer); // avoid ball stuck to end of player
+        let mut updated_ball_pos = player.pos().clone();
+        updated_ball_pos.add(&b_to_a);
+        *ball.pos_mut() = updated_ball_pos;
 
         ball.set_dirty(true);
     }

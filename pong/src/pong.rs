@@ -3,37 +3,45 @@ pub mod pong_collisions {
     use crate::geom::shape::ShapeType;
     use crate::geom::vector::Vector;
     use std::cell::RefCell;
+    use std::cmp::min;
+    use std::f64::consts::{FRAC_PI_2, FRAC_PI_4, PI};
     use std::rc::Rc;
 
     pub fn handle_player_ball_collision(
         ball: &Rc<RefCell<Box<dyn GameObject>>>,
         player: &Rc<RefCell<Box<dyn GameObject>>>,
     ) {
-        // reflect
         let mut ball = RefCell::borrow_mut(&ball);
         let player = player.borrow();
-        ball.vel_mut().reflect(&player.orientation());
+
+        // reflect
+        let ball_vel = ball.vel_mut();
+        let mut ball_vel_total = ball_vel.len();
+        ball_vel.reflect(&player.orientation());
+        ball_vel.normalize();
+
         // use vel of player obj
-        if *player.vel() != Vector::zero() {
-            let mut collision_effect = player.vel().clone();
-            collision_effect.scalar_multiplication(0.3);
+        if *player.vel() == Vector::zero() {
+            ball_vel.y *= 0.50; // friction, if player does not move reduce vertical velocity.
+            ball_vel.normalize();
+        } else if player.vel().angle(&ball_vel) > FRAC_PI_4 {
+            let mut collision_effect = player.orientation().clone();
+            collision_effect.scalar_multiplication(0.5);
 
-            let mut ball_vel = ball.vel().clone();
             ball_vel.add(&collision_effect);
-
-            let mut vel_ball_orientation = ball_vel.clone();
-            vel_ball_orientation.normalize();
-
-            ball_vel.abs();
-            ball_vel.min(&Vector::new(1000., 1000.));
-            ball_vel.multiply(&vel_ball_orientation);
-
-            *ball.vel_mut() = ball_vel
+            ball_vel.normalize();
         }
+
+        ball_vel_total *= 1.01; // get 1% faster every collision
+        ball_vel_total = f64::min(ball_vel_total, 1000.); // max velocity.
+        ball_vel.scalar_multiplication(ball_vel_total);
+        *ball.vel_mut() = ball_vel.clone();
+
         // move out of collision
         let mut b_to_a = ball.pos().clone();
         b_to_a.sub(&player.pos());
         b_to_a.normalize();
+        b_to_a.scalar_multiplication(5.);
         ball.pos_mut().add(&b_to_a);
 
         ball.set_dirty(true);

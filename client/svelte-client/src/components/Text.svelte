@@ -1,7 +1,7 @@
 <script>
     import {renderable} from "../store/engine";
+    import {mainColor} from "../store/render";
 
-    export let color = 'hsl(0, 0%, 100%)';
     export let align = 'center';
     export let baseline = 'middle';
 
@@ -10,12 +10,12 @@
     export let y = 0;
 
     export let fontSize = 16;
-    export let fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica';
+    export let fontFamily = '-apple-sysem, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica';
 
     renderable(props => {
         const { engineCtx: ctx } = props;
         if (text) {
-            ctx.fillStyle = color;
+            ctx.fillStyle = mainColor;
             ctx.font = `${fontSize}px ${fontFamily}`;
             ctx.textAlign = align;
             ctx.textBaseline = baseline;

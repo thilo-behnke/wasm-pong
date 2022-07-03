@@ -3,13 +3,13 @@ import api from "../api/session";
 import type {LocalSession, Message, NetworkSession, Session, SessionSnapshot} from "./model/session";
 import {isLocalSession, isNetworkSession, MessageType, SessionState, SessionType} from "./model/session";
 import type {NetworkStore} from "./network";
-import type {GameEventWrapper, InputEventPayload, SessionEventPayload} from "./model/event";
-import {isInputEvent, isMoveEvent, isSessionEvent} from "./model/event";
+import type {GameEventWrapper, InputEventPayload, SessionEventPayload, TickEventPayload} from "./model/event";
+import {isInputEvent, isMoveEvent, isSessionEvent, isTickEvent} from "./model/event";
 import {getPlayerKeyboardInputs, playerKeyboardInputs} from "./input";
 import type {Subscriber} from "svelte/types/runtime/store";
 import {combined} from "./utils";
 import type {Input} from "./model/input";
-import {init} from "svelte/internal";
+import {init, tick} from "svelte/internal";
 
 const sessionStore = writable<Session>(null);
 
@@ -134,14 +134,56 @@ export const networkSessionStateEvents = readable<SessionEventPayload[]>([], set
     }
 });
 
-export const networkMoveEvents = derived(networkEvents, $sessionEvents => {
-    const moveEvents = $sessionEvents.filter(isMoveEvent).map(({event}) => event);
-    if (!moveEvents.length) {
-        return [];
+export type NetworkTickEventState = {
+    hasNext: boolean;
+    events: TickEventPayload[]
+}
+
+const createNetworkTickEventStore = function() {
+    const ticks = writable<NetworkTickEventState>({hasNext: false, events: []});
+
+    const unsubSessionEvents = networkEvents.subscribe($sessionEvents => {
+        const tickEvents = $sessionEvents.filter(isTickEvent).map(({event}) => event);
+        ticks.update(({events}) => {
+            const updatedEvents = [...events, ...tickEvents];
+            return {
+                hasNext: !!updatedEvents.length,
+                events: updatedEvents
+            }
+        })
+    })
+
+    function next(): TickEventPayload {
+        const events = get(ticks);
+        if (!events.hasNext) {
+            return null;
+        }
+        const nextEvent = events.events[events.events.length - 1]
+        ticks.update(({events}) => {
+            const updatedEvents = events.slice(0, -1);
+            return {
+                hasNext: !!updatedEvents.length,
+                events: updatedEvents
+            }
+        })
+        return nextEvent;
     }
-    // TODO: How to know number of objects?
-    return moveEvents.slice(moveEvents.length - 7)
-})
+
+    const customSubscribe = (run: Subscriber<NetworkTickEventState>, invalidate): Unsubscriber => {
+        const unsubscribe = ticks.subscribe(run, invalidate);
+        return () => {
+            unsubscribe();
+            unsubSessionEvents();
+        }
+    }
+
+    return {
+        next,
+        subscribe: customSubscribe
+    }
+}
+
+export const networkTickEvents = createNetworkTickEventStore();
 
 const networkInputEvents = derived([networkEvents, sessionStore], ([$sessionEvents, $sessionStore]) => $sessionEvents.filter(wrapper => {
     if (!isInputEvent(wrapper)) {

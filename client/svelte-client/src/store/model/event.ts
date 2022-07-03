@@ -22,7 +22,11 @@ export type InputEventPayload = {
     ts: number,
 }
 
-export type GameEvent = SessionEventPayload | NetworkSessionEventPayload | InputEventPayload;
+export type TickEventPayload = {
+    session_id: string,
+    objects: GameObject[],
+    ts: number
+}
 
 export type SessionEvenWrapper = {
     topic: 'session',
@@ -34,12 +38,17 @@ export type InputEventWrapper = {
     event: InputEventPayload
 }
 
+export type TickEventWrapper = {
+    topic: 'tick',
+    event: TickEventPayload
+}
+
 export type MoveEventWrapper = {
     topic: 'move',
     event: GameObject
 }
 
-export type GameEventWrapper = SessionEvenWrapper | InputEventWrapper | MoveEventWrapper;
+export type GameEventWrapper = SessionEvenWrapper | InputEventWrapper | MoveEventWrapper | TickEventWrapper;
 
 export const isSessionEvent = (event: GameEventWrapper): event is SessionEvenWrapper => {
     return event.topic === 'session';
@@ -51,4 +60,9 @@ export const isInputEvent = (event: GameEventWrapper): event is InputEventWrappe
 
 export const isMoveEvent = (event: GameEventWrapper): event is MoveEventWrapper => {
     return event.topic === 'move';
+}
+
+
+export const isTickEvent = (event: GameEventWrapper): event is TickEventWrapper => {
+    return event.topic === 'tick';
 }

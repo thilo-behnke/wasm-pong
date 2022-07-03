@@ -57,13 +57,13 @@
             ></ModeSelect>
         </div>
     {:else}
-        <SessionWrapper session={session} let:inputs={inputs} let:objects={objects} let:tick={tick} let:events={events}>
+        <SessionWrapper session={session} let:inputs={inputs} let:tick={tick} let:events={events}>
             <div class="game-area">
                 <div class="game-area__session">
                     <SessionInfo session={session}></SessionInfo>
                 </div>
                 <div class="game-area__canvas">
-                    <Canvas debug={debug} session={session} inputs={inputs} objects={objects} on:tick={event => tick(...event.detail)}>
+                    <Canvas debug={debug} session={session} inputs={inputs} tick={tick} on:tick={event => tick(...event.detail)}>
                         <Fps></Fps>
                     </Canvas>
                 </div>

@@ -32,7 +32,7 @@ pub mod pong_collisions {
             ball_vel.normalize();
         }
 
-        ball_vel_total *= 1.01; // get 1% faster every collision
+        ball_vel_total *= 1.02; // get faster every collision
         ball_vel_total = f64::min(ball_vel_total, 1000.); // max velocity.
         ball_vel.scalar_multiplication(ball_vel_total);
         *ball.vel_mut() = ball_vel.clone();
@@ -59,6 +59,7 @@ pub mod pong_collisions {
         let mut b_to_a = ball.pos().clone();
         b_to_a.sub(&bound.pos());
         b_to_a.normalize();
+        b_to_a.scalar_multiplication(5.);
         ball.pos_mut().add(&b_to_a);
 
         ball.set_dirty(true);

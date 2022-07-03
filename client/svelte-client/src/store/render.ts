@@ -1,6 +1,6 @@
 import main from "../main";
 
-const mainColor = '#ff3e00';
+export const mainColor = '#ff3e00';
 
 export const drawObjects = (ctx: CanvasRenderingContext2D, objects, [width, height], debug = false) => {
     objects.forEach(obj => {
@@ -33,7 +33,7 @@ export const drawObjects = (ctx: CanvasRenderingContext2D, objects, [width, heig
     })
 }
 
-const drawLine = (ctx, from_x, from_y, to_x, to_y, color) => {
+export const drawLine = (ctx, from_x, from_y, to_x, to_y, color) => {
     ctx.beginPath();
     ctx.moveTo(from_x, from_y);
     ctx.strokeStyle = color;

@@ -242,8 +242,8 @@ impl DefaultGameObject {
                     y: y as f64,
                 },
                 Vector::new(0., 1.),
-                (field.width as f64) / 25.,
-                (field.height as f64) / 4.,
+                (field.width as f64) / 60.,
+                (field.height as f64) / 10.,
             ))),
             Box::new(DefaultPhysicsComp::new(Vector::zero(), true)),
         ))
@@ -261,7 +261,7 @@ impl DefaultGameObject {
                     y: y as f64,
                 },
                 Vector::zero(),
-                (field.width as f64) / 80.,
+                (field.width as f64) / 120.,
             ))),
             Box::new(DefaultPhysicsComp::new(Vector::zero(), false)),
         ))
@@ -349,7 +349,7 @@ pub enum Bound {
     TOP,
     RIGHT,
     BOTTOM,
-    LEFT,
+    LEFT
 }
 
 pub struct Bounds(pub Bound, pub Box<dyn GameObject>);

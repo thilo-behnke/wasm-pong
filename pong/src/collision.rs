@@ -242,6 +242,10 @@ pub mod handler {
         handlers: CollisionHandlerRegistry,
     }
 
+    pub struct FieldStats {
+        pub dimensions: (f64, f64)
+    }
+
     impl CollisionHandler {
         pub fn new(logger_factory: &Box<dyn LoggerFactory>) -> CollisionHandler {
             let logger = logger_factory.get("collision_handler");
@@ -254,13 +258,14 @@ pub mod handler {
         pub fn register(
             &mut self,
             mapping: (String, String),
-            callback: fn(&Rc<RefCell<Box<dyn GameObject>>>, &Rc<RefCell<Box<dyn GameObject>>>),
+            callback: fn(&FieldStats, &Rc<RefCell<Box<dyn GameObject>>>, &Rc<RefCell<Box<dyn GameObject>>>),
         ) {
             self.handlers.add(mapping, callback)
         }
 
         pub fn handle(
             &self,
+            stats: &FieldStats,
             obj_a: &Rc<RefCell<Box<dyn GameObject>>>,
             obj_b: &Rc<RefCell<Box<dyn GameObject>>>,
         ) -> bool {
@@ -268,7 +273,7 @@ pub mod handler {
                 RefCell::borrow(&obj_a).obj_type().to_string(),
                 RefCell::borrow(&obj_b).obj_type().to_string(),
             );
-            let handler_res = self.handlers.call(&key, (&obj_a, &obj_b));
+            let handler_res = self.handlers.call(&key, (&stats, &obj_a, &obj_b));
             if !handler_res {
                 self.logger
                     .log(&*format!("Found no matching collision handler: {:?}", key));
@@ -299,12 +304,12 @@ pub mod handler {
     pub struct CollisionHandlerRegistry {
         handlers: HashMap<
             (String, String),
-            fn(&Rc<RefCell<Box<dyn GameObject>>>, &Rc<RefCell<Box<dyn GameObject>>>),
+            fn(&FieldStats, &Rc<RefCell<Box<dyn GameObject>>>, &Rc<RefCell<Box<dyn GameObject>>>),
         >,
     }
 
     type CollisionCallback =
-    fn(&Rc<RefCell<Box<dyn GameObject>>>, &Rc<RefCell<Box<dyn GameObject>>>);
+    fn(&FieldStats, &Rc<RefCell<Box<dyn GameObject>>>, &Rc<RefCell<Box<dyn GameObject>>>);
 
     impl CollisionHandlerRegistry {
         pub fn new() -> CollisionHandlerRegistry {
@@ -327,18 +332,19 @@ pub mod handler {
             &self,
             mapping: &(String, String),
             values: (
+                &FieldStats,
                 &Rc<RefCell<Box<dyn GameObject>>>,
                 &Rc<RefCell<Box<dyn GameObject>>>,
             ),
         ) -> bool {
             let regular = self.handlers.get(&mapping);
             if let Some(callback) = regular {
-                callback(values.0, values.1);
+                callback(values.0, values.1, values.2);
                 return true;
             }
             let inverse = self.handlers.get(&(mapping.clone().1, mapping.clone().0));
             if let Some(callback) = inverse {
-                callback(values.1, values.0);
+                callback(values.0, values.2, values.1);
                 return true;
             }
             return false;
@@ -350,7 +356,7 @@ pub mod handler {
         use rstest::rstest;
         use std::cell::RefCell;
         use std::rc::Rc;
-        use crate::collision::handler::CollisionHandler;
+        use crate::collision::handler::{CollisionHandler, FieldStats};
         use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
         use crate::game_object::game_object::{DefaultGameObject, GameObject};
         use crate::geom::shape::Shape;
@@ -392,14 +398,17 @@ pub mod handler {
         ) {
             let logger = DefaultLoggerFactory::noop();
             let mut handler = CollisionHandler::new(&logger);
-            handler.register((String::from("obj"), String::from("obj")), |_a, _b| {
+            let field_stats = FieldStats {
+                dimensions: (1000., 1000.)
+            };
+            handler.register((String::from("obj"), String::from("obj")), |_stats, _a, _b| {
                 let mut a_mut = RefCell::borrow_mut(_a);
                 let mut vel_inverted = a_mut.vel().clone();
                 vel_inverted.invert();
                 *a_mut.vel_mut() = vel_inverted;
             });
             let expected_vel_a = Vector::inverted(RefCell::borrow(&obj_a).vel());
-            let res = handler.handle(&obj_a, &obj_b);
+            let res = handler.handle(&field_stats, &obj_a, &obj_b);
             assert_eq!(true, res);
             assert_eq!(RefCell::borrow(&obj_a).pos(), RefCell::borrow(&obj_a).pos());
             assert_eq!(RefCell::borrow(&obj_a).vel(), &expected_vel_a);

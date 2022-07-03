@@ -471,6 +471,22 @@ pub mod shape {
         Circle(Shape, f64),
     }
 
+    impl ShapeType {
+        pub fn dimensions(&self) -> Vector {
+            return Vector::new(self.width().clone(), self.height().clone());
+        }
+        pub fn width(&self) -> &f64 {
+            match self {
+                ShapeType::Rect(_, width, _) | ShapeType::Circle(_, width) => width,
+            }
+        }
+        pub fn height(&self) -> &f64 {
+            match self {
+                ShapeType::Rect(_, _, height) | ShapeType::Circle(_, height) => height,
+            }
+        }
+    }
+
     #[derive(Clone, Debug, PartialEq)]
     pub struct Shape {
         center: Vector,

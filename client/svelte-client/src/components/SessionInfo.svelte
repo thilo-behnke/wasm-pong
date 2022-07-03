@@ -1,6 +1,6 @@
 <script lang="ts">
     import type {Session} from "../store/model/session";
-    import {isLocalSession, isNetworkSession} from "../store/model/session";
+    import {isLocalSession, isNetworkSession, isPlayer, SessionType} from "../store/model/session";
 
     export let session: Session;
 </script>
@@ -11,7 +11,11 @@
         <span><b>State:</b> {session.state}</span>
         {#if isNetworkSession(session)}
             <span><b>Type:</b> {session.type}</span>
-            <span><b>You:</b> Player {session.you.nr} ({session.you.id})</span>
+            {#if isPlayer(session.you)}
+                <span><b>You:</b> Player {session.you.nr} ({session.you.id})</span>
+            {:else}
+                <span><b>You:</b> Observer ({session.you.id})</span>
+            {/if}
         {/if}
     </div>
 {/if}

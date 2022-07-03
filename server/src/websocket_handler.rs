@@ -16,7 +16,7 @@ use serde::{Serialize, Deserialize};
 use pong::event::event::{EventWrapper, EventWriter};
 use pong::game_field::Input;
 use crate::event::{HeartBeatEventPayload, InputEventPayload, MoveEventPayload, SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType, TickEvent};
-use crate::actor::Player;
+use crate::actor::{Actor, Player};
 use crate::session::{Session, SessionState};
 use crate::session_manager::{SessionManager, SessionWriter};
 use crate::utils::json_utils::unescape;
@@ -118,7 +118,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                         }
                                         let input_event = InputEventPayload {
                                             inputs: payload.inputs,
-                                            player_id: websocket_session_read_copy.player.id.to_owned(),
+                                            player_id: websocket_session_read_copy.actor.id().to_owned(),
                                             ts: payload.ts,
                                             session_id: session_id.to_owned()
                                         };
@@ -133,7 +133,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                         trace(&websocket_session_read_copy, "received message is PEER snapshot");
                                         let input_event = InputEventPayload {
                                             inputs: payload.inputs,
-                                            player_id: websocket_session_read_copy.player.id.to_owned(),
+                                            player_id: websocket_session_read_copy.actor.id().to_owned(),
                                             ts: payload.ts,
                                             session_id: session_id.to_owned()
                                         };
@@ -296,7 +296,7 @@ fn write_session_close_event(event_writer: &mut SessionWriter, websocket_session
     let mut updated_session = websocket_session.session.clone();
     updated_session.state = SessionState::CLOSED;
     let session_closed_event = SessionEvent::Closed(SessionEventPayload {
-        actor: websocket_session.player.clone(),
+        actor: websocket_session.actor.clone(),
         session: updated_session,
         reason: format!("ws closed: {}", close_reason),
     });
@@ -311,7 +311,7 @@ fn write_session_close_event(event_writer: &mut SessionWriter, websocket_session
 pub struct WebSocketSession {
     pub connection_type: WebSocketConnectionType,
     pub session: Session,
-    pub player: Player
+    pub actor: Actor
 }
 
 #[derive(Debug, Clone, PartialEq)]

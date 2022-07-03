@@ -17,11 +17,12 @@
             return;
         }
         const params = window.location.search.slice(1).split("&").map(p => p.split('=')).reduce((acc, [key, val]) => ({...acc, [key]: val}), {}) as any;
-        console.log(params)
-        if (!params.session_id) {
-            return;
+        if (params.join) {
+            joinSessionId = params.join;
         }
-        joinSessionId = params.session_id;
+        if (params.watch) {
+            watchSessionId = params.watch;
+        }
     })
 
     const localSession = () => {

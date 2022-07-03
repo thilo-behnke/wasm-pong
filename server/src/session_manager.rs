@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use futures::future::err;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 
@@ -9,7 +10,7 @@ use crate::kafka::{
     KafkaSessionEventReaderImpl, KafkaSessionEventWriterImpl,
     KafkaTopicManager,
 };
-use crate::actor::Player;
+use crate::actor::{Actor, Observer, Player};
 use crate::event::{SessionEvent, SessionEventPayload};
 use crate::session::{Session, SessionState};
 
@@ -52,7 +53,7 @@ impl SessionManager {
         self.sessions.push(session.clone());
         let session_created = SessionEvent::Created(SessionEventPayload {
             session: session.clone(),
-            actor: player,
+            actor: Actor::Player(player),
             reason: format!("session created")
         });
         let write_res = self.write_to_producer(&session_created);
@@ -105,7 +106,7 @@ impl SessionManager {
         let session_joined_event = SessionEvent::Joined(SessionEventPayload {
             session: updated_session.clone(),
             reason: "session joined".to_owned(),
-            actor: player
+            actor: Actor::Player(player)
         });
         {
             let write_res =
@@ -113,6 +114,52 @@ impl SessionManager {
             if let Err(e) = write_res {
                 eprintln!(
                     "Failed to write session joined event for {:?} to producer: {}",
+                    updated_session, e
+                );
+            }
+        };
+        println!("sessions = {:?}", self.sessions);
+        Ok(session_joined_event)
+    }
+
+    pub async fn watch_session(
+        &mut self,
+        session_id: String,
+        observer: Observer
+    ) -> Result<SessionEvent, String> {
+        let updated_session = {
+            let session = self.sessions.iter_mut().find(|s| s.session_id == session_id);
+            if let None = session {
+                let error = format!("Can't watch session that does not exist: {}", session_id);
+                return Err(error);
+            }
+            let session = session.unwrap();
+            if session.state != SessionState::RUNNING {
+                let error = format!("Can't watch session that is not RUNNING: {}", session_id);
+                return Err(error);
+            }
+            if session.observers.contains(&observer) {
+                let error = format!("Can't add observer to session {} that is already registered as an observer: {:?}", session_id, observer);
+                return Err(error);
+            }
+            if session.observers.len() > 5 {
+                let error = format!("Can't have more than 5 observers in session: {}", session_id);
+                return Err(error);
+            }
+            session.observers.push(observer.clone());
+            session.clone()
+        };
+        let session_joined_event = SessionEvent::ObserverAdded(SessionEventPayload {
+            session: updated_session.clone(),
+            reason: "observer added".to_owned(),
+            actor: Actor::Observer(observer)
+        });
+        {
+            let write_res =
+                self.write_to_producer(&session_joined_event);
+            if let Err(e) = write_res {
+                eprintln!(
+                    "Failed to write watch session event for {:?} to producer: {}",
                     updated_session, e
                 );
             }

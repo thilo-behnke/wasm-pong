@@ -37,4 +37,14 @@ impl Player {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Observer {
     pub id: String,
+    pub ip: String,
+}
+
+impl Observer {
+    pub fn new(ip: String) -> Observer {
+        Observer {
+            ip,
+            id: Uuid::new_v4().to_string()
+        }
+    }
 }

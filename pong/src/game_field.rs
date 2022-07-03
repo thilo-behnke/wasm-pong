@@ -67,8 +67,8 @@ impl Field {
             logger_factory,
         };
 
-        field.add_player(0, 0 + width / 20, height / 2);
-        field.add_player(1, width - width / 20, height / 2);
+        field.add_player(0, 0 + width / 15, height / 2);
+        field.add_player(1, width - width / 15, height / 2);
         field.add_ball(2, width / 2, height / 2);
 
         field.collision_handler.register(
@@ -367,8 +367,9 @@ mod tests {
 
     #[test]
     fn player_input_update_pos_up() {
+        let width = 1000;
         let height = 1000;
-        let mut field = Field::mock(1000, height);
+        let mut field = Field::mock(width, height);
         field.add_player(1, 50, height / 2);
         let inputs = vec![Input {
             input: InputType::UP,

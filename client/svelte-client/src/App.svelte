@@ -11,6 +11,7 @@
     import type {Readable} from "svelte/store";
     import {SessionType} from "./store/model/session";
     import EvenTicker from "./components/EvenTicker.svelte";
+    import Line from "./components/Line.svelte";
 
     let sessionStore: Readable<SessionStore>;
     let debug = false;
@@ -57,14 +58,15 @@
             ></ModeSelect>
         </div>
     {:else}
-        <SessionWrapper session={session} let:inputs={inputs} let:tick={tick} let:events={events}>
+        <SessionWrapper session={session} let:inputs={inputs} let:tick={tick} let:events={events} let:handleError={handleError}>
             <div class="game-area">
                 <div class="game-area__session">
                     <SessionInfo session={session}></SessionInfo>
                 </div>
                 <div class="game-area__canvas">
-                    <Canvas debug={debug} session={session} inputs={inputs} tick={tick} on:tick={event => tick(...event.detail)}>
+                    <Canvas debug={debug} session={session} inputs={inputs} tick={tick} handleError={handleError} on:tick={event => tick(...event.detail)} let:dimensions={dimensions}>
                         <Fps></Fps>
+                        <Line x={dimensions.width / 2} y={0} height={dimensions.height} dashed={true}></Line>
                     </Canvas>
                 </div>
                 <div class="game-area__hud">

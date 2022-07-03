@@ -15,7 +15,7 @@
     renderable(props => {
         const { engineCtx: ctx } = props;
         if (text) {
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = color;
             ctx.font = `${fontSize}px ${fontFamily}`;
             ctx.textAlign = align;
             ctx.textBaseline = baseline;

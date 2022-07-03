@@ -13,12 +13,12 @@
     {#if !session}
         <h1>no session</h1>
     {:else if session.type === SessionType.LOCAL}
-        <LocalSessionWrapper session={session} let:inputs={inputs} let:objects={objects} let:tick={tick} let:events={events}>
-            <slot inputs={inputs} objects={objects} tick={tick} events={events}></slot>
+        <LocalSessionWrapper session={session} let:inputs={inputs} let:objects={objects} let:tick={tick} let:events={events} let:handleError={handleError}>
+            <slot inputs={inputs} objects={objects} tick={tick} events={events} handleError={handleError}></slot>
         </LocalSessionWrapper>
     {:else}
-        <NetworkSessionWrapper session={session} let:inputs={inputs} let:objects={objects} let:tick={tick} let:events={events}>
-            <slot inputs={inputs} objects={objects} tick={tick} events={events}></slot>
+        <NetworkSessionWrapper session={session} let:inputs={inputs} let:objects={objects} let:tick={tick} let:events={events} let:handleError={handleError}>
+            <slot inputs={inputs} objects={objects} tick={tick} events={events} handleError={handleError}></slot>
         </NetworkSessionWrapper>
     {/if}
 </div>

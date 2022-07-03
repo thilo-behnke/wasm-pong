@@ -28,9 +28,9 @@ macro_rules! log {
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct GameObjectDTO {
-    pub id: u16,
+    id: String,
     pub x: f64,
     pub y: f64,
     pub orientation_x: f64,
@@ -50,7 +50,7 @@ impl GameObjectDTO {
         let vel = obj.vel();
         let shape = obj.shape();
         return GameObjectDTO {
-            id: obj.id(),
+            id: obj.id().to_owned(),
             x: pos.x,
             y: pos.y,
             orientation_x: orientation.x,
@@ -66,6 +66,14 @@ impl GameObjectDTO {
                 ShapeType::Circle(_, _) => 0,
             },
         };
+    }
+}
+
+#[wasm_bindgen]
+impl GameObjectDTO {
+    #[wasm_bindgen(getter)]
+    pub fn id(&self) -> String {
+        self.id.clone()
     }
 }
 
@@ -86,21 +94,30 @@ impl InputTypeDTO {
 }
 
 #[wasm_bindgen]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InputDTO {
+    obj_id: String,
     pub input: InputTypeDTO,
-    pub obj_id: u16,
     pub player: u16,
 }
 
 impl InputDTO {
     pub fn to_input(&self) -> Input {
         return Input {
+            obj_id: self.obj_id.clone(),
             input: self.input.to_input_type(),
-            obj_id: self.obj_id,
             player: self.player,
         };
     }
+}
+
+#[wasm_bindgen]
+impl InputDTO {
+    #[wasm_bindgen(getter)]
+    pub fn obj_id(&self) -> String {
+        self.obj_id.clone()
+    }
+
 }
 
 #[wasm_bindgen]

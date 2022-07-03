@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use serde::{Deserialize, Serialize};
 
-use crate::collision::collision::{Collision, CollisionRegistry, Collisions};
+use crate::collision::collision::{CollisionRegistry, Collisions};
 use crate::collision::detection::{CollisionDetector, CollisionGroup};
 use crate::collision::handler::{CollisionHandler, FieldStats};
 use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
@@ -26,7 +26,7 @@ pub enum InputType {
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Input {
     pub input: InputType,
-    pub obj_id: u16,
+    pub obj_id: String,
     pub player: u16,
 }
 
@@ -66,9 +66,9 @@ impl Field {
             logger_factory,
         };
 
-        field.add_player(0, 0 + width / 15, height / 2);
-        field.add_player(1, width - width / 15, height / 2);
-        field.add_ball(2, width / 2, height / 2);
+        field.add_player("player_1", 0 + width / 15, height / 2);
+        field.add_player("player_2", width - width / 15, height / 2);
+        field.add_ball("ball_1", width / 2, height / 2);
 
         field.collision_handler.register(
             (String::from("ball"), String::from("player")),
@@ -113,12 +113,12 @@ impl Field {
         }
     }
 
-    pub fn add_player(&mut self, id: u16, x: u16, y: u16) {
-        let player = DefaultGameObject::player(id, x, y, &self);
+    pub fn add_player(&mut self, id: &str, x: u16, y: u16) {
+        let player = DefaultGameObject::player(&id, x, y, &self);
         self.objs.push(Rc::new(RefCell::new(player)));
     }
 
-    pub fn add_ball(&mut self, id: u16, x: u16, y: u16) {
+    pub fn add_ball(&mut self, id: &str, x: u16, y: u16) {
         let ball = DefaultGameObject::ball(id, x, y, &self);
         self.objs.push(Rc::new(RefCell::new(ball)));
     }
@@ -197,23 +197,23 @@ impl Field {
         }
 
         // TODO: Use slices.
-        let left_bound = self.objs.iter().filter(|o| o.borrow().obj_type() == "bound").collect::<Vec<&Rc<RefCell<Box<dyn GameObject>>>>>();
-        let balls = self.objs.iter().filter(|o| o.borrow().obj_type() == "ball").collect::<Vec<&Rc<RefCell<Box<dyn GameObject>>>>>();
-        let ball_ids = balls.iter().map(|b| b.borrow().id().clone()).collect::<Vec<u16>>();
-        let ball_collisions = registered_collisions
-            .iter()
-            .map(|c| {
-                if ball_ids.contains(&c.0) {
-                    return Some(c.1)
-                }
-                if ball_ids.contains(&c.1) {
-                    return Some(c.0)
-                }
-                return None
-            })
-            .filter(|v| v.is_some())
-            .map(|c| self.objs.iter().find(|o| o.borrow().id() == c.unwrap()).unwrap())
-            .collect::<Vec<&Rc<RefCell<Box<dyn GameObject>>>>>();
+        // let left_bound = self.objs.iter().filter(|o| o.borrow().obj_type() == "bound").collect::<Vec<&Rc<RefCell<Box<dyn GameObject>>>>>();
+        // let balls = self.objs.iter().filter(|o| o.borrow().obj_type() == "ball").collect::<Vec<&Rc<RefCell<Box<dyn GameObject>>>>>();
+        // let ball_ids = balls.iter().map(|b| b.borrow().id().to_owned()).collect::<Vec<String>>();
+        // let ball_collisions = registered_collisions
+        //     .iter()
+        //     .map(|c| {
+        //         if ball_ids.contains(&c.0) {
+        //             return Some(c.1.clone())
+        //         }
+        //         if ball_ids.contains(&c.1) {
+        //             return Some(c.0.clone())
+        //         }
+        //         return None
+        //     })
+        //     .filter(|v| v.is_some())
+        //     .map(|c| self.objs.iter().find(|o| o.borrow().id() == c.unwrap()).unwrap())
+        //     .collect::<Vec<&Rc<RefCell<Box<dyn GameObject>>>>>();
 
         {
             for obj in self.objs.iter().filter(|o| RefCell::borrow(o).is_dirty()) {
@@ -251,7 +251,7 @@ impl Field {
 }
 
 impl DefaultGameObject {
-    pub fn player(id: u16, x: u16, y: u16, field: &Field) -> Box<dyn GameObject> {
+    pub fn player(id: &str, x: u16, y: u16, field: &Field) -> Box<dyn GameObject> {
         Box::new(DefaultGameObject::new(
             id,
             "player".to_string(),
@@ -270,7 +270,7 @@ impl DefaultGameObject {
 }
 
 impl DefaultGameObject {
-    pub fn ball(id: u16, x: u16, y: u16, field: &Field) -> Box<dyn GameObject> {
+    pub fn ball(id: &str, x: u16, y: u16, field: &Field) -> Box<dyn GameObject> {
         Box::new(DefaultGameObject::new(
             id,
             "ball".to_string(),
@@ -293,7 +293,7 @@ impl DefaultGameObject {
             Bounds(
                 Bound::BOTTOM,
                 Box::new(DefaultGameObject::new(
-                    90,
+                    "bound_bottom",
                     "bound".to_string(),
                     Box::new(DefaultGeomComp::new(Shape::rect(
                         Vector {
@@ -310,7 +310,7 @@ impl DefaultGameObject {
             Bounds(
                 Bound::TOP,
                 Box::new(DefaultGameObject::new(
-                    91,
+                    "bound_top",
                     "bound".to_string(),
                     Box::new(DefaultGeomComp::new(Shape::rect(
                         Vector {
@@ -327,7 +327,7 @@ impl DefaultGameObject {
             Bounds(
                 Bound::LEFT,
                 Box::new(DefaultGameObject::new(
-                    92,
+                    "bound_left",
                     "bound".to_string(),
                     Box::new(DefaultGeomComp::new(Shape::rect(
                         Vector {
@@ -344,7 +344,7 @@ impl DefaultGameObject {
             Bounds(
                 Bound::RIGHT,
                 Box::new(DefaultGameObject::new(
-                    93,
+                    "bound_right",
                     "bound".to_string(),
                     Box::new(DefaultGeomComp::new(Shape::rect(
                         Vector {
@@ -389,10 +389,10 @@ mod tests {
         let width = 1000;
         let height = 1000;
         let mut field = Field::mock(width, height);
-        field.add_player(1, 50, height / 2);
+        field.add_player("player_1", 50, height / 2);
         let inputs = vec![Input {
             input: InputType::UP,
-            obj_id: 1,
+            obj_id: "player_1".to_owned(),
             player: 1,
         }];
         field.tick(inputs, 1.);
@@ -410,10 +410,10 @@ mod tests {
     fn player_input_update_pos_down() {
         let height = 1000;
         let mut field = Field::mock(1000, height);
-        field.add_player(1, 50, height / 2);
+        field.add_player("player_1", 50, height / 2);
         let inputs = vec![Input {
             input: InputType::DOWN,
-            obj_id: 1,
+            obj_id: "player_1".to_owned(),
             player: 1,
         }];
         field.tick(inputs, 1.);

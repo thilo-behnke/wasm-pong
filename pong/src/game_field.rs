@@ -2,9 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use serde::{Deserialize, Serialize};
 
-use crate::collision::collision::{
-    CollisionRegistry, Collisions,
-};
+use crate::collision::collision::{Collision, CollisionRegistry, Collisions};
 use crate::collision::detection::{CollisionDetector, CollisionGroup};
 use crate::collision::handler::{CollisionHandler, FieldStats};
 use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
@@ -52,14 +50,15 @@ impl Field {
         let width = 800;
         let height = 600;
 
+        let objs = DefaultGameObject::bounds(width, height).into_iter()
+            .map(|b| Rc::new(RefCell::new(b.inner())))
+            .collect();
+
         let mut field = Field {
             logger: logger_factory.get("game_field"),
             width,
             height,
-            objs: DefaultGameObject::bounds(width, height)
-                .into_iter()
-                .map(|b| Rc::new(RefCell::new(b.inner())))
-                .collect(),
+            objs,
             collisions: Box::new(Collisions::new(vec![])),
             collision_detector: CollisionDetector::new(&logger_factory),
             collision_handler: CollisionHandler::new(&logger_factory),
@@ -196,6 +195,25 @@ impl Field {
             let field_stats = FieldStats {dimensions: (self.width as f64, self.height as f64)};
             collision_handler.handle(&field_stats, &obj_a, &obj_b);
         }
+
+        // TODO: Use slices.
+        let left_bound = self.objs.iter().filter(|o| o.borrow().obj_type() == "bound").collect::<Vec<&Rc<RefCell<Box<dyn GameObject>>>>>();
+        let balls = self.objs.iter().filter(|o| o.borrow().obj_type() == "ball").collect::<Vec<&Rc<RefCell<Box<dyn GameObject>>>>>();
+        let ball_ids = balls.iter().map(|b| b.borrow().id().clone()).collect::<Vec<u16>>();
+        let ball_collisions = registered_collisions
+            .iter()
+            .map(|c| {
+                if ball_ids.contains(&c.0) {
+                    return Some(c.1)
+                }
+                if ball_ids.contains(&c.1) {
+                    return Some(c.0)
+                }
+                return None
+            })
+            .filter(|v| v.is_some())
+            .map(|c| self.objs.iter().find(|o| o.borrow().id() == c.unwrap()).unwrap())
+            .collect::<Vec<&Rc<RefCell<Box<dyn GameObject>>>>>();
 
         {
             for obj in self.objs.iter().filter(|o| RefCell::borrow(o).is_dirty()) {

@@ -3,8 +3,7 @@ pub mod pong_collisions {
     use crate::geom::shape::ShapeType;
     use crate::geom::vector::Vector;
     use std::cell::RefCell;
-    use std::cmp::min;
-    use std::f64::consts::{FRAC_PI_2, FRAC_PI_4, PI};
+    use std::f64::consts::{FRAC_PI_4};
     use std::rc::Rc;
     use crate::collision::handler::FieldStats;
     use crate::utils::number_utils::is_in_range;

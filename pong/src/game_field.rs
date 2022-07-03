@@ -6,7 +6,7 @@ use crate::collision::collision::{
     CollisionRegistry, Collisions,
 };
 use crate::collision::detection::{CollisionDetector, CollisionGroup};
-use crate::collision::handler::{CollisionHandler};
+use crate::collision::handler::{CollisionHandler, FieldStats};
 use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
 use crate::game_object::game_object::{DefaultGameObject, GameObject};
 use crate::geom::shape::Shape;
@@ -193,7 +193,8 @@ impl Field {
                 .find(|o| RefCell::borrow(o).id() == collision.1)
                 .unwrap()
                 .clone();
-            collision_handler.handle(&obj_a, &obj_b);
+            let field_stats = FieldStats {dimensions: (self.width as f64, self.height as f64)};
+            collision_handler.handle(&field_stats, &obj_a, &obj_b);
         }
 
         {

@@ -45,3 +45,9 @@ pub mod utils {
         fn log(&self, _msg: &str) {}
     }
 }
+
+pub mod number_utils {
+    pub fn is_in_range(n: f64, from: f64, to: f64) -> bool {
+        return from <= n && n <= to;
+    }
+}

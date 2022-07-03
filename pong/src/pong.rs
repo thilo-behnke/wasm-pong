@@ -6,14 +6,29 @@ pub mod pong_collisions {
     use std::cmp::min;
     use std::f64::consts::{FRAC_PI_2, FRAC_PI_4, PI};
     use std::rc::Rc;
+    use crate::collision::handler::FieldStats;
+    use crate::utils::number_utils::is_in_range;
 
     pub fn handle_player_ball_collision(
+        stats: &FieldStats,
         ball: &Rc<RefCell<Box<dyn GameObject>>>,
         player: &Rc<RefCell<Box<dyn GameObject>>>,
     ) {
         let mut ball = RefCell::borrow_mut(&ball);
-        let player = player.borrow();
 
+        // player is crushing the ball out of bounds
+        let ball_pos = ball.pos().clone();
+        let ball_height = {
+            let ball_dimensions = ball.shape().dimensions();
+            ball_dimensions.y
+        };
+        if is_in_range(ball_pos.y, stats.dimensions.1 - ball_height / 2., stats.dimensions.1 + ball_height / 2.) || is_in_range(ball_pos.y, 0. - ball_height / 2., 0. + ball_height / 2.) {
+            let mut player = player.borrow_mut();
+            *player.vel_mut() = Vector::zero();
+            return;
+        }
+
+        let player = player.borrow();
         // reflect
         let ball_vel = ball.vel_mut();
         let mut ball_vel_total = ball_vel.len();
@@ -48,10 +63,13 @@ pub mod pong_collisions {
     }
 
     pub fn handle_ball_bounds_collision(
+        _stats: &FieldStats,
         ball: &Rc<RefCell<Box<dyn GameObject>>>,
         bound: &Rc<RefCell<Box<dyn GameObject>>>,
     ) {
         let mut ball = RefCell::borrow_mut(&ball);
+        let mut ball_dimensions = ball.shape().dimensions();
+        ball_dimensions.scalar_multiplication(0.5);
         let bound = RefCell::borrow(&bound);
         ball.vel_mut().reflect(&bound.orientation());
 
@@ -63,15 +81,17 @@ pub mod pong_collisions {
         bound_pos.multiply(&bound_orientation);
 
         let mut b_to_a = ball.pos().clone();
+        b_to_a.multiply(&bound_orientation);
         b_to_a.sub(&bound_pos);
         b_to_a.normalize();
-        b_to_a.scalar_multiplication(5.);
+        b_to_a.multiply(&ball_dimensions);
         ball.pos_mut().add(&b_to_a);
 
         ball.set_dirty(true);
     }
 
     pub fn handle_player_bound_collision(
+        _stats: &FieldStats,
         player: &Rc<RefCell<Box<dyn GameObject>>>,
         bound: &Rc<RefCell<Box<dyn GameObject>>>,
     ) {
@@ -98,6 +118,7 @@ pub mod pong_collisions {
         use rstest::rstest;
         use std::cell::RefCell;
         use std::rc::Rc;
+        use crate::collision::handler::FieldStats;
         use crate::game_field::{Bound, Field};
         use crate::game_object::game_object::{DefaultGameObject, GameObject};
         use crate::geom::vector::Vector;
@@ -144,7 +165,8 @@ pub mod pong_collisions {
             #[case] player_expected: Rc<RefCell<Box<dyn GameObject>>>,
             #[case] bounds_expected: Rc<RefCell<Box<dyn GameObject>>>,
         ) {
-            handle_player_bound_collision(&player, &bounds);
+            let stats = FieldStats {dimensions: (1000., 1000.)};
+            handle_player_bound_collision(&stats, &player, &bounds);
             assert_eq!(player_expected.borrow().pos(), player.borrow().pos());
             assert_eq!(bounds_expected.borrow().pos(), bounds.borrow().pos());
         }

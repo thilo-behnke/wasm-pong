@@ -13,6 +13,7 @@
         }
     }
 
+    // TODO: score must come from events for instrumented ticks
     function handleError(err) {
         console.error(err);
         if (killLoopOnError) {

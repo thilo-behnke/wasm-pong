@@ -17,7 +17,7 @@ export type Player = Actor & {
 }
 
 export type GameObject = {
-    id: number,
+    id: string,
     orientation_x: number,
     orientation_y: number,
     shape_param_1: number,

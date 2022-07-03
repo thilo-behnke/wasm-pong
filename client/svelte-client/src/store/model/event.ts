@@ -62,7 +62,6 @@ export const isMoveEvent = (event: GameEventWrapper): event is MoveEventWrapper 
     return event.topic === 'move';
 }
 
-
 export const isTickEvent = (event: GameEventWrapper): event is TickEventWrapper => {
     return event.topic === 'tick';
 }

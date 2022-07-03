@@ -68,7 +68,6 @@
                     <Canvas debug={debug} session={session} inputs={inputs} tick={tick} handleError={handleError} let:dimensions={dimensions}>
                         <Fps></Fps>
                         <Line x={dimensions.width / 2} y={0} height={dimensions.height} dashed={true}></Line>
-                        {JSON.stringify(tick.score)}
                         <Score dimensions={dimensions} score={tick.score}></Score>
                     </Canvas>
                 </div>

@@ -7,7 +7,6 @@
     import api from "../api/session";
 
     export let session: Session;
-
 </script>
 
 <div class="session-wrapper">

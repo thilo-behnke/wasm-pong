@@ -1,6 +1,6 @@
 <script lang="ts">
 
-    import {networkEvents, networkMoveEvents, networkSessionStateEvents, sessionInputs} from "../store/session";
+    import {networkEvents, networkTickEvents, networkSessionStateEvents, sessionInputs} from "../store/session";
     import type {NetworkSession} from "../store/model/session";
     import {SessionState, SessionType} from "../store/model/session";
     import CopyToClipboard from "./CopyToClipboard.svelte";
@@ -9,6 +9,8 @@
     import type {Input} from "../store/model/input";
     import {getPlayerKeyboardInputs} from "../store/input";
     import {gameField} from "../store/engine";
+    import InstrumentedTickWrapper from "./InstrumentedTickWrapper.svelte";
+    import TickWrapper from "./TickWrapper.svelte";
 
     export let session: NetworkSession;
 
@@ -28,25 +30,15 @@
 
     $: if(session && session.type === SessionType.HOST && session.state === SessionState.RUNNING) {
         console.debug("sending host snapshot")
-        networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, objects: $gameField.objects, player_id: session.you.id, ts: $gameField.lastTick})
+        networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, objects: $gameField.objects, player_id: session.you.id, ts: $gameField.ts})
     }
 
     $: if(session && session.type === SessionType.PEER && session.state === SessionState.RUNNING) {
         console.debug("sending host snapshot")
-        networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, player_id: session.you.id, ts: $gameField.lastTick})
+        networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, player_id: session.you.id, ts: $gameField.ts})
     }
 
     $: console.debug($networkSessionStateEvents)
-
-    const tick = (dt: number) => {
-        if (session.type === SessionType.HOST) {
-            gameField.tick($sessionInputs, dt)
-            return;
-        }
-        // peer and observer directly override game field state
-        gameField.update($networkMoveEvents)
-    }
-
 </script>
 
 {#if !session}
@@ -58,7 +50,15 @@
     {:else if session.state === SessionState.CLOSED}
         <h3>game over!</h3>
     {:else if session.state === SessionState.RUNNING}
-        <slot inputs={$sessionInputs} objects={$gameField.objects} tick={tick} events={$networkSessionStateEvents}></slot>
+        {#if session.type === SessionType.HOST}
+            <TickWrapper inputs={$sessionInputs} let:tick={tick} let:inputs={inputs} let:handleError={handleError}>
+                <slot inputs={inputs} tick={tick} events={$networkSessionStateEvents}></slot>
+            </TickWrapper>
+        {:else}
+            <InstrumentedTickWrapper inputs={$sessionInputs} let:tick={tick} let:inputs={inputs}>
+                <slot inputs={inputs} tick={tick} events={$networkSessionStateEvents}></slot>
+            </InstrumentedTickWrapper>
+        {/if}
     {:else }
         <h3>unknown game state</h3>
     {/if}

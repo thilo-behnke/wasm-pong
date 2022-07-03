@@ -60,12 +60,12 @@ function deriveObject (obj) {
 }
 
 export type GameFieldState = {
-    lastTick: number,
+    ts: number,
     objects: GameObject[]
 }
 
 function createGameFieldStore(): Readable<GameFieldState> & {tick: (inputs: Input[], dt: number) => void, update: (objects: GameObject[]) => void} {
-    const {subscribe, set} = writable<GameFieldState>({lastTick: 0, objects: []});
+    const {subscribe, set} = writable<GameFieldState>({ts: 0, objects: []});
 
     const field = FieldWrapper.new();
 
@@ -73,12 +73,12 @@ function createGameFieldStore(): Readable<GameFieldState> & {tick: (inputs: Inpu
         field.tick(inputs, dt);
 
         const objects = JSON.parse(field.objects());
-        const lastTick = Date.now();
-        set({objects, lastTick});
+        const ts = Date.now();
+        set({objects, ts});
     }
 
     function update(objects: GameObject[]) {
-        set({objects, lastTick: Date.now()})
+        set({objects, ts: Date.now()})
     }
 
     return {

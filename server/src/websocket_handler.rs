@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::{Debug, format};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -6,14 +7,15 @@ use hyper_tungstenite::HyperWebsocket;
 use tokio::sync::Mutex;
 use async_trait::async_trait;
 use futures::{SinkExt, StreamExt};
+use futures::future::err;
 use hyper_tungstenite::tungstenite::{Error, Message};
 use log::{debug, error, info, trace};
 use serde_json::json;
 use tokio::time::sleep;
 use serde::{Serialize, Deserialize};
-use pong::event::event::EventWriter;
+use pong::event::event::{EventWrapper, EventWriter};
 use pong::game_field::Input;
-use crate::event::{HeartBeatEventPayload, InputEventPayload, MoveEventPayload, SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType};
+use crate::event::{HeartBeatEventPayload, InputEventPayload, MoveEventPayload, SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType, TickEvent};
 use crate::actor::Player;
 use crate::session::{Session, SessionState};
 use crate::session_manager::{SessionManager, SessionWriter};
@@ -203,17 +205,48 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                     error(&websocket_session_write_copy, &format!("Failed to read messages from kafka: {:?}", e));
                     continue;
                 }
+                let events = events.unwrap();
                 trace(&websocket_session_write_copy, &format!("read messages for websocket_session from consumer: {:?}", events));
-                let event_dtos = events.unwrap().into_iter().map(|e| {
-                    info!("#### {}", e.event);
-                    WebsocketEventDTO {
-                        topic: e.topic,
-                        event: e.event
-                    }
-                }).collect::<Vec<WebsocketEventDTO>>();
-                if event_dtos.len() == 0 {
+
+                if events.len() == 0 {
                     trace(&websocket_session_write_copy, "no new messages from kafka.");
                 } else {
+                    let (move_events, other_events): (Vec<EventWrapper>, Vec<EventWrapper>) = events.into_iter().partition(|e| &e.topic == "move");
+
+                    let mut grouped_move_events = HashMap::<u128, Vec<MoveEventPayload>>::new();
+                    for move_event in move_events {
+                        let deserialized = serde_json::from_str::<MoveEventPayload>(&move_event.event);
+                        if let Err(e) = deserialized {
+                            error(&websocket_session_write_copy, &format!("Failed to deserialize move event {:?}: {:?}", move_event, e));
+                            continue;
+                        }
+                        let deserialized = deserialized.unwrap();
+                        if !grouped_move_events.contains_key(&deserialized.ts) {
+                            grouped_move_events.insert(deserialized.ts.clone(), vec![]);
+                        }
+                        let existing = grouped_move_events.get_mut(&deserialized.ts).unwrap();
+                        existing.push(deserialized);
+                    }
+                    let mut tick_event_dtos = grouped_move_events.into_iter()
+                        .map(|e| TickEvent{tick: e.0, objects: e.1})
+                        .map(|e| serde_json::to_string(&e).unwrap())
+                        // TODO: This could e.g. be done with ksql when the move events are sent.
+                        .map(|e| WebsocketEventDTO {topic: "tick".to_owned(), event: e})
+                        .collect::<Vec<WebsocketEventDTO>>();
+
+                    let mut other_event_dtos = other_events.into_iter().map(|e| {
+                        WebsocketEventDTO {
+                            topic: e.topic,
+                            event: e.event
+                        }
+                    }).collect::<Vec<WebsocketEventDTO>>();
+
+                    let mut event_dtos = vec![];
+                    event_dtos.append(&mut other_event_dtos);
+                    if websocket_session_write_copy.connection_type != WebSocketConnectionType::HOST {
+                        event_dtos.append(&mut tick_event_dtos);
+                    }
+
                     trace(&websocket_session_write_copy, &format!("{} new messages from kafka.", event_dtos.len()));
                     let json = serde_json::to_string(&event_dtos).unwrap();
                     trace(&websocket_session_write_copy, &format!("sending msg batch to client: {}", json));
@@ -230,6 +263,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                         break;
                     }
                 }
+
                 // Avoid starvation of read thread (?)
                 // TODO: How to avoid this? This is very bad for performance.
                 sleep(Duration::from_millis(1)).await;

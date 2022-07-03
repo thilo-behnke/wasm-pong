@@ -41,6 +41,12 @@ pub struct MoveEventPayload {
     pub ts: u128,
 }
 
+#[derive(Debug, Serialize)]
+pub struct TickEvent {
+    pub tick: u128,
+    pub objects: Vec<MoveEventPayload>
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InputEventPayload {
     pub session_id: String,

@@ -1,15 +1,13 @@
 <script lang="ts">
     import {sessionInputs} from "../store/session";
     import type {LocalSession} from "../store/model/session";
-    import {gameField} from "../store/engine";
+    import TickWrapper from "./TickWrapper.svelte";
 
     export let session: LocalSession;
-
-    const tick = (dt: number) => {
-        gameField.tick($sessionInputs, dt)
-    }
 </script>
 
 {#if session && sessionInputs}
-    <slot inputs={$sessionInputs} objects={$gameField.objects} tick={tick} events={[]}></slot>
+    <TickWrapper inputs={$sessionInputs} let:tick={tick} let:inputs={inputs} let:handleError={handleError}>
+        <slot inputs={inputs} tick={tick} handleError={handleError} events={[]}></slot>
+    </TickWrapper>
 {/if}

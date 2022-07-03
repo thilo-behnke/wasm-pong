@@ -1,30 +1,39 @@
 <script lang="ts">
-    import {FieldWrapper} from "wasm-app";
     import {createEventDispatcher, onMount, setContext} from "svelte";
     import {drawObjects} from "../store/render";
-    import {engineCanvas, engineCtx, height, pixelRatio, props, renderContext, width} from "../store/engine";
+    import {
+        engineCanvas,
+        engineCtx,
+        GameFieldState,
+        height,
+        pixelRatio,
+        props,
+        renderContext,
+        width
+    } from "../store/engine";
     import type {Input} from "../store/model/input";
     import type {GameObject, Session} from "../store/model/session";
     import {SessionType} from "../store/model/session";
 
     export let inputs: Input[] = []
-    export let objects: GameObject[] = []
+    export let tick: GameFieldState = null;
     export let session: Session;
+    export let handleError: (err: string) => void;
 
-    export let killLoopOnError = true;
     export let debug = false;
-
-    const dispatch = createEventDispatcher();
 
     let canvas: any;
     let ctx: any;
-    let frame: number;
     let listeners = [];
 
     let renderOnly = false;
 
     $: if(session) {
         renderOnly = session.type === SessionType.PEER || session.type === SessionType.OBSERVER;
+    }
+
+    $: if(canvas && session && tick) {
+        render(tick)
     }
 
     onMount(() => {
@@ -43,11 +52,6 @@
             }
             entity.ready = true;
         });
-
-        return createLoop((elapsed, dt) => {
-            tick(dt);
-            render(objects, dt);
-        });
     })
 
     setContext(renderContext, {
@@ -61,27 +65,7 @@
         }
     });
 
-    function createLoop (fn) {
-        let elapsed = 0;
-        let lastTime = performance.now();
-        (function loop() {
-            frame = requestAnimationFrame(loop);
-            const beginTime = performance.now();
-            const dt = (beginTime - lastTime) / 1000;
-            lastTime = beginTime;
-            elapsed += dt;
-            fn(elapsed, dt);
-        })();
-        return () => {
-            cancelAnimationFrame(frame);
-        };
-    }
-
-    function tick(dt) {
-        dispatch('tick', [dt]);
-    }
-
-    function render(objects, dt) {
+    function render({objects, ts}: {objects, ts}) {
         const [canvas_width, canvas_height] = [canvas.width, canvas.height];
         ctx.clearRect(0, 0, canvas_width, canvas_height);
         drawObjects(ctx, objects, [canvas_width, canvas_height], debug);
@@ -89,14 +73,10 @@
         listeners.forEach(entity => {
             try {
                 if (entity.mounted && entity.ready && entity.render) {
-                    entity.render($props, dt);
+                    entity.render($props, ts);
                 }
             } catch (err) {
-                console.error(err);
-                if (killLoopOnError) {
-                    cancelAnimationFrame(frame);
-                    console.warn('Animation loop stopped due to an error');
-                }
+                handleError(err);
             }
         });
     }

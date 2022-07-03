@@ -117,7 +117,6 @@ impl InputDTO {
     pub fn obj_id(&self) -> String {
         self.obj_id.clone()
     }
-
 }
 
 #[wasm_bindgen]
@@ -151,7 +150,6 @@ impl FieldWrapper {
             .collect::<Vec<Input>>();
         let ms_diff = ms_diff_js.as_f64();
         self.field.tick(inputs, ms_diff.unwrap());
-        // log!("{:?}", self.field.collisions);
     }
 
     pub fn objects(&self) -> String {
@@ -164,10 +162,10 @@ impl FieldWrapper {
         let json = json!(objs);
         serde_json::to_string(&json).unwrap()
     }
-    //
-    // pub fn game_state(&self) -> String {
-    //     serde_json::to_string(&self.field.game_state).unwrap()
-    // }
+
+    pub fn game_state(&self) -> String {
+        serde_json::to_string(&self.field.game_state).unwrap()
+    }
 
     pub fn set_dimensions(&mut self, width_js: JsValue, height_js: JsValue) {
         let width = width_js.as_f64().unwrap();

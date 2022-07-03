@@ -76,14 +76,12 @@ function createGameFieldStore(): Readable<GameFieldState> & {tick: (inputs: Inpu
     const field = FieldWrapper.new();
 
     function tick(inputs: Input[], dt: number) {
-        field.tick([], dt);
-        // field.tick(inputs, dt);
+        field.tick(inputs, dt);
 
         const objects = JSON.parse(field.objects());
         const ts = Date.now();
-        // const score = JSON.parse(field.game_state()) as {goals_player_1: number, goals_player_2: number};
-        // set({objects, ts, score: {player1: score.goals_player_1, player2: score.goals_player_2}});
-        set({objects, ts, score: {player1: 0, player2: 0}});
+        const score = JSON.parse(field.game_state()) as {goals_player_1: number, goals_player_2: number};
+        set({objects, ts, score: {player1: score.goals_player_1, player2: score.goals_player_2}});
     }
 
     function update(objects: GameObject[]) {

@@ -208,32 +208,36 @@ impl Field {
             collision_handler.handle(&field_stats, &obj_a, &obj_b);
         }
 
-        let left_bound = self.objs.iter().find(|o| o.borrow().obj_type() == "left_bound").unwrap();
-        let right_bound = self.objs.iter().find(|o| o.borrow().obj_type() == "right_bound").unwrap();
-        let balls = self.objs.iter().filter(|o| o.borrow().obj_type() == "ball").collect::<Vec<&Rc<RefCell<Box<dyn GameObject>>>>>();
-        let ball_ids = balls.iter().map(|b| b.borrow().id().to_owned()).collect::<Vec<String>>();
-        let ball_collisions = registered_collisions
-            .iter()
-            .map(|c| {
-                if ball_ids.contains(&c.0) {
-                    return Some(c.1.clone())
-                }
-                if ball_ids.contains(&c.1) {
-                    return Some(c.0.clone())
-                }
-                return None
-            })
-            .filter(|v| v.is_some())
-            .map(|c| c.unwrap())
-            .map(|c| self.objs.iter().find(|o| o.borrow().id() == c).unwrap())
-            .collect::<Vec<&Rc<RefCell<Box<dyn GameObject>>>>>();
+        let ball_collisions = {
+            let balls = self.objs.iter().filter(|o| o.borrow().obj_type() == "ball").collect::<Vec<&Rc<RefCell<Box<dyn GameObject>>>>>();
+            let ball_ids = balls.iter().map(|b| b.borrow().id().to_owned()).collect::<Vec<String>>();
+            registered_collisions
+                .iter()
+                .map(|c| {
+                    if ball_ids.contains(&c.0) {
+                        return Some(c.1.clone())
+                    }
+                    if ball_ids.contains(&c.1) {
+                        return Some(c.0.clone())
+                    }
+                    return None
+                })
+                .filter(|v| v.is_some())
+                .map(|c| c.unwrap())
+                .collect::<Vec<String>>()
+        };
 
-        if ball_collisions.iter().find(|c| c.borrow().id() == right_bound.borrow().id()).is_some() {
-            // goal for player 1
-            self.game_state.goals_player_1 += 1;
-        } else if ball_collisions.iter().find(|c| c.borrow().id() == left_bound.borrow().id()).is_some() {
-            // goal for player 2
-            self.game_state.goals_player_2 += 1;
+        if ball_collisions.len() > 0 {
+            let left_bound = self.objs.iter().find(|o| o.borrow().id() == "bound_left").unwrap();
+            let right_bound = self.objs.iter().find(|o| o.borrow().id() == "bound_right").unwrap();
+
+            if ball_collisions.iter().any(|id| id == right_bound.borrow().id()) {
+                // goal for player 1
+                self.game_state.goals_player_1 += 1;
+            } else if ball_collisions.iter().any(|id| id == left_bound.borrow().id()) {
+                // goal for player 2
+                self.game_state.goals_player_2 += 1;
+            }
         }
 
         {

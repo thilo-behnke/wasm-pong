@@ -15,14 +15,13 @@ pub mod pong_collisions {
         player: &Rc<RefCell<Box<dyn GameObject>>>,
     ) {
         let mut ball = RefCell::borrow_mut(&ball);
+        let ball_pos = ball.pos().clone();
+        let mut ball_dimensions = ball.shape().dimensions();
+        ball_dimensions.scalar_multiplication(0.5);
+        let ball_height = ball_dimensions.y;
 
         // player is crushing the ball out of bounds
-        let ball_pos = ball.pos().clone();
-        let ball_height = {
-            let ball_dimensions = ball.shape().dimensions();
-            ball_dimensions.y
-        };
-        if is_in_range(ball_pos.y, stats.dimensions.1 - ball_height / 2., stats.dimensions.1 + ball_height / 2.) || is_in_range(ball_pos.y, 0. - ball_height / 2., 0. + ball_height / 2.) {
+        if is_in_range(ball_pos.y, stats.dimensions.1 - ball_height, stats.dimensions.1 + ball_height) || is_in_range(ball_pos.y, 0. - ball_height, 0. + ball_height) {
             let mut player = player.borrow_mut();
             *player.vel_mut() = Vector::zero();
             return;
@@ -53,11 +52,12 @@ pub mod pong_collisions {
         *ball.vel_mut() = ball_vel.clone();
 
         // move out of collision
-        let mut b_to_a = ball.pos().clone();
-        b_to_a.sub(&player.pos());
-        b_to_a.normalize();
-        b_to_a.scalar_multiplication(5.);
-        ball.pos_mut().add(&b_to_a);
+        let mut ball_vel = ball.vel().clone();
+        ball_vel.normalize();
+        ball_vel.scalar_multiplication(2.);
+        let mut ball_pos_updated = ball.pos().clone();
+        ball_pos_updated.add(&ball_vel);
+        *ball.pos_mut() = ball_pos_updated;
 
         ball.set_dirty(true);
     }

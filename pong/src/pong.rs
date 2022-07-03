@@ -56,8 +56,14 @@ pub mod pong_collisions {
         ball.vel_mut().reflect(&bound.orientation());
 
         // move out of collision
+        let mut bound_orientation = bound.orientation().clone();
+        bound_orientation.switch();
+        bound_orientation.abs();
+        let mut bound_pos = bound.pos().clone();
+        bound_pos.multiply(&bound_orientation);
+
         let mut b_to_a = ball.pos().clone();
-        b_to_a.sub(&bound.pos());
+        b_to_a.sub(&bound_pos);
         b_to_a.normalize();
         b_to_a.scalar_multiplication(5.);
         ball.pos_mut().add(&b_to_a);

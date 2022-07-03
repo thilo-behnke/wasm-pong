@@ -154,6 +154,12 @@ pub mod vector {
             self.x = self.x.abs();
             self.y = self.y.abs();
         }
+
+        pub fn switch(&mut self) {
+            let tmp = self.x;
+            self.x = self.y;
+            self.y = tmp;
+        }
     }
 
     impl PartialEq for Vector {

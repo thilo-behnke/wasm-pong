@@ -3,6 +3,7 @@ import main from "../main";
 export const mainColor = '#ff3e00';
 
 export const drawObjects = (ctx: CanvasRenderingContext2D, objects, [width, height], debug = false) => {
+    ctx.font = ctx.font.replace(/\d+px/, "12px");
     objects.forEach(obj => {
         ctx.beginPath();
         ctx.strokeStyle = mainColor;

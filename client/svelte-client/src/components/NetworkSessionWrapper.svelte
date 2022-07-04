@@ -19,8 +19,6 @@
     let cachedSessionId;
     let relevantKeyboardEvents: Readable<Input[]>;
 
-    // TODO: objects must come from events for peer and observer
-
     $: if (!cachedSessionId && session && isPlayer(session.you)) {
         cachedSessionId = session.session_id;
         console.log("NetworkSessionWrapper ready, now setting up sessionEvents")

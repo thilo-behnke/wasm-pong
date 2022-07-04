@@ -1,15 +1,21 @@
 import {derived, get, Readable, readable, Unsubscriber, writable} from "svelte/store";
 import api from "../api/session";
-import type {LocalSession, Message, NetworkSession, Session, SessionSnapshot} from "./model/session";
+import type {GameState, LocalSession, Message, NetworkSession, Session, SessionSnapshot} from "./model/session";
 import {isLocalSession, isNetworkSession, MessageType, SessionState, SessionType} from "./model/session";
 import type {NetworkStore} from "./network";
-import type {GameEventWrapper, InputEventPayload, SessionEventPayload, TickEventPayload} from "./model/event";
-import {isInputEvent, isMoveEvent, isSessionEvent, isTickEvent} from "./model/event";
+import type {
+    GameEventWrapper,
+    InputEventPayload,
+    SessionEventPayload,
+    StatusEventPayload,
+    TickEventPayload
+} from "./model/event";
+import {isInputEvent, isMoveEvent, isSessionEvent, isStatusEvent, isTickEvent} from "./model/event";
 import {getPlayerKeyboardInputs, playerKeyboardInputs} from "./input";
 import type {Subscriber} from "svelte/types/runtime/store";
 import {combined} from "./utils";
 import type {Input} from "./model/input";
-import {init, tick} from "svelte/internal";
+import {init, subscribe, tick} from "svelte/internal";
 
 const sessionStore = writable<Session>(null);
 
@@ -133,6 +139,30 @@ export const networkSessionStateEvents = readable<SessionEventPayload[]>([], set
         unsub();
     }
 });
+
+export const gameStateEvents = (function() {
+    const lastEvent = writable<StatusEventPayload>(null);
+    const unsubNetworkEvents = networkEvents.subscribe($events => {
+        const events = $events.filter(isStatusEvent);
+        if (!events.length) {
+            return;
+        }
+        const latest = events[events.length - 1];
+        lastEvent.set(latest.event);
+    })
+
+    const customSubscribe = (run: Subscriber<StatusEventPayload>, invalidate): Unsubscriber => {
+        const unsub = lastEvent.subscribe(run, invalidate);
+        return () => {
+            unsub();
+            unsubNetworkEvents();
+        }
+    }
+
+    return {
+        subscribe: customSubscribe
+    }
+}())
 
 export type NetworkTickEventState = {
     hasNext: boolean;

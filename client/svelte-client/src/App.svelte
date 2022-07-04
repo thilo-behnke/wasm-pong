@@ -68,7 +68,7 @@
                     <Canvas debug={debug} session={session} inputs={inputs} tick={tick} handleError={handleError} let:dimensions={dimensions}>
                         <Fps></Fps>
                         <Line x={dimensions.width / 2} y={0} height={dimensions.height} dashed={true}></Line>
-                        <Score dimensions={dimensions} score={tick.score}></Score>
+                        <Score dimensions={dimensions} score={tick?.state?.score}></Score>
                     </Canvas>
                 </div>
                 <div class="game-area__hud">

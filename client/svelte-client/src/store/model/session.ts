@@ -63,8 +63,8 @@ export function isLocalSession(session: Session): session is LocalSession {
 }
 
 export type GameScore = {
-    player1: number,
-    player2: number,
+    player_1: number,
+    player_2: number,
 }
 
 export type GameState = {

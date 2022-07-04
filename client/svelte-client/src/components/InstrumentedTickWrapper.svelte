@@ -1,15 +1,19 @@
 <script lang="ts">
     import {gameField} from "../store/engine";
-    import {networkTickEvents, sessionInputs} from "../store/session";
+    import {gameStateEvents, networkTickEvents, sessionInputs} from "../store/session";
+    import type {GameState} from "../store/model/session";
 
     export let killLoopOnError = true;
 
     let frame: number;
 
+    let state: GameState;
+    $: state = $gameStateEvents;
+
     $: if (networkTickEvents && $networkTickEvents.hasNext) {
         const tick = networkTickEvents.next();
         if (tick != null) {
-            gameField.update(tick.objects);
+            gameField.update(tick.objects, state);
         }
     }
 

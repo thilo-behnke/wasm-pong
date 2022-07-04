@@ -39,4 +39,4 @@
     }
 </script>
 
-<slot tick={gameFieldStore} inputs={inputs} handleError={handleError}></slot>
+<slot tick={$gameFieldStore} inputs={inputs} handleError={handleError}></slot>

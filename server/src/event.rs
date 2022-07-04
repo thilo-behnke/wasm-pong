@@ -29,7 +29,7 @@ pub enum PongEvent {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MoveEventPayload {
     pub session_id: String,
-    pub id: i32,
+    pub id: String,
     pub orientation_x: f64,
     pub orientation_y: f64,
     pub shape_param_1: f64,

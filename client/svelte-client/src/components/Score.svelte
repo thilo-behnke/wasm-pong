@@ -1,7 +1,6 @@
 <script lang="ts">
-
-    import type {GameScore} from "../store/engine";
     import Text from "./Text.svelte";
+    import type {GameScore} from "../store/model/session";
 
     export let dimensions: { width: number, height: number };
     export let score: GameScore;
@@ -9,7 +8,7 @@
 
 {#if score}
     <Text
-            text={score.player1.toString()}
+            text={score.player_1.toString()}
             fontSize=40
             fontFamily='Courier New'
             align='left'
@@ -18,7 +17,7 @@
             y={20}/>
 
     <Text
-            text={score.player2.toString()}
+            text={score.player_2.toString()}
             fontSize=40
             fontFamily='Courier New'
             align='left'

@@ -455,7 +455,7 @@ struct ObserverSessionSnapshotDTO {
 
 #[derive(Deserialize)]
 struct GameObjectStateDTO {
-    pub id: i32,
+    pub id: String,
     pub orientation_x: f64,
     pub orientation_y: f64,
     pub shape_param_1: f64,
@@ -471,7 +471,7 @@ impl GameObjectStateDTO {
         MoveEventPayload {
             session_id: session_id.to_owned(),
             ts,
-            id: self.id,
+            id: self.id.clone(),
             x: self.x,
             y: self.y,
             orientation_x: self.orientation_x,

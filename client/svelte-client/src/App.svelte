@@ -12,6 +12,7 @@
     import {SessionType} from "./store/model/session";
     import EvenTicker from "./components/EvenTicker.svelte";
     import Line from "./components/Line.svelte";
+    import Score from "./components/Score.svelte";
 
     let sessionStore: Readable<SessionStore>;
     let debug = false;
@@ -64,9 +65,10 @@
                     <SessionInfo session={session}></SessionInfo>
                 </div>
                 <div class="game-area__canvas">
-                    <Canvas debug={debug} session={session} inputs={inputs} tick={tick} handleError={handleError} on:tick={event => tick(...event.detail)} let:dimensions={dimensions}>
+                    <Canvas debug={debug} session={session} inputs={inputs} tick={tick} handleError={handleError} let:dimensions={dimensions}>
                         <Fps></Fps>
                         <Line x={dimensions.width / 2} y={0} height={dimensions.height} dashed={true}></Line>
+                        <Score dimensions={dimensions} state={tick?.state}></Score>
                     </Canvas>
                 </div>
                 <div class="game-area__hud">

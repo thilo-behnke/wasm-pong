@@ -95,6 +95,6 @@
         style="width: {$width}px; height: {$height}px;"
 ></canvas>
 <svelte:window on:resize|passive={handleResize}/>
-<slot dimensions={{width: $width, height: $height}}></slot>
+<slot dimensions={{width: $width, height: $height}} tick={tick}></slot>
 <style>
 </style>

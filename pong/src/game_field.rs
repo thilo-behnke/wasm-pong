@@ -2,9 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use serde::{Deserialize, Serialize};
 
-use crate::collision::collision::{
-    CollisionRegistry, Collisions,
-};
+use crate::collision::collision::{CollisionRegistry, Collisions};
 use crate::collision::detection::{CollisionDetector, CollisionGroup};
 use crate::collision::handler::{CollisionHandler, FieldStats};
 use crate::game_object::components::{DefaultGeomComp, DefaultPhysicsComp};
@@ -28,8 +26,29 @@ pub enum InputType {
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Input {
     pub input: InputType,
-    pub obj_id: u16,
+    pub obj_id: String,
     pub player: u16,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GameScore {
+    pub player_1: u16,
+    pub player_2: u16
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GameState {
+    pub score: GameScore,
+    pub winner: Option<String>
+}
+
+impl GameState {
+    pub fn new() -> GameState {
+        GameState {
+            score: GameScore{ player_1: 0, player_2: 0 },
+            winner: None
+        }
+    }
 }
 
 pub struct Field {
@@ -37,7 +56,7 @@ pub struct Field {
     pub logger: Box<dyn Logger>,
     pub width: u16,
     pub height: u16,
-    pub collisions: Box<dyn CollisionRegistry>,
+    pub game_state: GameState,
     objs: Vec<Rc<RefCell<Box<dyn GameObject>>>>,
     event_writer: Box<dyn PongEventWriter>,
     collision_detector: CollisionDetector,
@@ -52,24 +71,25 @@ impl Field {
         let width = 800;
         let height = 600;
 
+        let objs = DefaultGameObject::bounds(width, height).into_iter()
+            .map(|b| Rc::new(RefCell::new(b.inner())))
+            .collect();
+
         let mut field = Field {
             logger: logger_factory.get("game_field"),
             width,
             height,
-            objs: DefaultGameObject::bounds(width, height)
-                .into_iter()
-                .map(|b| Rc::new(RefCell::new(b.inner())))
-                .collect(),
-            collisions: Box::new(Collisions::new(vec![])),
+            objs,
+            game_state: GameState::new(),
             collision_detector: CollisionDetector::new(&logger_factory),
             collision_handler: CollisionHandler::new(&logger_factory),
             event_writer,
             logger_factory,
         };
 
-        field.add_player(0, 0 + width / 15, height / 2);
-        field.add_player(1, width - width / 15, height / 2);
-        field.add_ball(2, width / 2, height / 2);
+        field.add_player("player_1", 0 + width / 15, height / 2);
+        field.add_player("player_2", width - width / 15, height / 2);
+        field.add_ball("ball_1", width / 2, height / 2);
 
         field.collision_handler.register(
             (String::from("ball"), String::from("player")),
@@ -106,7 +126,7 @@ impl Field {
                 .into_iter()
                 .map(|b| Rc::new(RefCell::new(b.inner())))
                 .collect(),
-            collisions: Box::new(Collisions::new(vec![])),
+            game_state: GameState::new(),
             collision_detector: CollisionDetector::new(&logger_factory),
             collision_handler: CollisionHandler::new(&logger_factory),
             event_writer,
@@ -114,17 +134,21 @@ impl Field {
         }
     }
 
-    pub fn add_player(&mut self, id: u16, x: u16, y: u16) {
-        let player = DefaultGameObject::player(id, x, y, &self);
+    pub fn add_player(&mut self, id: &str, x: u16, y: u16) {
+        let player = DefaultGameObject::player(&id, x, y, &self);
         self.objs.push(Rc::new(RefCell::new(player)));
     }
 
-    pub fn add_ball(&mut self, id: u16, x: u16, y: u16) {
+    pub fn add_ball(&mut self, id: &str, x: u16, y: u16) {
         let ball = DefaultGameObject::ball(id, x, y, &self);
         self.objs.push(Rc::new(RefCell::new(ball)));
     }
 
     pub fn tick(&mut self, inputs: Vec<Input>, ms_diff: f64) {
+        if self.game_state.winner.is_some() {
+            return;
+        }
+
         for obj in self.objs.iter() {
             let mut obj_mut = RefCell::borrow_mut(obj);
             if obj_mut.obj_type() != "ball" {
@@ -197,6 +221,44 @@ impl Field {
             collision_handler.handle(&field_stats, &obj_a, &obj_b);
         }
 
+        let ball_collisions = {
+            let balls = self.objs.iter().filter(|o| o.borrow().obj_type() == "ball").collect::<Vec<&Rc<RefCell<Box<dyn GameObject>>>>>();
+            let ball_ids = balls.iter().map(|b| b.borrow().id().to_owned()).collect::<Vec<String>>();
+            registered_collisions
+                .iter()
+                .map(|c| {
+                    if ball_ids.contains(&c.0) {
+                        return Some(c.1.clone())
+                    }
+                    if ball_ids.contains(&c.1) {
+                        return Some(c.0.clone())
+                    }
+                    return None
+                })
+                .filter(|v| v.is_some())
+                .map(|c| c.unwrap())
+                .collect::<Vec<String>>()
+        };
+
+        if ball_collisions.len() > 0 {
+            let left_bound = self.objs.iter().find(|o| o.borrow().id() == "bound_left").unwrap();
+            let right_bound = self.objs.iter().find(|o| o.borrow().id() == "bound_right").unwrap();
+
+            if ball_collisions.iter().any(|id| id == right_bound.borrow().id()) {
+                // goal for player 1
+                self.game_state.score.player_1 += 1;
+                if self.game_state.score.player_1 >= 10 {
+                    self.game_state.winner = Some("player_1".to_owned());
+                }
+            } else if ball_collisions.iter().any(|id| id == left_bound.borrow().id()) {
+                // goal for player 2
+                self.game_state.score.player_2 += 1;
+                if self.game_state.score.player_2 >= 10 {
+                    self.game_state.winner = Some("player_2".to_owned());
+                }
+            }
+        }
+
         {
             for obj in self.objs.iter().filter(|o| RefCell::borrow(o).is_dirty()) {
                 let mut obj = RefCell::borrow_mut(obj);
@@ -233,7 +295,7 @@ impl Field {
 }
 
 impl DefaultGameObject {
-    pub fn player(id: u16, x: u16, y: u16, field: &Field) -> Box<dyn GameObject> {
+    pub fn player(id: &str, x: u16, y: u16, field: &Field) -> Box<dyn GameObject> {
         Box::new(DefaultGameObject::new(
             id,
             "player".to_string(),
@@ -252,7 +314,7 @@ impl DefaultGameObject {
 }
 
 impl DefaultGameObject {
-    pub fn ball(id: u16, x: u16, y: u16, field: &Field) -> Box<dyn GameObject> {
+    pub fn ball(id: &str, x: u16, y: u16, field: &Field) -> Box<dyn GameObject> {
         Box::new(DefaultGameObject::new(
             id,
             "ball".to_string(),
@@ -275,7 +337,7 @@ impl DefaultGameObject {
             Bounds(
                 Bound::BOTTOM,
                 Box::new(DefaultGameObject::new(
-                    90,
+                    "bound_bottom",
                     "bound".to_string(),
                     Box::new(DefaultGeomComp::new(Shape::rect(
                         Vector {
@@ -292,7 +354,7 @@ impl DefaultGameObject {
             Bounds(
                 Bound::TOP,
                 Box::new(DefaultGameObject::new(
-                    91,
+                    "bound_top",
                     "bound".to_string(),
                     Box::new(DefaultGeomComp::new(Shape::rect(
                         Vector {
@@ -309,7 +371,7 @@ impl DefaultGameObject {
             Bounds(
                 Bound::LEFT,
                 Box::new(DefaultGameObject::new(
-                    92,
+                    "bound_left",
                     "bound".to_string(),
                     Box::new(DefaultGeomComp::new(Shape::rect(
                         Vector {
@@ -326,7 +388,7 @@ impl DefaultGameObject {
             Bounds(
                 Bound::RIGHT,
                 Box::new(DefaultGameObject::new(
-                    93,
+                    "bound_right",
                     "bound".to_string(),
                     Box::new(DefaultGeomComp::new(Shape::rect(
                         Vector {
@@ -371,10 +433,10 @@ mod tests {
         let width = 1000;
         let height = 1000;
         let mut field = Field::mock(width, height);
-        field.add_player(1, 50, height / 2);
+        field.add_player("player_1", 50, height / 2);
         let inputs = vec![Input {
             input: InputType::UP,
-            obj_id: 1,
+            obj_id: "player_1".to_owned(),
             player: 1,
         }];
         field.tick(inputs, 1.);
@@ -392,10 +454,10 @@ mod tests {
     fn player_input_update_pos_down() {
         let height = 1000;
         let mut field = Field::mock(1000, height);
-        field.add_player(1, 50, height / 2);
+        field.add_player("player_1", 50, height / 2);
         let inputs = vec![Input {
             input: InputType::DOWN,
-            obj_id: 1,
+            obj_id: "player_1".to_owned(),
             player: 1,
         }];
         field.tick(inputs, 1.);

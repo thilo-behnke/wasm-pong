@@ -17,7 +17,7 @@ export type Player = Actor & {
 }
 
 export type GameObject = {
-    id: number,
+    id: string,
     orientation_x: number,
     orientation_y: number,
     shape_param_1: number,
@@ -62,10 +62,21 @@ export function isLocalSession(session: Session): session is LocalSession {
     return !!session.type && session.type === SessionType.LOCAL
 }
 
+export type GameScore = {
+    player_1: number,
+    player_2: number,
+}
+
+export type GameState = {
+    score: GameScore,
+    winner?: string
+}
+
 export type HostSessionSnapshot = {
     session_id: string,
     inputs: Input[],
     objects: GameObject[],
+    state: GameState,
     player_id: string,
     ts: number
 }

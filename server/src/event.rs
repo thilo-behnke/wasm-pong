@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use serde::{Deserialize, Serialize};
-use pong::game_field::Input;
+use pong::game_field::{GameScore, Input};
 use crate::actor::{Actor, Player};
 use crate::session::Session;
 
@@ -29,7 +29,7 @@ pub enum PongEvent {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MoveEventPayload {
     pub session_id: String,
-    pub id: i32,
+    pub id: String,
     pub orientation_x: f64,
     pub orientation_y: f64,
     pub shape_param_1: f64,
@@ -57,7 +57,9 @@ pub struct InputEventPayload {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StatusEventPayload {
-    // TODO
+    pub session_id: String,
+    pub score: GameScore,
+    pub winner: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -134,7 +136,7 @@ pub fn deserialize(event: &str) -> Option<PongEvent> {
 #[cfg(test)]
 mod tests {
     use crate::event::{SessionEvent, SessionEventPayload};
-    use crate::actor::{Observer, Player};
+    use crate::actor::{Actor, Observer, Player};
     use crate::session::{Session, SessionState};
 
     const SESSION_EVENT_JSON: &str = "{\"event_type\":\"Created\",\"session\":{\"id\":1,\"hash\":\"abc\",\"state\":\"PENDING\",\"players\":[{\"id\":\"player_1\"}],\"observers\":[{\"id\":\"observer_1\"}]},\"actor\":{\"id\":\"player_1\"},\"reason\":\"some reason\"}";
@@ -162,9 +164,9 @@ mod tests {
                 session_id: "abc".to_owned(),
                 state: SessionState::PENDING,
                 players: vec![Player { id: "player_1".to_owned(), nr: 1, ip: "127.0.0.1".to_owned() }],
-                observers: vec![Observer {id: "observer_1".to_owned()}]
+                observers: vec![Observer {id: "observer_1".to_owned(), ip: "127.0.0.1".to_owned()}]
             },
-            actor: Player { id: "player_1".to_owned(), nr: 1, ip: "127.0.0.1".to_owned() },
+            actor: Actor::Player(Player { id: "player_1".to_owned(), nr: 1, ip: "127.0.0.1".to_owned() }),
             reason: "some reason".to_owned(),
         })
     }

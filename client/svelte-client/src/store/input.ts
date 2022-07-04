@@ -6,13 +6,13 @@ export const playerKeyboardInputs = derived(keysPressed, $keysPressed => {
     return $keysPressed.map((key): Input => {
         switch (key.toLowerCase()) {
             case 'w':
-                return {input: 'UP', obj_id: 0, player: 1};
+                return {input: 'UP', obj_id: "player_1", player: 1};
             case 's':
-                return {input: 'DOWN', obj_id: 0, player: 1}
+                return {input: 'DOWN', obj_id: "player_1", player: 1}
             case 'arrowup':
-                return {input: 'UP', obj_id: 1, player: 2}
+                return {input: 'UP', obj_id: "player_2", player: 2}
             case 'arrowdown':
-                return {input: 'DOWN', obj_id: 1, player: 2}
+                return {input: 'DOWN', obj_id: "player_2", player: 2}
             default:
                 return null
         }

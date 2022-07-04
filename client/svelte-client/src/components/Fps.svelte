@@ -20,7 +20,7 @@
 </script>
 
 <Text
-        {text}
+        text={text}
         fontSize=12
         fontFamily='Courier New'
         align='left'

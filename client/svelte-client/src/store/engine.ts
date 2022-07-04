@@ -1,7 +1,7 @@
 import {FieldWrapper} from "wasm-app";
 import {derived, Readable, Writable, writable} from "svelte/store";
 import {getContext, onMount} from "svelte";
-import type {GameObject} from "./model/session";
+import type {GameObject, GameScore, GameState} from "./model/session";
 import type {Input} from "./model/input";
 import type {Subscriber} from "svelte/types/runtime/store";
 
@@ -61,11 +61,14 @@ function deriveObject (obj) {
 
 export type GameFieldState = {
     ts: number,
-    objects: GameObject[]
+    objects: GameObject[],
+    state: GameState
 }
 
-function createGameFieldStore(): Readable<GameFieldState> & {tick: (inputs: Input[], dt: number) => void, update: (objects: GameObject[]) => void} {
-    const {subscribe, set} = writable<GameFieldState>({ts: 0, objects: []});
+export type GameFieldStore = Readable<GameFieldState> & {tick: (inputs: Input[], dt: number) => void, update: (objects: GameObject[], state: GameState) => void};
+
+function createGameFieldStore(): GameFieldStore {
+    const {subscribe, set} = writable<GameFieldState>({ts: 0, objects: [], state: {score: {player_1: 0, player_2: 0}}});
 
     const field = FieldWrapper.new();
 
@@ -74,11 +77,12 @@ function createGameFieldStore(): Readable<GameFieldState> & {tick: (inputs: Inpu
 
         const objects = JSON.parse(field.objects());
         const ts = Date.now();
-        set({objects, ts});
+        const state = JSON.parse(field.game_state()) as GameState;
+        set({objects, ts, state} as GameFieldState);
     }
 
-    function update(objects: GameObject[]) {
-        set({objects, ts: Date.now()})
+    function update(objects: GameObject[], state: GameState) {
+        set({objects, ts: Date.now(), state});
     }
 
     return {

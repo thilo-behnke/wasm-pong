@@ -14,6 +14,7 @@
 
     renderable(props => {
         const { engineCtx: ctx } = props;
+        console.log({text})
         if (text) {
             ctx.fillStyle = mainColor;
             ctx.font = `${fontSize}px ${fontFamily}`;

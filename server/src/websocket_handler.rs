@@ -14,8 +14,8 @@ use serde_json::json;
 use tokio::time::sleep;
 use serde::{Serialize, Deserialize};
 use pong::event::event::{EventWrapper, EventWriter};
-use pong::game_field::Input;
-use crate::event::{HeartBeatEventPayload, InputEventPayload, MoveEventPayload, SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType, TickEvent};
+use pong::game_field::{GameState, Input};
+use crate::event::{HeartBeatEventPayload, InputEventPayload, MoveEventPayload, SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType, StatusEventPayload, TickEvent};
 use crate::actor::{Actor, Player};
 use crate::session::{Session, SessionState};
 use crate::session_manager::{SessionManager, SessionWriter};
@@ -112,8 +112,8 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                             o.to_move_event(&session_id, payload.ts)
                                         }).collect();
                                         debug(&websocket_session_read_copy, &format!("host: created move events from snapshot: {:?}", move_events));
-                                        any_error = !write_events(move_events, "move", &mut event_writer) || any_error;
-                                        if any_error {
+                                        let move_write_error = !write_events(move_events, "move", &mut event_writer);
+                                        if move_write_error {
                                             debug(&websocket_session_read_copy, "host: move events write failed");
                                         }
                                         let input_event = InputEventPayload {
@@ -123,11 +123,20 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                             session_id: session_id.to_owned()
                                         };
                                         debug(&websocket_session_read_copy, &format!("host: created input event from snapshot: {:?}", input_event));
-                                        any_error = !write_events(vec![input_event], "input", &mut event_writer) || any_error;
-                                        if any_error {
-                                            debug(&websocket_session_read_copy, "peer: input event write failed");
+                                        let input_write_error = !write_events(vec![input_event], "input", &mut event_writer);
+                                        if input_write_error {
+                                            debug(&websocket_session_read_copy, "host: input event write failed");
                                         }
-                                        // TODO: Status events.
+                                        let status_event = StatusEventPayload {
+                                            score: payload.state.score,
+                                            winner: payload.state.winner,
+                                            session_id: session_id.to_owned()
+                                        };
+                                        let status_write_error = !write_events(vec![status_event], "status", &mut event_writer);
+                                        if status_write_error {
+                                            debug(&websocket_session_read_copy, "host: status event write failed");
+                                        }
+                                        any_error = move_write_error || input_write_error || input_write_error;
                                     },
                                     SessionSnapshot::Peer(session_id, payload) => {
                                         trace(&websocket_session_read_copy, "received message is PEER snapshot");
@@ -138,7 +147,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                             session_id: session_id.to_owned()
                                         };
                                         debug(&websocket_session_read_copy, &format!("peer: created input event from snapshot: {:?}", input_event));
-                                        any_error = !write_events(vec![input_event], "input", &mut event_writer) || any_error;
+                                        any_error = !write_events(vec![input_event], "input", &mut event_writer);
                                         if any_error {
                                             debug(&websocket_session_read_copy, "peer: input event write failed");
                                         }
@@ -423,6 +432,7 @@ impl SessionSnapshot {
 struct HostSessionSnapshotDTO {
     pub session_id: String,
     pub inputs: Vec<Input>,
+    pub state: GameState,
     pub objects: Vec<GameObjectStateDTO>,
     pub player_id: String,
     pub ts: u128

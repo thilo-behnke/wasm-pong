@@ -30,13 +30,13 @@ pub struct Input {
     pub player: u16,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameScore {
     pub player_1: u16,
     pub player_2: u16
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
     pub score: GameScore,
     pub winner: Option<String>

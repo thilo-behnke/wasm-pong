@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use serde::{Deserialize, Serialize};
-use pong::game_field::Input;
+use pong::game_field::{GameScore, Input};
 use crate::actor::{Actor, Player};
 use crate::session::Session;
 
@@ -57,7 +57,9 @@ pub struct InputEventPayload {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StatusEventPayload {
-    // TODO
+    pub session_id: String,
+    pub score: GameScore,
+    pub winner: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

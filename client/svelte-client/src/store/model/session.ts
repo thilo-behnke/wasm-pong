@@ -62,10 +62,21 @@ export function isLocalSession(session: Session): session is LocalSession {
     return !!session.type && session.type === SessionType.LOCAL
 }
 
+export type GameScore = {
+    player1: number,
+    player2: number,
+}
+
+export type GameState = {
+    score: GameScore,
+    winner?: string
+}
+
 export type HostSessionSnapshot = {
     session_id: string,
     inputs: Input[],
     objects: GameObject[],
+    state: GameState,
     player_id: string,
     ts: number
 }

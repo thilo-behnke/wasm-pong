@@ -31,14 +31,23 @@ pub struct Input {
 }
 
 #[derive(Clone, Serialize)]
+pub struct GameScore {
+    pub player_1: u16,
+    pub player_2: u16
+}
+
+#[derive(Clone, Serialize)]
 pub struct GameState {
-    pub goals_player_1: u16,
-    pub goals_player_2: u16
+    pub score: GameScore,
+    pub winner: Option<String>
 }
 
 impl GameState {
     pub fn new() -> GameState {
-        GameState {goals_player_1: 0, goals_player_2: 0}
+        GameState {
+            score: GameScore{ player_1: 0, player_2: 0 },
+            winner: None
+        }
     }
 }
 
@@ -233,10 +242,10 @@ impl Field {
 
             if ball_collisions.iter().any(|id| id == right_bound.borrow().id()) {
                 // goal for player 1
-                self.game_state.goals_player_1 += 1;
+                self.game_state.score.player_1 += 1;
             } else if ball_collisions.iter().any(|id| id == left_bound.borrow().id()) {
                 // goal for player 2
-                self.game_state.goals_player_2 += 1;
+                self.game_state.score.player_2 += 1;
             }
         }
 

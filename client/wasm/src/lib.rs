@@ -1,6 +1,6 @@
 mod utils;
 
-use pong::game_field::{Field, GameState, Input, InputType};
+use pong::game_field::{Field, Input, InputType};
 use pong::game_object::game_object::{GameObject};
 use pong::geom::shape::ShapeType;
 use pong::pong::pong_events::{NoopPongEventWriter};

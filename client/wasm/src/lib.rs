@@ -28,9 +28,9 @@ macro_rules! log {
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
-#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct GameObjectDTO {
-    pub id: u16,
+    id: String,
     pub x: f64,
     pub y: f64,
     pub orientation_x: f64,
@@ -50,7 +50,7 @@ impl GameObjectDTO {
         let vel = obj.vel();
         let shape = obj.shape();
         return GameObjectDTO {
-            id: obj.id(),
+            id: obj.id().to_owned(),
             x: pos.x,
             y: pos.y,
             orientation_x: orientation.x,
@@ -66,6 +66,14 @@ impl GameObjectDTO {
                 ShapeType::Circle(_, _) => 0,
             },
         };
+    }
+}
+
+#[wasm_bindgen]
+impl GameObjectDTO {
+    #[wasm_bindgen(getter)]
+    pub fn id(&self) -> String {
+        self.id.clone()
     }
 }
 
@@ -86,20 +94,28 @@ impl InputTypeDTO {
 }
 
 #[wasm_bindgen]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InputDTO {
+    obj_id: String,
     pub input: InputTypeDTO,
-    pub obj_id: u16,
     pub player: u16,
 }
 
 impl InputDTO {
     pub fn to_input(&self) -> Input {
         return Input {
+            obj_id: self.obj_id.clone(),
             input: self.input.to_input_type(),
-            obj_id: self.obj_id,
             player: self.player,
         };
+    }
+}
+
+#[wasm_bindgen]
+impl InputDTO {
+    #[wasm_bindgen(getter)]
+    pub fn obj_id(&self) -> String {
+        self.obj_id.clone()
     }
 }
 
@@ -126,7 +142,7 @@ impl FieldWrapper {
         self.field.height
     }
 
-    pub fn tick(&mut self, inputs_js: &JsValue, ms_diff_js: JsValue) {
+    pub fn tick(&mut self, inputs_js: JsValue, ms_diff_js: JsValue) {
         let input_dtos: Vec<InputDTO> = inputs_js.into_serde().unwrap();
         let inputs = input_dtos
             .into_iter()
@@ -134,7 +150,6 @@ impl FieldWrapper {
             .collect::<Vec<Input>>();
         let ms_diff = ms_diff_js.as_f64();
         self.field.tick(inputs, ms_diff.unwrap());
-        // log!("{:?}", self.field.collisions);
     }
 
     pub fn objects(&self) -> String {
@@ -146,6 +161,10 @@ impl FieldWrapper {
             .collect::<Vec<GameObjectDTO>>();
         let json = json!(objs);
         serde_json::to_string(&json).unwrap()
+    }
+
+    pub fn game_state(&self) -> String {
+        serde_json::to_string(&self.field.game_state).unwrap()
     }
 
     pub fn set_dimensions(&mut self, width_js: JsValue, height_js: JsValue) {

@@ -1,6 +1,6 @@
 export type Input = {
     input: 'UP' | 'DOWN',
-    obj_id: number,
+    obj_id: string,
     player: number
 }
 

@@ -74,7 +74,7 @@ pub mod detection {
                     if !has_collision {
                         continue;
                     }
-                    collisions.push(Collision(obj.id(), other.id()))
+                    collisions.push(Collision(obj.id().to_owned(), other.id().to_owned()))
                 }
                 if i >= objs.len() {
                     break;
@@ -102,36 +102,36 @@ pub mod detection {
         #[case(vec![], vec![])]
         #[case(
         vec![
-        MockGameObject::new(1, "a", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
-        MockGameObject::new(2, "b", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.))
+        MockGameObject::new("1", "a", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
+        MockGameObject::new("2", "b", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.))
         ],
-        vec![Collision(1, 2)]
+        vec![Collision::new("1", "2")]
         )]
         #[case(
         vec![
-        MockGameObject::new(1, "a", BoundingBox::create(&Vector{x: 60., y: 65.}, 20., 20.)),
-        MockGameObject::new(2, "b", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
+        MockGameObject::new("1", "a", BoundingBox::create(&Vector{x: 60., y: 65.}, 20., 20.)),
+        MockGameObject::new("2", "b", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
         ],
-        vec![Collision(1, 2)]
+        vec![Collision::new("1", "2")]
         )]
         #[case(
         vec![
-        MockGameObject::new(1, "a", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
-        MockGameObject::new(2, "b", BoundingBox::create(&Vector{x: 80., y: 80.}, 20., 20.)),
-        ],
-        vec![]
-        )]
-        #[case(
-        vec![
-        MockGameObject::new(1, "a", BoundingBox::create(&Vector{x: 50., y: 50.}, 50., 50.)),
-        MockGameObject::new(2, "b", BoundingBox::create(&Vector{x: 500., y: 50.}, 50., 50.)),
+        MockGameObject::new("1", "a", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
+        MockGameObject::new("2", "b", BoundingBox::create(&Vector{x: 80., y: 80.}, 20., 20.)),
         ],
         vec![]
         )]
         #[case(
         vec![
-        MockGameObject::new(1, "a", BoundingBox::create(&Vector{x: 60., y: 65.}, 20., 20.)),
-        MockGameObject::new(2, "c", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
+        MockGameObject::new("1", "a", BoundingBox::create(&Vector{x: 50., y: 50.}, 50., 50.)),
+        MockGameObject::new("2", "b", BoundingBox::create(&Vector{x: 500., y: 50.}, 50., 50.)),
+        ],
+        vec![]
+        )]
+        #[case(
+        vec![
+        MockGameObject::new("1", "a", BoundingBox::create(&Vector{x: 60., y: 65.}, 20., 20.)),
+        MockGameObject::new("2", "c", BoundingBox::create(&Vector{x: 50., y: 50.}, 20., 20.)),
         ],
         vec![]
         )]
@@ -151,19 +151,19 @@ pub mod detection {
 
         #[derive(Debug)]
         pub struct MockGameObject {
-            id: u16,
+            id: String,
             obj_type: String,
             bounding_box: BoundingBox,
         }
 
         impl MockGameObject {
             pub fn new(
-                id: u16,
+                id: &str,
                 obj_type: &str,
                 bounding_box: BoundingBox,
             ) -> Rc<RefCell<Box<dyn GameObject>>> {
                 Rc::new(RefCell::new(Box::new(MockGameObject {
-                    id,
+                    id: id.to_owned(),
                     obj_type: String::from(obj_type),
                     bounding_box,
                 })))
@@ -171,8 +171,8 @@ pub mod detection {
         }
 
         impl GameObject for MockGameObject {
-            fn id(&self) -> u16 {
-                self.id
+            fn id(&self) -> &str {
+                &self.id
             }
 
             fn obj_type(&self) -> &str {
@@ -365,32 +365,32 @@ pub mod handler {
 
         #[rstest]
         #[case(
-        create_game_obj(1, Vector::new(1., 0.), Vector::new(1., 0.), true),
-        create_game_obj(2, Vector::new(0., 0.), Vector::new(0., 1.), true)
+        create_game_obj("1", Vector::new(1., 0.), Vector::new(1., 0.), true),
+        create_game_obj("2", Vector::new(0., 0.), Vector::new(0., 1.), true)
         )]
         #[case(
-        create_game_obj(1, Vector::new(1., 0.), Vector::new(1., 0.), false),
-        create_game_obj(2, Vector::new(0., 0.), Vector::new(0., 1.), true)
+        create_game_obj("1", Vector::new(1., 0.), Vector::new(1., 0.), false),
+        create_game_obj("2", Vector::new(0., 0.), Vector::new(0., 1.), true)
         )]
         #[case(
-        create_game_obj(1, Vector::new(-1., 0.), Vector::new(-1., 0.), false),
-        create_game_obj(2, Vector::new(0., 0.), Vector::new(0., 1.), true),
+        create_game_obj("1", Vector::new(-1., 0.), Vector::new(-1., 0.), false),
+        create_game_obj("2", Vector::new(0., 0.), Vector::new(0., 1.), true),
         )]
         #[case(
-        create_game_obj(1, Vector::new(1., 1.), Vector::new(1., 1.), false),
-        create_game_obj(2, Vector::new(0., 0.), Vector::new(0., 1.), true)
+        create_game_obj("1", Vector::new(1., 1.), Vector::new(1., 1.), false),
+        create_game_obj("2", Vector::new(0., 0.), Vector::new(0., 1.), true)
         )]
         #[case(
-        create_game_obj(1, Vector::new(-2., 1.), Vector::new(-1., 0.), false),
-        create_game_obj(2, Vector::new(0., 0.), Vector::new(0., 1.), true),
+        create_game_obj("1", Vector::new(-2., 1.), Vector::new(-1., 0.), false),
+        create_game_obj("2", Vector::new(0., 0.), Vector::new(0., 1.), true),
         )]
         #[case(
-        create_game_obj(1, Vector::new(1., 0.), Vector::new(1., 0.), false),
-        create_game_obj(2, Vector::new(0., 1.), Vector::new(0., 1.), true)
+        create_game_obj("1", Vector::new(1., 0.), Vector::new(1., 0.), false),
+        create_game_obj("2", Vector::new(0., 1.), Vector::new(0., 1.), true)
         )]
         #[case(
-        create_game_obj(1, Vector::new(-2., 1.), Vector::new(-1., 0.), false),
-        create_game_obj(2, Vector::new(0., 0.), Vector::new(0., 1.), true),
+        create_game_obj("1", Vector::new(-2., 1.), Vector::new(-1., 0.), false),
+        create_game_obj("2", Vector::new(0., 0.), Vector::new(0., 1.), true),
         )]
         pub fn should_handle_collision(
             #[case] obj_a: Rc<RefCell<Box<dyn GameObject>>>,
@@ -417,7 +417,7 @@ pub mod handler {
         }
 
         fn create_game_obj(
-            id: u16,
+            id: &str,
             vel: Vector,
             orientation: Vector,
             is_static: bool,
@@ -442,7 +442,7 @@ pub mod collision {
 
     pub trait CollisionRegistry: Debug {
         fn get_collisions(&self) -> Vec<&Collision>;
-        fn get_collisions_by_id(&self, id: u16) -> Vec<&Collision>;
+        fn get_collisions_by_id(&self, id: &str) -> Vec<&Collision>;
     }
 
     #[derive(Debug)]
@@ -460,7 +460,7 @@ pub mod collision {
         fn get_collisions(&self) -> Vec<&Collision> {
             self.state.iter().collect()
         }
-        fn get_collisions_by_id(&self, id: u16) -> Vec<&Collision> {
+        fn get_collisions_by_id(&self, id: &str) -> Vec<&Collision> {
             self.state
                 .iter()
                 .filter(|c| c.0 == id || c.1 == id)
@@ -469,6 +469,12 @@ pub mod collision {
     }
 
     #[derive(Debug, Eq, PartialEq)]
-    pub struct Collision(pub u16, pub u16);
+    pub struct Collision(pub String, pub String);
+
+    impl Collision {
+        pub fn new(obj_a: &str, obj_b: &str) -> Collision {
+            Collision(obj_a.to_owned(), obj_b.to_owned())
+        }
+    }
 
 }

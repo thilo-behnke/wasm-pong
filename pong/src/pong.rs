@@ -3,8 +3,7 @@ pub mod pong_collisions {
     use crate::geom::shape::ShapeType;
     use crate::geom::vector::Vector;
     use std::cell::RefCell;
-    use std::cmp::min;
-    use std::f64::consts::{FRAC_PI_2, FRAC_PI_4, PI};
+    use std::f64::consts::{FRAC_PI_4};
     use std::rc::Rc;
     use crate::collision::handler::FieldStats;
     use crate::utils::number_utils::is_in_range;
@@ -129,34 +128,34 @@ pub mod pong_collisions {
         #[rstest]
         #[case(
         // given
-        create_player(1, 10, 0, Vector::new(0., -1.)),
+        create_player("1", 10, 0, Vector::new(0., -1.)),
         get_bound(Bound::BOTTOM),
         // expected
-        create_player(1, 10, 31, Vector::new(0., -1.)),
+        create_player("2", 10, 31, Vector::new(0., -1.)),
         get_bound(Bound::BOTTOM)
         )]
         #[case(
         // given
-        create_player(1, 10, 1, Vector::new(0., -1.)),
+        create_player("1", 10, 1, Vector::new(0., -1.)),
         get_bound(Bound::BOTTOM),
         // expected
-        create_player(1, 10, 31, Vector::new(0., -1.)),
+        create_player("2", 10, 31, Vector::new(0., -1.)),
         get_bound(Bound::BOTTOM)
         )]
         #[case(
         // given
-        create_player(1, 10, 601, Vector::new(0., 1.)),
+        create_player("1", 10, 601, Vector::new(0., 1.)),
         get_bound(Bound::TOP),
         // expected
-        create_player(1, 10, 569, Vector::new(0., 1.)),
+        create_player("2", 10, 569, Vector::new(0., 1.)),
         get_bound(Bound::TOP)
         )]
         #[case(
         // given
-        create_player(1, 10, 599, Vector::new(0., 1.)),
+        create_player("1", 10, 599, Vector::new(0., 1.)),
         get_bound(Bound::TOP),
         // expected
-        create_player(1, 10, 569, Vector::new(0., 1.)),
+        create_player("2", 10, 569, Vector::new(0., 1.)),
         get_bound(Bound::TOP)
         )]
         pub fn should_correctly_handle_player_bounds_collision(
@@ -171,7 +170,7 @@ pub mod pong_collisions {
             assert_eq!(bounds_expected.borrow().pos(), bounds.borrow().pos());
         }
 
-        fn create_player(id: u16, x: u16, y: u16, orientation: Vector) -> Rc<RefCell<Box<dyn GameObject>>> {
+        fn create_player(id: &str, x: u16, y: u16, orientation: Vector) -> Rc<RefCell<Box<dyn GameObject>>> {
             let logger = DefaultLoggerFactory::noop();
             let event_writer = NoopPongEventWriter::new();
             let field = Field::new(logger, event_writer);

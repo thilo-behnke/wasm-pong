@@ -6,7 +6,7 @@ pub mod game_object {
     use std::fmt::Debug;
 
     pub trait GameObject: Debug {
-        fn id(&self) -> u16;
+        fn id(&self) -> &str;
         fn obj_type(&self) -> &str;
         fn shape(&self) -> &ShapeType;
         fn pos(&self) -> &Vector;
@@ -24,7 +24,7 @@ pub mod game_object {
 
     #[derive(Debug)]
     pub struct DefaultGameObject {
-        pub id: u16,
+        pub id: String,
         pub obj_type: String,
         geom: Box<dyn GeomComp>,
         physics: Box<dyn PhysicsComp>,
@@ -33,13 +33,13 @@ pub mod game_object {
 
     impl DefaultGameObject {
         pub fn new(
-            id: u16,
+            id: &str,
             obj_type: String,
             geom: Box<dyn GeomComp>,
             physics: Box<dyn PhysicsComp>,
         ) -> DefaultGameObject {
             DefaultGameObject {
-                id,
+                id: id.to_owned(),
                 obj_type,
                 geom,
                 physics,
@@ -49,8 +49,8 @@ pub mod game_object {
     }
 
     impl GameObject for DefaultGameObject {
-        fn id(&self) -> u16 {
-            self.id
+        fn id(&self) -> &str {
+            &self.id
         }
 
         fn obj_type(&self) -> &str {
@@ -139,7 +139,7 @@ pub mod game_object {
             #[case] ms_diff: f64,
         ) {
             let mut obj = DefaultGameObject::new(
-                1,
+                "1",
                 "obj".to_string(),
                 Box::new(DefaultGeomComp::new(Shape::rect(
                     Vector::new(start_pos.x as f64, start_pos.y as f64),

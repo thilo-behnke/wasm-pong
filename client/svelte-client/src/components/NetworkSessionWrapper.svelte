@@ -1,8 +1,8 @@
 <script lang="ts">
 
     import {networkEvents, networkTickEvents, networkSessionStateEvents, sessionInputs} from "../store/session";
-    import type {NetworkSession} from "../store/model/session";
-    import {SessionState, SessionType} from "../store/model/session";
+    import type {GameState, NetworkSession} from "../store/model/session";
+    import {isObserver, isPlayer, SessionState, SessionType} from "../store/model/session";
     import CopyToClipboard from "./CopyToClipboard.svelte";
     import api from "../api/session";
     import type {Readable} from "svelte/store";
@@ -19,9 +19,7 @@
     let cachedSessionId;
     let relevantKeyboardEvents: Readable<Input[]>;
 
-    // TODO: objects must come from events for peer and observer
-
-    $: if(!cachedSessionId && session) {
+    $: if (!cachedSessionId && session && isPlayer(session.you)) {
         cachedSessionId = session.session_id;
         console.log("NetworkSessionWrapper ready, now setting up sessionEvents")
         joinLink = api.createJoinLink(session.session_id);
@@ -30,14 +28,27 @@
         relevantKeyboardEvents = getPlayerKeyboardInputs(session.you.nr);
     }
 
-    $: if(session && session.type === SessionType.HOST && session.state === SessionState.RUNNING) {
+    $: if (session && session.type === SessionType.HOST && session.state === SessionState.RUNNING) {
         console.debug("sending host snapshot")
-        networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, objects: $gameField.objects, player_id: session.you.id, ts: $gameField.ts})
+        const state: GameState = $gameField.state;
+        networkEvents.produce({
+            state,
+            inputs: $relevantKeyboardEvents,
+            session_id: session.session_id,
+            objects: $gameField.objects,
+            player_id: session.you.id,
+            ts: $gameField.ts
+        })
     }
 
-    $: if(session && session.type === SessionType.PEER && session.state === SessionState.RUNNING) {
-        console.debug("sending host snapshot")
-        networkEvents.produce({inputs: $relevantKeyboardEvents, session_id: session.session_id, player_id: session.you.id, ts: $gameField.ts})
+    $: if (session && session.type === SessionType.PEER && session.state === SessionState.RUNNING) {
+        console.debug("sending peer snapshot")
+        networkEvents.produce({
+            inputs: $relevantKeyboardEvents,
+            session_id: session.session_id,
+            player_id: session.you.id,
+            ts: $gameField.ts
+        })
     }
 
     $: console.debug($networkSessionStateEvents)
@@ -54,7 +65,7 @@
     {:else if session.state === SessionState.RUNNING}
         <CopyToClipboard text={watchLink}></CopyToClipboard>
         {#if session.type === SessionType.HOST}
-            <TickWrapper inputs={$sessionInputs} let:tick={tick} let:inputs={inputs} let:handleError={handleError}>
+            <TickWrapper gameFieldStore={gameField} inputs={$sessionInputs} let:tick={tick} let:inputs={inputs} let:handleError={handleError}>
                 <slot inputs={inputs} tick={tick} events={$networkSessionStateEvents}></slot>
             </TickWrapper>
         {:else}

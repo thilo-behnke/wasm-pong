@@ -1,7 +1,8 @@
 <script lang="ts">
     import {onMount} from "svelte";
-    import {gameField} from "../store/engine";
+    import {GameFieldStore} from "../store/engine";
 
+    export let gameFieldStore: GameFieldStore;
     export let inputs;
     export let killLoopOnError = true;
 
@@ -9,7 +10,7 @@
 
     onMount(() => {
         return createLoop((elapsed, dt) => {
-            gameField.tick(inputs, dt);
+            gameFieldStore.tick(inputs, dt);
         });
     })
 
@@ -38,4 +39,4 @@
     }
 </script>
 
-<slot tick={$gameField} inputs={inputs} handleError={handleError}></slot>
+<slot tick={$gameFieldStore} inputs={inputs} handleError={handleError}></slot>

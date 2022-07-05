@@ -1,6 +1,15 @@
 extern crate core;
 
-use log::{debug, error, info, Level};
+use log::{debug, error, info, Level, LevelFilter};
+use log4rs::append::console::{ConsoleAppender, ConsoleAppenderConfig};
+use log4rs::append::file::FileAppender;
+use log4rs::append::rolling_file::policy::compound::CompoundPolicy;
+use log4rs::append::rolling_file::policy::compound::roll::delete::DeleteRoller;
+use log4rs::append::rolling_file::policy::compound::trigger::size::SizeTrigger;
+use log4rs::append::rolling_file::RollingFileAppender;
+use log4rs::Config;
+use log4rs::config::{Appender, Logger, Root};
+use log4rs::encode::pattern::PatternEncoder;
 use crate::http::HttpServer;
 
 mod hash;
@@ -16,7 +25,39 @@ mod session;
 
 #[tokio::main]
 pub async fn main() {
-    env_logger::init();
+    let compound_policy = Box::new(CompoundPolicy::new(Box::new(SizeTrigger::new(2u64.pow(20) * 10)), Box::new(DeleteRoller::new())));
+    let logfile = RollingFileAppender::builder()
+        .encoder(Box::new(PatternEncoder::new("{d(%Y-%m-%d %H:%M:%S%.f)} [{l}] - {m}\n")))
+        .append(true)
+        .build("log/output.log", compound_policy).unwrap();
+
+    let stdout = ConsoleAppender::builder()
+        .encoder(Box::new(PatternEncoder::new("[{l}] {m}\n")))
+        .build();
+
+    let config = Config::builder()
+        .appenders(
+            vec![
+                Appender::builder().build("stdout", Box::new(stdout)),
+                Appender::builder().build("logfile", Box::new(logfile)),
+            ]
+        )
+        .logger(
+            Logger::builder()
+                .appender("logfile")
+                .additive(true)
+                .build("server", LevelFilter::Trace)
+        )
+        .build(Root::builder()
+            .appender("stdout")
+            .build(LevelFilter::Info)).unwrap();
+
+    let logger_res = log4rs::init_config(config);
+    if let Err(e) = logger_res {
+        eprintln!("Failed to setup logger: {:?}", e);
+        return;
+    }
+
     info!("preparing environment");
     let kafka_host_env = std::env::var("KAFKA_HOST");
     let kafka_host = match kafka_host_env {

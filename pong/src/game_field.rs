@@ -144,7 +144,7 @@ impl Field {
         self.objs.push(Rc::new(RefCell::new(ball)));
     }
 
-    pub fn tick(&mut self, inputs: Vec<Input>, ms_diff: f64) {
+    pub fn tick(&mut self, inputs: Vec<Input>, delta_sec: f64) {
         if self.game_state.winner.is_some() {
             return;
         }
@@ -192,7 +192,7 @@ impl Field {
         {
             for obj in self.objs.iter() {
                 let mut obj_mut = RefCell::borrow_mut(obj);
-                obj_mut.update_pos(ms_diff);
+                obj_mut.update_pos(delta_sec);
             }
         }
 

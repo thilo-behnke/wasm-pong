@@ -43,21 +43,22 @@
         width.set(canvas.width);
         height.set(canvas.height);
         // field.set_dimensions(canvas.width, canvas.height);
+    })
 
-        // setup entities
-        listeners.forEach(async entity => {
+    setContext(renderContext, {
+        async add (entity) {
+            this.remove(entity);
+            listeners.push(entity);
+
+            if (entity.ready) {
+                return;
+            }
+
             if (entity.setup) {
                 let p = entity.setup($props);
                 if (p && p.then) await p;
             }
             entity.ready = true;
-        });
-    })
-
-    setContext(renderContext, {
-        add (fn) {
-            this.remove(fn);
-            listeners.push(fn);
         },
         remove (fn) {
             const idx = listeners.indexOf(fn);

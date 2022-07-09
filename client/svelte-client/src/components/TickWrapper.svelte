@@ -8,7 +8,6 @@
 
     const targetFps = 60;
     const frameThreshold = 1_000 / targetFps;
-
     let frame: number;
 
     onMount(() => {

@@ -1,11 +1,12 @@
 pub mod pong_collisions {
     use crate::game_object::game_object::GameObject;
-    use crate::geom::shape::ShapeType;
+    use crate::geom::shape::{get_bounding_box, ShapeType};
     use crate::geom::vector::Vector;
-    use std::cell::RefCell;
+    use std::cell::{Ref, RefCell, RefMut};
     use std::f64::consts::{FRAC_PI_4};
     use std::rc::Rc;
     use crate::collision::handler::FieldStats;
+    use crate::pong::pong_events::GameObjUpdate;
     use crate::utils::number_utils::is_in_range;
 
     pub fn handle_player_ball_collision(
@@ -53,11 +54,9 @@ pub mod pong_collisions {
         // move out of collision
         let mut ball_vel = ball.vel().clone();
         ball_vel.normalize();
-        ball_vel.scalar_multiplication(2.);
-        let mut ball_pos_updated = ball.pos().clone();
-        ball_pos_updated.add(&ball_vel);
-        *ball.pos_mut() = ball_pos_updated;
+        ball_vel.scalar_multiplication(ball_dimensions.len());
 
+        escape_collision(&mut ball, &player);
         ball.set_dirty(true);
     }
 
@@ -72,13 +71,7 @@ pub mod pong_collisions {
         let bound = RefCell::borrow(&bound);
         ball.vel_mut().reflect(&bound.orientation());
 
-        let bound_pos = bound.pos().clone();
-        let mut b_to_a = ball.pos().clone();
-        b_to_a.sub(&bound_pos);
-        b_to_a.normalize();
-        b_to_a.multiply(&ball_dimensions);
-        ball.pos_mut().add(&b_to_a);
-
+        escape_collision(&mut ball, &bound);
         ball.set_dirty(true);
     }
 
@@ -103,6 +96,28 @@ pub mod pong_collisions {
         player_pos.y = new_pos.y;
 
         player.set_dirty(true);
+    }
+
+    fn escape_collision(game_obj_a: &mut RefMut<Box<dyn GameObject>>, game_obj_b: &Ref<Box<dyn GameObject>>) {
+        let a_dims = game_obj_a.shape().dimensions();
+        let mut a_vel = game_obj_a.vel().clone();
+        a_vel.normalize();
+        a_vel.multiply(&a_dims);
+        let mut tries = 0;
+        loop {
+            if tries >= 5 {
+                break;
+            }
+            let mut a_pos_updated = game_obj_a.pos().clone();
+            a_pos_updated.add(&a_vel);
+            *game_obj_a.pos_mut() = a_pos_updated;
+            let ball_bounding_box = get_bounding_box(game_obj_a.shape());
+            let player_bounding_box = get_bounding_box(game_obj_b.shape());
+            if !ball_bounding_box.overlaps(&player_bounding_box) {
+                break;
+            }
+            tries += 1;
+        }
     }
 
     #[cfg(test)]

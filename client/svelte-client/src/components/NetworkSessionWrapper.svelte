@@ -65,7 +65,7 @@
     {:else if session.state === SessionState.RUNNING}
         <CopyToClipboard text={watchLink}></CopyToClipboard>
         {#if session.type === SessionType.HOST}
-            <TickWrapper gameFieldStore={gameField} inputs={$sessionInputs} let:tick={tick} let:inputs={inputs} let:handleError={handleError}>
+            <TickWrapper gameFieldStore={gameField} inputs={$sessionInputs} throttle={true} let:tick={tick} let:inputs={inputs} let:handleError={handleError}>
                 <slot inputs={inputs} tick={tick} events={$networkSessionStateEvents}></slot>
             </TickWrapper>
         {:else}

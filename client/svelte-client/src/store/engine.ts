@@ -1,9 +1,11 @@
 import {FieldWrapper} from "wasm-app";
-import {derived, Readable, Writable, writable} from "svelte/store";
+import {derived, get, readable, Readable, Writable, writable} from "svelte/store";
 import {getContext, onMount} from "svelte";
 import type {GameObject, GameScore, GameState} from "./model/session";
 import type {Input} from "./model/input";
 import type {Subscriber} from "svelte/types/runtime/store";
+import {subscribe} from "svelte/internal";
+import Fps from "../components/Fps.svelte";
 
 export const engineCanvas = writable();
 export const engineCtx = writable();
@@ -62,13 +64,49 @@ function deriveObject (obj) {
 export type GameFieldState = {
     ts: number,
     objects: GameObject[],
-    state: GameState
+    state: GameState,
+    meta: {
+        fps: number
+    }
+}
+
+type FpsStore = Readable<number> & {
+    inc: () => void;
+}
+
+const createFpsStore = (): FpsStore => {
+    const fps = writable<number>();
+    const frameCounter = writable<{fps: number, current: number, lastReset: number}>({fps: 0, current: 0, lastReset: 0});
+
+    frameCounter.subscribe(({fps: updatedFps}) => {
+        fps.set(updatedFps);
+    })
+
+    const inc = () => {
+        const now = Date.now();
+        frameCounter.update(prev => {
+            const {current, lastReset} = prev;
+            const diff = now - lastReset;
+            if (diff > 1_000) {
+                const fps = parseFloat((current / diff * 1_000).toFixed(2));
+                return {fps, current: 0, lastReset: now };
+            }
+            return {...prev, current: current + 1};
+        });
+    }
+
+    return {
+        subscribe: fps.subscribe,
+        inc
+    }
 }
 
 export type GameFieldStore = Readable<GameFieldState> & {tick: (inputs: Input[], dt: number) => void, update: (objects: GameObject[], state: GameState) => void};
 
 function createGameFieldStore(): GameFieldStore {
-    const {subscribe, set} = writable<GameFieldState>({ts: 0, objects: [], state: {score: {player_1: 0, player_2: 0}}});
+    const {subscribe, set} = writable<GameFieldState>({ts: 0, objects: [], state: {score: {player_1: 0, player_2: 0}}, meta: {fps: 0}});
+
+    const fps = createFpsStore();
 
     const field = FieldWrapper.new();
 
@@ -78,11 +116,17 @@ function createGameFieldStore(): GameFieldStore {
         const objects = JSON.parse(field.objects());
         const ts = Date.now();
         const state = JSON.parse(field.game_state()) as GameState;
-        set({objects, ts, state} as GameFieldState);
+
+        fps.inc();
+
+        const meta = {fps: get(fps)};
+        set({objects, ts, state, meta} as GameFieldState);
     }
 
     function update(objects: GameObject[], state: GameState) {
-        set({objects, ts: Date.now(), state});
+        fps.inc();
+        const meta = {fps: get(fps)};
+        set({objects, ts: Date.now(), state, meta});
     }
 
     return {

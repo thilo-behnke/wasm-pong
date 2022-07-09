@@ -30,7 +30,7 @@
                 fn(elapsed / 1_000, dt / 1_000);
                 return;
             }
-            
+
             const dtMs = now - lastTime;
             if (dtMs < frameThreshold) {
                 return;

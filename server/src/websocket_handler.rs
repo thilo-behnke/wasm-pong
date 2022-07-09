@@ -286,7 +286,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
 
 // TODO: doable in macro?
 fn trace(websocket_session: &WebSocketSession, msg: &str) {
-    trace!("{} {}", websocket_session.session.session_id, msg)
+    trace!("[{}] {}", websocket_session.session.session_id, msg)
 }
 
 fn debug(websocket_session: &WebSocketSession, msg: &str) {

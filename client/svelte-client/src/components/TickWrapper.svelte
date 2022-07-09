@@ -5,6 +5,7 @@
     export let gameFieldStore: GameFieldStore;
     export let inputs;
     export let killLoopOnError = true;
+    export let throttle = false;
 
     const targetFps = 60;
     const frameThreshold = 1_000 / targetFps;
@@ -22,6 +23,14 @@
         (function loop() {
             frame = requestAnimationFrame(loop);
             const now = Date.now();
+            if (!throttle) {
+                const dt = now - lastTime;
+                lastTime = now;
+                elapsed += dt;
+                fn(elapsed / 1_000, dt / 1_000);
+                return;
+            }
+            
             const dtMs = now - lastTime;
             if (dtMs < frameThreshold) {
                 return;

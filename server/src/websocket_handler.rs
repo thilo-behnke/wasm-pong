@@ -13,6 +13,7 @@ use log::{debug, error, info, trace};
 use serde_json::json;
 use tokio::time::sleep;
 use serde::{Serialize, Deserialize};
+use tokio::task;
 use pong::event::event::{EventWrapper, EventWriter};
 use pong::game_field::{GameState, Input};
 use crate::event::{HeartBeatEventPayload, InputEventPayload, MoveEventPayload, SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType, StatusEventPayload, TickEvent};
@@ -197,6 +198,9 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                     }
                     _ => {}
                 }
+
+                trace(&websocket_session_read_copy, "kafka write done, waiting for next cycle.");
+                task::yield_now().await;
             }
             info!("ws receiver terminated")
         });
@@ -273,10 +277,8 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                     }
                 }
 
-                // Avoid starvation of read thread (?)
-                // TODO: How to avoid this? This is very bad for performance.
-                sleep(Duration::from_millis(1)).await;
-                trace(&websocket_session_write_copy, "kafka read done, back to sleep")
+                trace(&websocket_session_write_copy, "kafka read done, waiting for next cycle.");
+                task::yield_now().await;
             }
         });
         Ok(())

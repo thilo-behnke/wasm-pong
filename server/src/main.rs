@@ -27,7 +27,7 @@ mod session;
 pub async fn main() {
     let compound_policy = Box::new(CompoundPolicy::new(Box::new(SizeTrigger::new(2u64.pow(20) * 10)), Box::new(DeleteRoller::new())));
     let logfile = RollingFileAppender::builder()
-        .encoder(Box::new(PatternEncoder::new("{d(%Y-%m-%d %H:%M:%S%.f)} [{l}] - {m}\n")))
+        .encoder(Box::new(PatternEncoder::new("{d(%Y-%m-%d %H:%M:%S%.f)} [{l}] - [{M}:{L}] {m}\n")))
         .append(true)
         .build("log/output.log", compound_policy).unwrap();
 

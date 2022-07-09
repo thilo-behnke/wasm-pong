@@ -6,6 +6,9 @@
     export let inputs;
     export let killLoopOnError = true;
 
+    const targetFps = 60;
+    const frameThreshold = 1_000 / targetFps;
+
     let frame: number;
 
     onMount(() => {
@@ -16,14 +19,17 @@
 
     function createLoop (fn) {
         let elapsed = 0;
-        let lastTime = performance.now();
+        let lastTime = Date.now();
         (function loop() {
             frame = requestAnimationFrame(loop);
-            const beginTime = performance.now();
-            const dt = (beginTime - lastTime) / 1000;
-            lastTime = beginTime;
-            elapsed += dt;
-            fn(elapsed, dt);
+            const now = Date.now();
+            const dtMs = now - lastTime;
+            if (dtMs < frameThreshold) {
+                return;
+            }
+            lastTime = now - (dtMs % frameThreshold);
+            elapsed += dtMs;
+            fn(elapsed / 1_000, dtMs / 1_000);
         })();
         return () => {
             cancelAnimationFrame(frame);

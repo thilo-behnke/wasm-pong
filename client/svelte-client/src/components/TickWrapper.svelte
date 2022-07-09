@@ -28,8 +28,8 @@
                 return;
             }
             lastTime = now - (dtMs % frameThreshold);
-            elapsed += dtMs;
-            fn(elapsed / 1_000, dtMs / 1_000);
+            elapsed += frameThreshold;
+            fn(elapsed / 1_000, frameThreshold / 1_000);
         })();
         return () => {
             cancelAnimationFrame(frame);

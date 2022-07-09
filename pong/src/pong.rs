@@ -72,15 +72,8 @@ pub mod pong_collisions {
         let bound = RefCell::borrow(&bound);
         ball.vel_mut().reflect(&bound.orientation());
 
-        // move out of collision
-        let mut bound_orientation = bound.orientation().clone();
-        bound_orientation.switch();
-        bound_orientation.abs();
-        let mut bound_pos = bound.pos().clone();
-        bound_pos.multiply(&bound_orientation);
-
+        let bound_pos = bound.pos().clone();
         let mut b_to_a = ball.pos().clone();
-        b_to_a.multiply(&bound_orientation);
         b_to_a.sub(&bound_pos);
         b_to_a.normalize();
         b_to_a.multiply(&ball_dimensions);

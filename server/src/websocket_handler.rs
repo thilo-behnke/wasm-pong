@@ -54,11 +54,13 @@ impl WebsocketHandler for DefaultWebsocketHandler {
         let websocket = self.websocket.await?;
         let (mut websocket_writer, mut websocket_reader) = websocket.split();
 
-        let session_manager = self.session_manager.lock().await;
-        let event_handler_pair = session_manager.split(
-            &self.websocket_session.session.session_id,
-            self.websocket_session.connection_type.get_topics(),
-        );
+        let event_handler_pair = async {
+            let session_manager = self.session_manager.lock().await;
+            session_manager.split(
+                &self.websocket_session.session.session_id,
+                self.websocket_session.connection_type.get_topics(),
+            ).await
+        }.await;
         if let Err(_) = event_handler_pair {
             error(
                 &self.websocket_session,
@@ -113,7 +115,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                             o.to_move_event(&session_id, payload.ts)
                                         }).collect();
                                         debug(&websocket_session_read_copy, &format!("host: created move events from snapshot: {:?}", move_events));
-                                        let move_write_error = !write_events(move_events, "move", &mut event_writer);
+                                        let move_write_error = !write_events(move_events, "move", &mut event_writer).await;
                                         if move_write_error {
                                             debug(&websocket_session_read_copy, "host: move events write failed");
                                         }
@@ -124,7 +126,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                             session_id: session_id.to_owned()
                                         };
                                         debug(&websocket_session_read_copy, &format!("host: created input event from snapshot: {:?}", input_event));
-                                        let input_write_error = !write_events(vec![input_event], "input", &mut event_writer);
+                                        let input_write_error = !write_events(vec![input_event], "input", &mut event_writer).await;
                                         if input_write_error {
                                             debug(&websocket_session_read_copy, "host: input event write failed");
                                         }
@@ -133,7 +135,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                             winner: payload.state.winner,
                                             session_id: session_id.to_owned()
                                         };
-                                        let status_write_error = !write_events(vec![status_event], "status", &mut event_writer);
+                                        let status_write_error = !write_events(vec![status_event], "status", &mut event_writer).await;
                                         if status_write_error {
                                             debug(&websocket_session_read_copy, "host: status event write failed");
                                         }
@@ -148,7 +150,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                             session_id: session_id.to_owned()
                                         };
                                         debug(&websocket_session_read_copy, &format!("peer: created input event from snapshot: {:?}", input_event));
-                                        any_error = !write_events(vec![input_event], "input", &mut event_writer);
+                                        any_error = !write_events(vec![input_event], "input", &mut event_writer).await;
                                         if any_error {
                                             debug(&websocket_session_read_copy, "peer: input event write failed");
                                         }
@@ -170,7 +172,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                     actor_id: heartbeat.player_id,
                                     ts: heartbeat.ts
                                 };
-                                let res = write_events(vec![event], "heart_beat", &mut event_writer);
+                                let res = write_events(vec![event], "heart_beat", &mut event_writer).await;
                                 if !res {
                                     error!("failed to persist heart beat.");
                                 } else {
@@ -213,7 +215,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
             loop {
                 trace(&websocket_session_write_copy, "reading messages from kafka");
                 // TODO: Should perform more filtering, e.g. inputs of player are not relevant.
-                let events = event_reader.read_from_session();
+                let events = event_reader.read_from_session().await;
                 if let Err(e) = events {
                     error(&websocket_session_write_copy, &format!("Failed to read messages from kafka: {:?}", e));
                     continue;
@@ -303,7 +305,7 @@ fn error(websocket_session: &WebSocketSession, msg: &str) {
     error!("[{}] {}", websocket_session.session.session_id, msg)
 }
 
-fn write_session_close_event(event_writer: &mut SessionWriter, websocket_session: &WebSocketSession, close_reason: &str) {
+async fn write_session_close_event(event_writer: &mut SessionWriter, websocket_session: &WebSocketSession, close_reason: &str) {
     let mut updated_session = websocket_session.session.clone();
     updated_session.state = SessionState::CLOSED;
     let session_closed_event = SessionEvent::Closed(SessionEventPayload {
@@ -312,7 +314,7 @@ fn write_session_close_event(event_writer: &mut SessionWriter, websocket_session
         reason: format!("ws closed: {}", close_reason),
     });
     let msg = json!(session_closed_event).to_string();
-    let session_event_write_res = event_writer.write_to_session("session", vec![&msg]);
+    let session_event_write_res = event_writer.write_to_session("session", vec![&msg]).await;
     if let Err(e) = session_event_write_res {
         eprintln!("Failed to write session closed event: {0}", e)
     }
@@ -486,7 +488,7 @@ impl GameObjectStateDTO {
     }
 }
 
-fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter) -> bool where T : Serialize + Debug {
+async fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter) -> bool where T : Serialize + Debug {
     if events.len() == 0 {
         debug!("called to write 0 events - noop");
         return true;
@@ -505,7 +507,7 @@ fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter
     }
 
     let to_send = to_send.iter().map(|e| e.as_str()).collect();
-    let write_res = event_writer.write_to_session(topic, to_send);
+    let write_res = event_writer.write_to_session(topic, to_send).await;
     if let Err(e) = write_res {
         error!("Failed to write at least one event to topic {}: {:?}", topic, e);
         any_error = true;

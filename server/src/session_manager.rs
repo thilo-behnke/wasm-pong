@@ -56,7 +56,7 @@ impl SessionManager {
             actor: Actor::Player(player),
             reason: format!("session created")
         });
-        let write_res = self.write_to_producer(&session_created);
+        let write_res = self.write_to_producer(&session_created).await;
         if let Err(e) = write_res {
             let index = self.sessions.iter().position(|s| s.session_id == session_id);
             if let Some(i) = index {
@@ -110,7 +110,7 @@ impl SessionManager {
         });
         {
             let write_res =
-                self.write_to_producer(&session_joined_event);
+                self.write_to_producer(&session_joined_event).await;
             if let Err(e) = write_res {
                 eprintln!(
                     "Failed to write session joined event for {:?} to producer: {}",
@@ -156,7 +156,7 @@ impl SessionManager {
         });
         {
             let write_res =
-                self.write_to_producer(&session_joined_event);
+                self.write_to_producer(&session_joined_event).await;
             if let Err(e) = write_res {
                 eprintln!(
                     "Failed to write watch session event for {:?} to producer: {}",
@@ -168,13 +168,13 @@ impl SessionManager {
         Ok(session_joined_event)
     }
 
-    fn write_to_producer(&mut self, session_event: &SessionEvent) -> Result<(), String>
+    async fn write_to_producer(&mut self, session_event: &SessionEvent) -> Result<(), String>
     {
         let session_id = session_event.session_id();
         let session_producer = match self.session_producers.get_mut(session_id) {
             Some(p) => p,
             None => {
-                let session_writer = self.get_session_writer(session_id).expect("failed to create session writer to persist create event");
+                let session_writer = self.get_session_writer(session_id).await.expect("failed to create session writer to persist create event");
                 self.session_producers.insert(session_id.to_owned(), session_writer);
                 self.session_producers.get_mut(session_id).expect("failed to retrieve newly created session writer")
             }
@@ -187,7 +187,7 @@ impl SessionManager {
         }
         let json_event = json_event.unwrap();
         info!("preparing to write session event to kafka: {}", json_event);
-        let session_event_write = session_producer.write_to_session("session", vec![&json_event]);
+        let session_event_write = session_producer.write_to_session("session", vec![&json_event]).await;
         if let Err(e) = session_event_write {
             let message = format!("Failed to write session event to kafka: {:?}", e);
             println!("{}", e);
@@ -197,17 +197,17 @@ impl SessionManager {
         return Ok(());
     }
 
-    pub fn split(
+    pub async fn split(
         &self,
         session_id: &str,
         read_topics: &[&str],
     ) -> Result<(SessionReader, SessionWriter), String> {
-        let reader = self.get_session_reader(session_id, read_topics);
+        let reader = self.get_session_reader(session_id, read_topics).await;
         if let Err(e) = reader {
             error!("Failed to create session reader for session {}: {:?}", session_id, e);
             return Err("Failed to create session reader".to_string());
         }
-        let writer = self.get_session_writer(session_id);
+        let writer = self.get_session_writer(session_id).await;
         if let Err(e) = writer {
             error!("Failed to create session writer for session {}: {:?}", session_id, e);
             return Err("Failed to create session writer".to_string());
@@ -237,14 +237,15 @@ impl SessionManager {
         })
     }
 
-    pub fn get_session_writer(&self, session_id: &str) -> Result<SessionWriter, String> {
+    pub async fn get_session_writer(&self, session_id: &str) -> Result<SessionWriter, String> {
         let session = self.find_session(&session_id);
         if let None = session {
             return Err(format!("Unable to find session with hash {}", session_id));
         }
         let session = session.unwrap();
+        let writer = KafkaSessionEventWriterImpl::new(&self.kafka_host, vec!["move", "status", "input", "session"], &i32::from(session.id)).await;
         let event_writer =
-            EventWriter::new(Box::new(KafkaSessionEventWriterImpl::new(&self.kafka_host)));
+            EventWriter::new(Box::new(writer));
         Ok(SessionWriter {
             writer: event_writer,
             session,
@@ -265,7 +266,7 @@ pub struct SessionWriter {
 }
 
 impl SessionWriter {
-    pub fn write_to_session(&mut self, topic: &str, messages: Vec<&str>) -> Result<(), String> {
+    pub async fn write_to_session(&mut self, topic: &str, messages: Vec<&str>) -> Result<(), String> {
         let events = messages.into_iter().map(|e| {
             EventWrapper {
                 event: e.to_owned(),
@@ -273,7 +274,7 @@ impl SessionWriter {
                 topic: topic.to_owned(),
             }
         }).collect();
-        self.writer.write_all(events)
+        self.writer.write_all(events).await
     }
 }
 
@@ -284,7 +285,7 @@ pub struct SessionReader {
 }
 
 impl SessionReader {
-    pub fn read_from_session(&mut self) -> Result<Vec<EventWrapper>, String> {
-        self.reader.read()
+    pub async fn read_from_session(&mut self) -> Result<Vec<EventWrapper>, String> {
+        self.reader.read().await
     }
 }

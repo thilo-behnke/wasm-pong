@@ -18,28 +18,51 @@ use pong::event::event::{EventWrapper, EventReaderImpl, EventWriterImpl};
 use crate::session::Session;
 
 pub struct KafkaSessionEventWriterImpl {
-    topic: String,
-    partition: i32,
-    producer: PartitionClient
+    topics: Vec<String>,
+    partitions: Vec<i32>,
+    producers: HashMap<String, PartitionClient>
 }
 
 impl KafkaSessionEventWriterImpl {
-    pub async fn new(host: &str, topic: &str, partition: &i32) -> KafkaSessionEventWriterImpl {
+    pub async fn new(host: &str, topics: Vec<&str>, partition: &i32) -> KafkaSessionEventWriterImpl {
         info!("Connecting session_writer producer to kafka host: {}", host);
-        let client = ClientBuilder::new(vec![host.to_owned()]).build().await.unwrap();
-        let producer = client.partition_client(topic.to_owned(), partition.clone()).await;
-        if let Err(ref e) = producer {
-            error!("Failed to connect kafka producer: {:?}", e)
+        let owned_topics = topics.iter().map(|t| t.to_owned().to_owned()).collect();
+        let mut producers = HashMap::new();
+        for topic in topics {
+            let client = ClientBuilder::new(vec![host.to_owned()]).build().await.unwrap();
+            let producer = client.partition_client(topic.to_owned(), partition.clone()).await;
+            if let Err(ref e) = producer {
+                error!("Failed to connect kafka producer: {:?}", e)
+            }
+            let producer = producer.unwrap();
+            producers.insert(topic.to_owned(), producer);
         }
-        let producer = producer.unwrap();
-        KafkaSessionEventWriterImpl { producer, topic: topic.to_owned(), partition: partition.clone() }
+        KafkaSessionEventWriterImpl { topics: owned_topics, partitions: vec![partition.clone()], producers }
     }
 }
 
 #[async_trait]
 impl EventWriterImpl for KafkaSessionEventWriterImpl {
     async fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String> {
-        write_events(events, &mut self.producer).await
+        let mut by_topic: HashMap<String, Vec<EventWrapper>> = HashMap::new();
+        for e in events {
+            match by_topic.get(&e.topic) {
+                Some(mut events) => events.push(e),
+                None => {
+                    let mut events = vec![];
+                    events.push(e);
+                    by_topic.insert(e.topic.to_owned(), events);
+                }
+            }
+        }
+        for topic_events in by_topic {
+            let mut producer = self.producers.get(&topic_events.0).unwrap();
+            let res = write_events(topic_events.1, &mut producer).await;
+            if let Err(e) = res {
+                return Err(e);
+            }
+        }
+        Ok(())
     }
 }
 

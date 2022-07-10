@@ -1,4 +1,5 @@
 pub mod event {
+    use async_trait::async_trait;
     use serde::{Deserialize, Serialize};
     use std::fmt::Debug;
     use std::fs::OpenOptions;
@@ -11,7 +12,8 @@ pub mod event {
         pub event: String,
     }
 
-    pub trait EventWriterImpl: Send + Sync {
+    #[async_trait]
+    pub trait EventWriterImpl {
         fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String>;
     }
 
@@ -75,8 +77,9 @@ pub mod event {
         }
     }
 
-    pub trait EventReaderImpl: Send + Sync {
-        fn read(&mut self) -> Result<Vec<EventWrapper>, String>;
+    #[async_trait]
+    pub trait EventReaderImpl {
+        async fn read(&mut self) -> Result<Vec<EventWrapper>, String>;
     }
 
     pub struct EventReader {
@@ -88,8 +91,8 @@ pub mod event {
             EventReader { reader_impl }
         }
 
-        pub fn read(&mut self) -> Result<Vec<EventWrapper>, String> {
-            self.reader_impl.read()
+        pub async fn read(&mut self) -> Result<Vec<EventWrapper>, String> {
+            self.reader_impl.read().await
         }
     }
 }

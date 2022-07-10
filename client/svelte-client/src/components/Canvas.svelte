@@ -91,8 +91,8 @@
 </script>
 <canvas
         bind:this={canvas}
-        width={width}
-        height={height}
+        width={$width}
+        height={$height}
         style="width: {$width}px; height: {$height}px;"
 ></canvas>
 <svelte:window on:resize|passive={handleResize}/>

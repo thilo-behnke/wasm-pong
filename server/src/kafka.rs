@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs::read;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 use futures::{StreamExt, TryFutureExt};
 use futures::future::err;
 
@@ -149,7 +150,12 @@ impl KafkaEventReaderImpl {
     async fn consume(&mut self) -> Result<Vec<EventWrapper>, String> {
         debug!("kafka consumer called to consume messages for {:?} / {:?}", self.topic, self.partition);
         // TODO: Only 1 message?
-        let next_res = self.consumer.next().await;
+        let next_res = tokio::time::timeout(Duration::from_millis(1), self.consumer.next()).await;
+        if let Err(e) = next_res {
+            info!("No record received in time after {}, timeout for {} / {}.", e, self.topic, self.partition);
+            return Ok(vec![]);
+        }
+        let next_res = next_res.unwrap();
         if let None = next_res {
             debug!("No record retrieved for {} / {}", self.topic, self.partition);
             return Err("No record.".to_owned());

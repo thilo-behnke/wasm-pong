@@ -4,6 +4,7 @@ use std::fs::read;
 use std::str::FromStr;
 use std::sync::Arc;
 use futures::{StreamExt, TryFutureExt};
+use futures::future::err;
 
 use hyper::{Body, Client, Method, Request, Uri};
 use log::{debug, error, info, trace};
@@ -148,7 +149,19 @@ impl KafkaEventReaderImpl {
     async fn consume(&mut self) -> Result<Vec<EventWrapper>, String> {
         debug!("kafka consumer called to consume messages for {:?} / {:?}", self.topic, self.partition);
         // TODO: Only 1 message?
-        let (record, _) = self.consumer.next().await.unwrap().unwrap();
+        let next_res = self.consumer.next().await;
+        if let None = next_res {
+            debug!("No record retrieved for {} / {}", self.topic, self.partition);
+            return Err("No record.".to_owned());
+        }
+        let next_res = next_res.unwrap();
+        if let Err(e) = next_res {
+            let error = format!("Failed to extract record for {} / {}: {:?}", self.topic, self.partition, e);
+            error!("{}", error);
+            return Err(error);
+        }
+        let (record, _) = next_res.unwrap();
+        debug!("kafka consumer retrieved record: {:?}", record);
         let key = match record.record.key {
             Some(k) => Some(std::str::from_utf8(&*k).unwrap().to_owned()),
             None => None
@@ -162,6 +175,7 @@ impl KafkaEventReaderImpl {
             key,
             event,
         };
+        debug!("converted record to event: {:?}", event);
         let events = vec![event];
         Ok(events)
     }

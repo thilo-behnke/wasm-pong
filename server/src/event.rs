@@ -27,6 +27,13 @@ pub enum PongEvent {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct MoveEventBatchPayload {
+    pub session_id: String,
+    pub ts: u128,
+    pub objects: Vec<MoveEventPayload>
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MoveEventPayload {
     pub session_id: String,
     pub id: String,

@@ -16,7 +16,7 @@ use serde::{Serialize, Deserialize};
 use tokio::task;
 use pong::event::event::{EventWrapper, EventWriter};
 use pong::game_field::{GameState, Input};
-use crate::event::{HeartBeatEventPayload, InputEventPayload, MoveEventPayload, SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType, StatusEventPayload, TickEvent};
+use crate::event::{HeartBeatEventPayload, InputEventPayload, MoveEventBatchPayload, MoveEventPayload, SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType, StatusEventPayload, TickEvent};
 use crate::actor::{Actor, Player};
 use crate::session::{Session, SessionState};
 use crate::session_manager::{SessionManager, SessionWriter};
@@ -114,8 +114,13 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                         let move_events = payload.objects.iter().map(|o| {
                                             o.to_move_event(&session_id, payload.ts)
                                         }).collect();
-                                        debug(&websocket_session_read_copy, &format!("host: created move events from snapshot: {:?}", move_events));
-                                        let move_write_error = !write_events(move_events, "move", &mut event_writer).await;
+                                        let move_event_batch = MoveEventBatchPayload {
+                                            session_id: session_id.clone(),
+                                            ts: payload.ts.clone(),
+                                            objects: move_events
+                                        };
+                                        debug(&websocket_session_read_copy, &format!("host: created move events from snapshot: {:?}", move_event_batch));
+                                        let move_write_error = !write_events(vec![move_event_batch], "move", &mut event_writer).await;
                                         if move_write_error {
                                             debug(&websocket_session_read_copy, "host: move events write failed");
                                         }
@@ -228,26 +233,12 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                 } else {
                     let (move_events, other_events): (Vec<EventWrapper>, Vec<EventWrapper>) = events.into_iter().partition(|e| &e.topic == "move");
 
-                    let mut grouped_move_events = HashMap::<u128, Vec<MoveEventPayload>>::new();
-                    for move_event in move_events {
-                        let deserialized = serde_json::from_str::<MoveEventPayload>(&move_event.event);
-                        if let Err(e) = deserialized {
-                            error(&websocket_session_write_copy, &format!("Failed to deserialize move event {:?}: {:?}", move_event, e));
-                            continue;
-                        }
-                        let deserialized = deserialized.unwrap();
-                        if !grouped_move_events.contains_key(&deserialized.ts) {
-                            grouped_move_events.insert(deserialized.ts.clone(), vec![]);
-                        }
-                        let existing = grouped_move_events.get_mut(&deserialized.ts).unwrap();
-                        existing.push(deserialized);
-                    }
-                    let mut tick_event_dtos = grouped_move_events.into_iter()
-                        .map(|e| TickEvent{tick: e.0, objects: e.1})
+                    let move_events = move_events.into_iter().map(|e| serde_json::from_str::<MoveEventBatchPayload>(&e.event).unwrap()).collect::<Vec<MoveEventBatchPayload>>();
+                    let mut tick_event_dtos = move_events.into_iter()
+                        .map(|e| TickEvent {tick: e.ts, objects: e.objects})
                         .map(|e| serde_json::to_string(&e).unwrap())
-                        // TODO: This could e.g. be done with ksql when the move events are sent.
                         .map(|e| WebsocketEventDTO {topic: "tick".to_owned(), event: e})
-                        .collect::<Vec<WebsocketEventDTO>>();
+                        .collect();
 
                     let mut other_event_dtos = other_events.into_iter().map(|e| {
                         WebsocketEventDTO {

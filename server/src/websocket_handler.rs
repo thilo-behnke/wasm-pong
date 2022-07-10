@@ -341,9 +341,9 @@ impl FromStr for WebSocketConnectionType {
 impl WebSocketConnectionType {
     pub fn get_topics(&self) -> &[&str] {
         match self {
-            WebSocketConnectionType::HOST => &["input", "session"],
+            WebSocketConnectionType::HOST => &["peer_tick", "session"],
             WebSocketConnectionType::PEER | WebSocketConnectionType::OBSERVER => {
-                &["move", "input", "status", "session"]
+                &["host_tick", "session"]
             }
         }
     }

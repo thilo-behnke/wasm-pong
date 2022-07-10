@@ -126,20 +126,6 @@ impl FromStr for SessionEventType {
     }
 }
 
-pub fn deserialize(event: &str) -> Option<PongEvent> {
-    let wrapper = serde_json::from_str::<PongEventWrapper>(event);
-    wrapper.ok().and_then(|w| {
-        match w.topic.as_str() {
-            "move" => serde_json::from_str::<MoveEventPayload>(&w.event).ok().map(|e| PongEvent::Move(w.session_id, e)),
-            "input" => serde_json::from_str::<InputEventPayload>(&w.event).ok().map(|e| PongEvent::Input(w.session_id, e)),
-            "status" => serde_json::from_str::<StatusEventPayload>(&w.event).ok().map(|e| PongEvent::Status(w.session_id, e)),
-            "heart_beat" => serde_json::from_str::<HeartBeatEventPayload>(&w.event).ok().map(|e| PongEvent::HeartBeat(w.session_id, e)),
-            "session" => serde_json::from_str::<SessionEvent>(&w.event).ok().map(|e| PongEvent::Session(w.session_id, e)),
-            _ => None
-        }
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use crate::event::{SessionEvent, SessionEventPayload};

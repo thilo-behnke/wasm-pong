@@ -32,3 +32,7 @@ The game is modelled as a series of events, so that other players/observers can 
     - A different approach would be too just throw away the events of other game sessions
 - The server makes use of async rust to allow high concurrency and throughput
   - The game is limited to 60fps in online multiplayer, however this still requires a tick to be send to the peer every ~16ms.
+
+# Demo
+
+![Demo](./docs/demo.gif)

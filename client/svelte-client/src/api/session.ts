@@ -82,7 +82,7 @@ async function createEventWebsocket(session: NetworkSession): Promise<WebSocket>
 async function createWebsocket(path: string): Promise<WebSocket> {
     return new Promise((res, rej) => {
         const baseUrl = location.host.split(':')[0];
-        const websocket = new WebSocket(`ws://${baseUrl}/${path}`);
+        const websocket = new WebSocket(`wss://${baseUrl}/${path}`);
         console.debug("ws initialized, not yet ready: ", websocket)
         waitForWebsocket(websocket, 10, () => {
             return res(websocket)

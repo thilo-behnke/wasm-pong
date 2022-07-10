@@ -235,7 +235,7 @@ impl SessionManager {
             return Err(format!("Unable to find session with hash {}", session_id));
         }
         let session = session.unwrap();
-        let writer = KafkaSessionEventWriterImpl::new(&self.kafka_host, vec!["move", "status", "input", "session"], &i32::from(session.id)).await;
+        let writer = KafkaSessionEventWriterImpl::new(&self.kafka_host, vec!["move", "status", "input", "session", "heart_beat"], &i32::from(session.id)).await;
         let event_writer =
             EventWriter::new(Box::new(writer));
         Ok(SessionWriter {

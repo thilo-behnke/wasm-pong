@@ -14,12 +14,14 @@ pub mod event {
 
     #[async_trait]
     pub trait EventWriterImpl {
-        fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String>;
+        async fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String>;
     }
 
     pub struct FileEventWriterImpl {}
+
+    #[async_trait]
     impl EventWriterImpl for FileEventWriterImpl {
-        fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String> {
+        async fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String> {
             let event_buffer = events.iter().fold(vec![], |mut acc, e| {
                 acc.push(e.event.as_bytes());
                 acc
@@ -41,8 +43,10 @@ pub mod event {
     }
 
     pub struct NoopEventWriterImpl {}
+
+    #[async_trait]
     impl EventWriterImpl for NoopEventWriterImpl {
-        fn write(&mut self, _events: Vec<EventWrapper>) -> Result<(), String> {
+        async fn write(&mut self, _events: Vec<EventWrapper>) -> Result<(), String> {
             Ok(())
         }
     }
@@ -68,12 +72,12 @@ pub mod event {
             }
         }
 
-        pub fn write(&mut self, event: EventWrapper) -> Result<(), String> {
-            self.write_all(vec![event])
+        pub async fn write(&mut self, event: EventWrapper) -> Result<(), String> {
+            self.write_all(vec![event]).await
         }
 
-        pub fn write_all(&mut self, events: Vec<EventWrapper>) -> Result<(), String> {
-            self.writer_impl.write(events)
+        pub async fn write_all(&mut self, events: Vec<EventWrapper>) -> Result<(), String> {
+            self.writer_impl.write(events).await
         }
     }
 

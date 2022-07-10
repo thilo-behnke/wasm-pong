@@ -10,10 +10,19 @@
     let state: GameState;
     $: state = $gameStateEvents;
 
+    let lastTick;
+
     $: if (networkTickEvents && $networkTickEvents.hasNext) {
         const tick = networkTickEvents.next();
         if (tick != null) {
-            gameField.update(tick.objects, state);
+            console.warn(`Received tick: ${tick.tick}`)
+            if (lastTick && lastTick.tick >= tick.tick) {
+                console.error(`???? DUPLICATED TICK: ${JSON.stringify(tick)} (vs ${lastTick.tick}) ????`)
+            } else {
+                console.warn(`!!!! Valid tick: ${JSON.stringify(tick)} !!!!`)
+                gameField.update(tick.objects, state);
+                lastTick = tick;
+            }
         }
     }
 

@@ -25,7 +25,7 @@ export type InputEventPayload = {
 export type TickEventPayload = {
     session_id: string,
     objects: GameObject[],
-    ts: number
+    tick: number
 }
 
 export type StatusEventPayload = {

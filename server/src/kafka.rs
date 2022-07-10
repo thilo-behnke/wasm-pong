@@ -150,7 +150,7 @@ impl KafkaEventReaderImpl {
     async fn consume(&mut self) -> Result<Vec<EventWrapper>, String> {
         debug!("kafka consumer called to consume messages for {:?} / {:?}", self.topic, self.partition);
         // TODO: Only 1 message?
-        let next_res = tokio::time::timeout(Duration::from_millis(1), self.consumer.next()).await;
+        let next_res = tokio::time::timeout(Duration::from_millis(3), self.consumer.next()).await;
         if let Err(e) = next_res {
             info!("No record received in time after {}, timeout for {} / {}.", e, self.topic, self.partition);
             return Ok(vec![]);

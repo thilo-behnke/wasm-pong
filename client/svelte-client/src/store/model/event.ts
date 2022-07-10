@@ -1,4 +1,12 @@
-import type {GameObject, GameState, NetworkSession, Session} from "./session";
+import type {
+    GameObject,
+    GameState,
+    HostSessionSnapshot,
+    NetworkSession,
+    PeerSessionSnapshot,
+    Session,
+    SessionSnapshot
+} from "./session";
 import type {Input} from "./input";
 
 export type SessionEventPayload = {
@@ -22,12 +30,6 @@ export type InputEventPayload = {
     ts: number,
 }
 
-export type TickEventPayload = {
-    session_id: string,
-    objects: GameObject[],
-    tick: number
-}
-
 export type StatusEventPayload = {
     session_id: string,
     state: GameState
@@ -45,7 +47,7 @@ export type InputEventWrapper = {
 
 export type TickEventWrapper = {
     topic: 'tick',
-    event: TickEventPayload
+    event: SessionSnapshot
 }
 
 export type MoveEventWrapper = {

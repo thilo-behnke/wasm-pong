@@ -1,28 +1,16 @@
 <script lang="ts">
     import {gameField} from "../store/engine";
-    import {gameStateEvents, networkTickEvents, sessionInputs} from "../store/session";
-    import type {GameState} from "../store/model/session";
+    import {networkTickEvents, sessionInputs} from "../store/session";
+    import type {GameState, HostSessionSnapshot} from "../store/model/session";
 
     export let killLoopOnError = true;
 
     let frame: number;
 
-    let state: GameState;
-    $: state = $gameStateEvents;
-
-    let lastTick;
-
     $: if (networkTickEvents && $networkTickEvents.hasNext) {
-        const tick = networkTickEvents.next();
+        const tick = networkTickEvents.next() as HostSessionSnapshot;
         if (tick != null) {
-            console.warn(`Received tick: ${tick.tick}`)
-            if (lastTick && lastTick.tick >= tick.tick) {
-                console.error(`???? DUPLICATED TICK: ${JSON.stringify(tick)} (vs ${lastTick.tick}) ????`)
-            } else {
-                console.warn(`!!!! Valid tick: ${JSON.stringify(tick)} !!!!`)
-                gameField.update(tick.objects, state);
-                lastTick = tick;
-            }
+            gameField.update(tick.objects, tick.state);
         }
     }
 

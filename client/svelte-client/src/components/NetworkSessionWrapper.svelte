@@ -33,7 +33,7 @@
         const state: GameState = $gameField.state;
         networkEvents.produce({
             state,
-            inputs: $relevantKeyboardEvents,
+            inputs: $sessionInputs,
             session_id: session.session_id,
             objects: $gameField.objects,
             player_id: session.you.id,

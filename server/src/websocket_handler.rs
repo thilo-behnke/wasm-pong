@@ -111,37 +111,19 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                 match session_snapshot {
                                     SessionSnapshot::Host(_, payload) => {
                                         trace(&websocket_session_read_copy, "received message is HOST snapshot");
-                                        let serialized = serde_json::to_string(&payload);
-                                        match serialized {
-                                            Err(e) => {
-                                                error(&websocket_session_read_copy, &format!("failed to serialize HOST snapshot: {0}", e));
-                                                any_error = true;
-                                            },
-                                            Ok(serialized) => {
-                                                let write_res = !write_events(vec![serialized], "host_tick", &mut event_writer).await;
-                                                if !write_res {
-                                                    error(&websocket_session_read_copy, "failed to write HOST tick");
-                                                }
-                                                any_error = !write_res;
-                                            }
+                                        let write_res = write_events(vec![payload], "host_tick", &mut event_writer).await;
+                                        if !write_res {
+                                            error(&websocket_session_read_copy, "failed to write HOST tick");
                                         }
+                                        any_error = !write_res;
                                     },
                                     SessionSnapshot::Peer(session_id, payload) => {
                                         trace(&websocket_session_read_copy, "received message is PEER snapshot");
-                                        let serialized = serde_json::to_string(&payload);
-                                        match serialized {
-                                            Err(e) => {
-                                                error(&websocket_session_read_copy, &format!("failed to serialize PEER snapshot: {0}", e));
-                                                any_error = true;
-                                            },
-                                            Ok(serialized) => {
-                                                let write_res = !write_events(vec![serialized], "peer_tick", &mut event_writer).await;
-                                                if !write_res {
-                                                    error(&websocket_session_read_copy, "failed to write PEER tick");
-                                                }
-                                                any_error = !write_res;
-                                            }
+                                        let write_res = write_events(vec![payload], "peer_tick", &mut event_writer).await;
+                                        if !write_res {
+                                            error(&websocket_session_read_copy, &format!("failed to write PEER tick"));
                                         }
+                                        any_error = !write_res;
                                     },
                                     SessionSnapshot::Observer(_, _) => {
                                         // noop
@@ -221,19 +203,18 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                         })
                         .collect();
 
-                    let tick_events = match websocket_session_write_copy.connection_type {
+                    let mut tick_events = match websocket_session_write_copy.connection_type {
                         WebSocketConnectionType::HOST => {
-                            events.iter().filter(|e| e.topic == "peer_tick").map(|e| e.event.clone()).collect::<Vec<String>>()
+                            events.iter().filter(|e| e.topic == "peer_tick")
+                                .map(|e| WebsocketEventDTO {topic: "tick".to_owned(), event: e.event.clone()})
+                                .collect()
                         },
                         _ => {
-                            events.iter().filter(|e| e.topic == "host_tick").map(|e| e.event.clone()).collect::<Vec<String>>()
+                            events.iter().filter(|e| e.topic == "host_tick")
+                                .map(|e| WebsocketEventDTO {topic: "tick".to_owned(), event: e.event.clone()})
+                                .collect()
                         }
                     };
-
-                    let mut tick_events = tick_events.into_iter().map(|e| WebsocketEventDTO {
-                        topic: "tick".to_owned(),
-                        event: e
-                    }).collect::<Vec<WebsocketEventDTO>>();
 
                     let mut event_dtos = vec![];
                     event_dtos.append(&mut session_events);
@@ -409,7 +390,7 @@ impl SessionSnapshot {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 struct HostSessionSnapshotDTO {
     pub session_id: String,
     pub inputs: Vec<Input>,
@@ -419,7 +400,7 @@ struct HostSessionSnapshotDTO {
     pub ts: u128
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 struct PeerSessionSnapshotDTO {
     pub session_id: String,
     pub inputs: Vec<Input>,
@@ -434,7 +415,7 @@ struct ObserverSessionSnapshotDTO {
     pub ts: u128
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 struct GameObjectStateDTO {
     pub id: String,
     pub orientation_x: f64,

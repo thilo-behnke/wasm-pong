@@ -214,27 +214,30 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                 if events.len() == 0 {
                     trace(&websocket_session_write_copy, "no new messages from kafka.");
                 } else {
-                    let (move_events, other_events): (Vec<EventWrapper>, Vec<EventWrapper>) = events.into_iter().partition(|e| &e.topic == "move");
-
-                    let move_events = move_events.into_iter().map(|e| serde_json::from_str::<MoveEventBatchPayload>(&e.event).unwrap()).collect::<Vec<MoveEventBatchPayload>>();
-                    let mut tick_event_dtos = move_events.into_iter()
-                        .map(|e| TickEvent {tick: e.ts, objects: e.objects})
-                        .map(|e| serde_json::to_string(&e).unwrap())
-                        .map(|e| WebsocketEventDTO {topic: "tick".to_owned(), event: e})
+                    let mut session_events = events.iter().filter(|e| e.topic == "session")
+                        .map(|e| WebsocketEventDTO {
+                            topic: "session".to_owned(),
+                            event: e.event.clone()
+                        })
                         .collect();
 
-                    let mut other_event_dtos = other_events.into_iter().map(|e| {
-                        WebsocketEventDTO {
-                            topic: e.topic,
-                            event: e.event
+                    let tick_events = match websocket_session_write_copy.connection_type {
+                        WebSocketConnectionType::HOST => {
+                            events.iter().filter(|e| e.topic == "peer_tick").map(|e| e.event.clone()).collect::<Vec<String>>()
+                        },
+                        _ => {
+                            events.iter().filter(|e| e.topic == "host_tick").map(|e| e.event.clone()).collect::<Vec<String>>()
                         }
+                    };
+
+                    let mut tick_events = tick_events.into_iter().map(|e| WebsocketEventDTO {
+                        topic: "tick".to_owned(),
+                        event: e
                     }).collect::<Vec<WebsocketEventDTO>>();
 
                     let mut event_dtos = vec![];
-                    event_dtos.append(&mut other_event_dtos);
-                    if websocket_session_write_copy.connection_type != WebSocketConnectionType::HOST {
-                        event_dtos.append(&mut tick_event_dtos);
-                    }
+                    event_dtos.append(&mut session_events);
+                    event_dtos.append(&mut tick_events);
 
                     trace(&websocket_session_write_copy, &format!("{} new messages from kafka.", event_dtos.len()));
                     let json = serde_json::to_string(&event_dtos).unwrap();

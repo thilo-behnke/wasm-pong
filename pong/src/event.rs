@@ -13,7 +13,7 @@ pub mod event {
     }
 
     #[async_trait]
-    pub trait EventWriterImpl {
+    pub trait EventWriterImpl : Send {
         async fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String>;
     }
 
@@ -82,7 +82,7 @@ pub mod event {
     }
 
     #[async_trait]
-    pub trait EventReaderImpl {
+    pub trait EventReaderImpl : Send {
         async fn read(&mut self) -> Result<Vec<EventWrapper>, String>;
     }
 

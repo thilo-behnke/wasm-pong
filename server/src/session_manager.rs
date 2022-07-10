@@ -215,7 +215,7 @@ impl SessionManager {
         return Ok((reader.unwrap(), writer.unwrap()));
     }
 
-    pub fn get_session_reader(
+    pub async fn get_session_reader(
         &self,
         session_id: &str,
         topics: &[&str],
@@ -225,7 +225,7 @@ impl SessionManager {
             return Err(format!("Unable to find session with hash {}", session_id));
         }
         let session = session.unwrap();
-        let kafka_reader = KafkaSessionEventReaderImpl::new(&self.kafka_host, &session, topics);
+        let kafka_reader = KafkaSessionEventReaderImpl::new(&self.kafka_host, &session, topics).await;
         if let Err(_) = kafka_reader {
             return Err("Unable to create kafka reader.".to_string());
         }

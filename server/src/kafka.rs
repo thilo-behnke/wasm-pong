@@ -149,7 +149,9 @@ impl EventReaderImpl for KafkaEventReaderImpl {
 impl KafkaEventReaderImpl {
     async fn consume(&mut self) -> Result<Vec<EventWrapper>, String> {
         debug!("kafka consumer called to consume messages for {:?} / {:?}", self.topic, self.partition);
-        // TODO: Only 1 message?
+        // TODO: This is a problem:
+        // - The peer inputs are intermittent to the host, because sometimes it will timeout without receiving the peer's inputs
+        // - The peer will receive the host's inputs intermittent in the same way.
         let next_res = tokio::time::timeout(Duration::from_millis(3), self.consumer.next()).await;
         if let Err(e) = next_res {
             info!("No record received in time after {}, timeout for {} / {}.", e, self.topic, self.partition);

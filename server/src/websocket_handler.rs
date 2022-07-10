@@ -81,7 +81,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                 if let Err(e) = message {
                     error(&websocket_session_read_copy, &format!("ws message read failed for session: {:?}", e));
                     let reason = format!("ws closed: {:?}", e);
-                    write_session_close_event(&mut event_writer, &websocket_session_read_copy, reason.as_str());
+                    write_session_close_event(&mut event_writer, &websocket_session_read_copy, reason.as_str()).await;
                     break;
                 }
                 let message = message.unwrap();

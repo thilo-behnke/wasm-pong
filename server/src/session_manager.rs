@@ -17,7 +17,6 @@ use crate::session::{Session, SessionState};
 pub struct SessionManager {
     kafka_host: String,
     sessions: Vec<Session>,
-    session_producers: HashMap<String, SessionWriter>,
     topic_manager: KafkaTopicManager,
 }
 
@@ -27,8 +26,7 @@ impl SessionManager {
         SessionManager {
             kafka_host: kafka_host.to_owned(),
             sessions: vec![],
-            topic_manager: KafkaTopicManager::from(kafka_topic_manager_host),
-            session_producers: HashMap::new(),
+            topic_manager: KafkaTopicManager::from(kafka_topic_manager_host)
         }
     }
 
@@ -171,14 +169,7 @@ impl SessionManager {
     async fn write_to_producer(&mut self, session_event: &SessionEvent) -> Result<(), String>
     {
         let session_id = session_event.session_id();
-        let session_producer = match self.session_producers.get_mut(session_id) {
-            Some(p) => p,
-            None => {
-                let session_writer = self.get_session_writer(session_id).await.expect("failed to create session writer to persist create event");
-                self.session_producers.insert(session_id.to_owned(), session_writer);
-                self.session_producers.get_mut(session_id).expect("failed to retrieve newly created session writer")
-            }
-        };
+        let session_writer = self.get_session_writer(session_id).await.expect("failed to create session writer to persist create event");
         let json_event = serde_json::to_string(&session_event);
         if let Err(e) = json_event {
             let error = format!("failed to serialize session event: {}", e);
@@ -187,7 +178,8 @@ impl SessionManager {
         }
         let json_event = json_event.unwrap();
         info!("preparing to write session event to kafka: {}", json_event);
-        let session_event_write = session_producer.write_to_session("session", vec![&json_event]).await;
+        let mut session_writer = self.get_session_writer(session_id).await.unwrap();
+        let session_event_write = session_writer.write_to_session("session", vec![&json_event]).await;
         if let Err(e) = session_event_write {
             let message = format!("Failed to write session event to kafka: {:?}", e);
             println!("{}", e);

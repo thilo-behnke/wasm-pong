@@ -46,18 +46,24 @@ impl EventWriterImpl for KafkaSessionEventWriterImpl {
     async fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String> {
         let mut by_topic: HashMap<String, Vec<EventWrapper>> = HashMap::new();
         for e in events {
-            match by_topic.get(&e.topic) {
-                Some(mut events) => events.push(e),
+            match by_topic.get_mut(&e.topic) {
+                Some(events) => events.push(e),
                 None => {
                     let mut events = vec![];
+                    let topic = e.topic.clone();
                     events.push(e);
-                    by_topic.insert(e.topic.to_owned(), events);
+                    by_topic.insert(topic, events);
                 }
             }
         }
         for topic_events in by_topic {
-            let mut producer = self.producers.get(&topic_events.0).unwrap();
-            let res = write_events(topic_events.1, &mut producer).await;
+            let mut producer = self.producers.get_mut(&topic_events.0);
+            if let None = producer {
+                let available = self.producers.keys().collect::<Vec<&String>>();
+                return Err(format!("Could not find producer for topic: {}. Available topic producers: {:?}", &topic_events.0, available));
+            }
+            let producer = producer.unwrap();
+            let res = write_events(topic_events.1, producer).await;
             if let Err(e) = res {
                 return Err(e);
             }
@@ -101,6 +107,10 @@ pub struct KafkaEventReaderImpl {
     topic: String,
     partition: i32
 }
+
+// TODO: Hotfix, but does this really work?
+unsafe impl Send for KafkaEventReaderImpl {}
+unsafe impl Sync for KafkaEventReaderImpl {}
 
 impl KafkaEventReaderImpl {
     pub async fn for_partition(
@@ -184,7 +194,7 @@ impl KafkaSessionEventReaderImpl {
 impl EventReaderImpl for KafkaSessionEventReaderImpl {
     async fn read(&mut self) -> Result<Vec<EventWrapper>, String> {
         let mut events = vec![];
-        for mut topic_reader in self.inner {
+        for topic_reader in self.inner.iter_mut() {
             let topic_events = topic_reader.1.read().await;
             if let Err(e) = topic_events {
                 let error = format!("Failed to consume events for topic {}: {}", topic_reader.0, e);

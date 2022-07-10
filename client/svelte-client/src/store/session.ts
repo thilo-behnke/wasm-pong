@@ -1,26 +1,27 @@
 import {derived, get, Readable, readable, Unsubscriber, writable} from "svelte/store";
 import api from "../api/session";
-import type {GameState, LocalSession, Message, NetworkSession, Session, SessionSnapshot} from "./model/session";
+import type {
+    HostSessionSnapshot,
+    LocalSession,
+    Message,
+    NetworkSession,
+    PeerSessionSnapshot,
+    Session,
+    SessionSnapshot
+} from "./model/session";
 import {isLocalSession, isNetworkSession, MessageType, SessionState, SessionType} from "./model/session";
 import type {NetworkStore} from "./network";
-import type {
-    GameEventWrapper,
-    InputEventPayload,
-    SessionEventPayload,
-    StatusEventPayload,
-    TickEventPayload
-} from "./model/event";
-import {isInputEvent, isMoveEvent, isSessionEvent, isStatusEvent, isTickEvent} from "./model/event";
+import type {GameEventWrapper, InputEventPayload, SessionEventPayload} from "./model/event";
+import {isSessionEvent, isTickEvent} from "./model/event";
 import {getPlayerKeyboardInputs, playerKeyboardInputs} from "./input";
 import type {Subscriber} from "svelte/types/runtime/store";
 import {combined} from "./utils";
 import type {Input} from "./model/input";
-import {init, subscribe, tick} from "svelte/internal";
 
 const sessionStore = writable<Session>(null);
 
 function createNetworkEvents() {
-    const {subscribe, set, update} = writable<GameEventWrapper[]>([]);
+    const {subscribe, set} = writable<GameEventWrapper[]>([]);
 
     const websocket = writable<WebSocket>(null);
     const sessionId = writable<string>(null);
@@ -140,33 +141,9 @@ export const networkSessionStateEvents = readable<SessionEventPayload[]>([], set
     }
 });
 
-export const gameStateEvents = (function() {
-    const lastEvent = writable<StatusEventPayload>(null);
-    const unsubNetworkEvents = networkEvents.subscribe($events => {
-        const events = $events.filter(isStatusEvent);
-        if (!events.length) {
-            return;
-        }
-        const latest = events[events.length - 1];
-        lastEvent.set(latest.event);
-    })
-
-    const customSubscribe = (run: Subscriber<StatusEventPayload>, invalidate): Unsubscriber => {
-        const unsub = lastEvent.subscribe(run, invalidate);
-        return () => {
-            unsub();
-            unsubNetworkEvents();
-        }
-    }
-
-    return {
-        subscribe: customSubscribe
-    }
-}())
-
 export type NetworkTickEventState = {
     hasNext: boolean;
-    events: TickEventPayload[]
+    events: HostSessionSnapshot[] | PeerSessionSnapshot[]
 }
 
 const createNetworkTickEventStore = function() {
@@ -183,7 +160,7 @@ const createNetworkTickEventStore = function() {
         })
     })
 
-    function next(): TickEventPayload {
+    function next(): SessionSnapshot {
         const events = get(ticks);
         if (!events.hasNext) {
             return null;
@@ -215,12 +192,10 @@ const createNetworkTickEventStore = function() {
 
 export const networkTickEvents = createNetworkTickEventStore();
 
-const networkInputEvents = derived([networkEvents, sessionStore], ([$sessionEvents, $sessionStore]) => $sessionEvents.filter(wrapper => {
-    if (!isInputEvent(wrapper)) {
-        return false;
-    }
-    return wrapper.event.player_id !== ($sessionStore as NetworkSession).you.id
-}).map(({event}) => event as InputEventPayload));
+const networkInputEvents = derived(networkTickEvents, ($networkTickEvents: NetworkTickEventState) => $networkTickEvents.events.map((tick: SessionSnapshot): InputEventPayload => {
+    const inputs = tick.inputs;
+    return {inputs, player_id: tick.player_id, ts: tick.ts, session_id: tick.session_id}
+}));
 
 const getPlayerNetworkInputEvents = (player_nr: number): Readable<Input[]> => derived(networkInputEvents, $networkInputEvents => {
     const session = get(sessionStore);

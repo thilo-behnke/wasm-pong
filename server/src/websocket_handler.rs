@@ -1,26 +1,24 @@
-use std::collections::HashMap;
-use std::fmt::{Debug, format};
+use std::fmt::{Debug};
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::Duration;
-use hyper_tungstenite::HyperWebsocket;
-use tokio::sync::Mutex;
+
 use async_trait::async_trait;
 use futures::{SinkExt, StreamExt};
-use futures::future::err;
+use hyper_tungstenite::HyperWebsocket;
 use hyper_tungstenite::tungstenite::{Error, Message};
 use log::{debug, error, info, trace};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tokio::time::sleep;
-use serde::{Serialize, Deserialize};
+use tokio::sync::Mutex;
 use tokio::task;
-use pong::event::event::{EventWrapper, EventWriter};
+
+use pong::event::event::{EventWriter};
 use pong::game_field::{GameState, Input};
-use crate::event::{HeartBeatEventPayload, InputEventPayload, MoveEventPayload, SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType, StatusEventPayload, TickEvent};
-use crate::actor::{Actor, Player};
+
+use crate::actor::{Actor};
+use crate::event::{HeartBeatEventPayload, MoveEventBatchPayload, MoveEventPayload, SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType, StatusEventPayload, TickEvent};
 use crate::session::{Session, SessionState};
 use crate::session_manager::{SessionManager, SessionWriter};
-use crate::utils::json_utils::unescape;
 
 #[async_trait]
 pub trait WebsocketHandler {
@@ -54,11 +52,13 @@ impl WebsocketHandler for DefaultWebsocketHandler {
         let websocket = self.websocket.await?;
         let (mut websocket_writer, mut websocket_reader) = websocket.split();
 
-        let session_manager = self.session_manager.lock().await;
-        let event_handler_pair = session_manager.split(
-            &self.websocket_session.session.session_id,
-            self.websocket_session.connection_type.get_topics(),
-        );
+        let event_handler_pair = async {
+            let session_manager = self.session_manager.lock().await;
+            session_manager.split(
+                &self.websocket_session.session.session_id,
+                self.websocket_session.connection_type.get_topics(),
+            ).await
+        }.await;
         if let Err(_) = event_handler_pair {
             error(
                 &self.websocket_session,
@@ -107,51 +107,21 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                 trace!("received message is snapshot");
                                 let mut any_error = false;
                                 match session_snapshot {
-                                    SessionSnapshot::Host(session_id, payload) => {
+                                    SessionSnapshot::Host(_, payload) => {
                                         trace(&websocket_session_read_copy, "received message is HOST snapshot");
-                                        let move_events = payload.objects.iter().map(|o| {
-                                            o.to_move_event(&session_id, payload.ts)
-                                        }).collect();
-                                        debug(&websocket_session_read_copy, &format!("host: created move events from snapshot: {:?}", move_events));
-                                        let move_write_error = !write_events(move_events, "move", &mut event_writer);
-                                        if move_write_error {
-                                            debug(&websocket_session_read_copy, "host: move events write failed");
+                                        let write_res = write_events(vec![payload], "host_tick", &mut event_writer).await;
+                                        if !write_res {
+                                            error(&websocket_session_read_copy, "failed to write HOST tick");
                                         }
-                                        let input_event = InputEventPayload {
-                                            inputs: payload.inputs,
-                                            player_id: websocket_session_read_copy.actor.id().to_owned(),
-                                            ts: payload.ts,
-                                            session_id: session_id.to_owned()
-                                        };
-                                        debug(&websocket_session_read_copy, &format!("host: created input event from snapshot: {:?}", input_event));
-                                        let input_write_error = !write_events(vec![input_event], "input", &mut event_writer);
-                                        if input_write_error {
-                                            debug(&websocket_session_read_copy, "host: input event write failed");
-                                        }
-                                        let status_event = StatusEventPayload {
-                                            score: payload.state.score,
-                                            winner: payload.state.winner,
-                                            session_id: session_id.to_owned()
-                                        };
-                                        let status_write_error = !write_events(vec![status_event], "status", &mut event_writer);
-                                        if status_write_error {
-                                            debug(&websocket_session_read_copy, "host: status event write failed");
-                                        }
-                                        any_error = move_write_error || input_write_error || input_write_error;
+                                        any_error = !write_res;
                                     },
                                     SessionSnapshot::Peer(session_id, payload) => {
                                         trace(&websocket_session_read_copy, "received message is PEER snapshot");
-                                        let input_event = InputEventPayload {
-                                            inputs: payload.inputs,
-                                            player_id: websocket_session_read_copy.actor.id().to_owned(),
-                                            ts: payload.ts,
-                                            session_id: session_id.to_owned()
-                                        };
-                                        debug(&websocket_session_read_copy, &format!("peer: created input event from snapshot: {:?}", input_event));
-                                        any_error = !write_events(vec![input_event], "input", &mut event_writer);
-                                        if any_error {
-                                            debug(&websocket_session_read_copy, "peer: input event write failed");
+                                        let write_res = write_events(vec![payload], "peer_tick", &mut event_writer).await;
+                                        if !write_res {
+                                            error(&websocket_session_read_copy, &format!("failed to write PEER tick"));
                                         }
+                                        any_error = !write_res;
                                     },
                                     SessionSnapshot::Observer(_, _) => {
                                         // noop
@@ -170,7 +140,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                                     actor_id: heartbeat.player_id,
                                     ts: heartbeat.ts
                                 };
-                                let res = write_events(vec![event], "heart_beat", &mut event_writer);
+                                let res = write_events(vec![event], "heart_beat", &mut event_writer).await;
                                 if !res {
                                     error!("failed to persist heart beat.");
                                 } else {
@@ -193,7 +163,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                         };
 
                         let reason = format!("ws closed: {}", reason);
-                        write_session_close_event(&mut event_writer, &websocket_session_read_copy, reason.as_str());
+                        write_session_close_event(&mut event_writer, &websocket_session_read_copy, reason.as_str()).await;
                         break;
                     }
                     _ => {}
@@ -213,7 +183,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
             loop {
                 trace(&websocket_session_write_copy, "reading messages from kafka");
                 // TODO: Should perform more filtering, e.g. inputs of player are not relevant.
-                let events = event_reader.read_from_session();
+                let events = event_reader.read_from_session().await;
                 if let Err(e) = events {
                     error(&websocket_session_write_copy, &format!("Failed to read messages from kafka: {:?}", e));
                     continue;
@@ -224,41 +194,29 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                 if events.len() == 0 {
                     trace(&websocket_session_write_copy, "no new messages from kafka.");
                 } else {
-                    let (move_events, other_events): (Vec<EventWrapper>, Vec<EventWrapper>) = events.into_iter().partition(|e| &e.topic == "move");
+                    let mut session_events = events.iter().filter(|e| e.topic == "session")
+                        .map(|e| WebsocketEventDTO {
+                            topic: "session".to_owned(),
+                            event: e.event.clone()
+                        })
+                        .collect();
 
-                    let mut grouped_move_events = HashMap::<u128, Vec<MoveEventPayload>>::new();
-                    for move_event in move_events {
-                        let deserialized = serde_json::from_str::<MoveEventPayload>(&move_event.event);
-                        if let Err(e) = deserialized {
-                            error(&websocket_session_write_copy, &format!("Failed to deserialize move event {:?}: {:?}", move_event, e));
-                            continue;
+                    let mut tick_events = match websocket_session_write_copy.connection_type {
+                        WebSocketConnectionType::HOST => {
+                            events.iter().filter(|e| e.topic == "peer_tick")
+                                .map(|e| WebsocketEventDTO {topic: "tick".to_owned(), event: e.event.clone()})
+                                .collect()
+                        },
+                        _ => {
+                            events.iter().filter(|e| e.topic == "host_tick")
+                                .map(|e| WebsocketEventDTO {topic: "tick".to_owned(), event: e.event.clone()})
+                                .collect()
                         }
-                        let deserialized = deserialized.unwrap();
-                        if !grouped_move_events.contains_key(&deserialized.ts) {
-                            grouped_move_events.insert(deserialized.ts.clone(), vec![]);
-                        }
-                        let existing = grouped_move_events.get_mut(&deserialized.ts).unwrap();
-                        existing.push(deserialized);
-                    }
-                    let mut tick_event_dtos = grouped_move_events.into_iter()
-                        .map(|e| TickEvent{tick: e.0, objects: e.1})
-                        .map(|e| serde_json::to_string(&e).unwrap())
-                        // TODO: This could e.g. be done with ksql when the move events are sent.
-                        .map(|e| WebsocketEventDTO {topic: "tick".to_owned(), event: e})
-                        .collect::<Vec<WebsocketEventDTO>>();
-
-                    let mut other_event_dtos = other_events.into_iter().map(|e| {
-                        WebsocketEventDTO {
-                            topic: e.topic,
-                            event: e.event
-                        }
-                    }).collect::<Vec<WebsocketEventDTO>>();
+                    };
 
                     let mut event_dtos = vec![];
-                    event_dtos.append(&mut other_event_dtos);
-                    if websocket_session_write_copy.connection_type != WebSocketConnectionType::HOST {
-                        event_dtos.append(&mut tick_event_dtos);
-                    }
+                    event_dtos.append(&mut session_events);
+                    event_dtos.append(&mut tick_events);
 
                     trace(&websocket_session_write_copy, &format!("{} new messages from kafka.", event_dtos.len()));
                     let json = serde_json::to_string(&event_dtos).unwrap();
@@ -303,7 +261,7 @@ fn error(websocket_session: &WebSocketSession, msg: &str) {
     error!("[{}] {}", websocket_session.session.session_id, msg)
 }
 
-fn write_session_close_event(event_writer: &mut SessionWriter, websocket_session: &WebSocketSession, close_reason: &str) {
+async fn write_session_close_event(event_writer: &mut SessionWriter, websocket_session: &WebSocketSession, close_reason: &str) {
     let mut updated_session = websocket_session.session.clone();
     updated_session.state = SessionState::CLOSED;
     let session_closed_event = SessionEvent::Closed(SessionEventPayload {
@@ -312,7 +270,7 @@ fn write_session_close_event(event_writer: &mut SessionWriter, websocket_session
         reason: format!("ws closed: {}", close_reason),
     });
     let msg = json!(session_closed_event).to_string();
-    let session_event_write_res = event_writer.write_to_session("session", vec![&msg]);
+    let session_event_write_res = event_writer.write_to_session("session", vec![&msg]).await;
     if let Err(e) = session_event_write_res {
         eprintln!("Failed to write session closed event: {0}", e)
     }
@@ -348,9 +306,9 @@ impl FromStr for WebSocketConnectionType {
 impl WebSocketConnectionType {
     pub fn get_topics(&self) -> &[&str] {
         match self {
-            WebSocketConnectionType::HOST => &["input", "session"],
+            WebSocketConnectionType::HOST => &["peer_tick", "session"],
             WebSocketConnectionType::PEER | WebSocketConnectionType::OBSERVER => {
-                &["move", "input", "status", "session"]
+                &["host_tick", "session"]
             }
         }
     }
@@ -430,7 +388,7 @@ impl SessionSnapshot {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Debug)]
 struct HostSessionSnapshotDTO {
     pub session_id: String,
     pub inputs: Vec<Input>,
@@ -440,7 +398,7 @@ struct HostSessionSnapshotDTO {
     pub ts: u128
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Debug)]
 struct PeerSessionSnapshotDTO {
     pub session_id: String,
     pub inputs: Vec<Input>,
@@ -455,7 +413,7 @@ struct ObserverSessionSnapshotDTO {
     pub ts: u128
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Debug)]
 struct GameObjectStateDTO {
     pub id: String,
     pub orientation_x: f64,
@@ -486,7 +444,7 @@ impl GameObjectStateDTO {
     }
 }
 
-fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter) -> bool where T : Serialize + Debug {
+async fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter) -> bool where T : Serialize + Debug {
     if events.len() == 0 {
         debug!("called to write 0 events - noop");
         return true;
@@ -505,7 +463,7 @@ fn write_events<T>(events: Vec<T>, topic: &str, event_writer: &mut SessionWriter
     }
 
     let to_send = to_send.iter().map(|e| e.as_str()).collect();
-    let write_res = event_writer.write_to_session(topic, to_send);
+    let write_res = event_writer.write_to_session(topic, to_send).await;
     if let Err(e) = write_res {
         error!("Failed to write at least one event to topic {}: {:?}", topic, e);
         any_error = true;

@@ -26,11 +26,13 @@
             y={20}/>
 {/if}
 
-<Text
-    text={state.winner ? "player " + state.winner + " has won!" : ""}
+{#if state?.winner}
+    <Text
+    text={"player " + state.winner + " has won!"}
     fontSize=32
     fontFamily='Courier New'
     align='left'
     baseline='top'
     x={dimensions.width / 4}
     y={dimensions.height / 2}/>
+{/if}

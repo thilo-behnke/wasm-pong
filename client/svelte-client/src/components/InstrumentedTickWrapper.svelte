@@ -1,19 +1,27 @@
 <script lang="ts">
     import {gameField} from "../store/engine";
-    import {gameStateEvents, networkTickEvents, sessionInputs} from "../store/session";
-    import type {GameState} from "../store/model/session";
+    import {networkTickEvents, sessionInputs} from "../store/session";
+    import type {GameState, HostSessionSnapshot} from "../store/model/session";
+    import Input from "./Input.svelte";
 
     export let killLoopOnError = true;
 
     let frame: number;
 
-    let state: GameState;
-    $: state = $gameStateEvents;
+    let lastTick;
+    let inputs: Input[];
 
     $: if (networkTickEvents && $networkTickEvents.hasNext) {
-        const tick = networkTickEvents.next();
+        const tick = networkTickEvents.next() as HostSessionSnapshot;
         if (tick != null) {
-            gameField.update(tick.objects, state);
+            if (lastTick && lastTick.ts >= tick.ts) {
+                // TODO: How is this possible?
+                console.error(`!!!! Duplicated Tick ${tick.ts} (vs ${lastTick.ts}) !!!!`)
+            } else {
+                inputs = tick.inputs;
+                gameField.update(tick.objects, tick.state);
+                lastTick = tick;
+            }
         }
     }
 
@@ -27,4 +35,4 @@
     }
 </script>
 
-<slot tick={$gameField} inputs={$sessionInputs} handleError={handleError}></slot>
+<slot tick={$gameField} inputs={inputs} handleError={handleError}></slot>

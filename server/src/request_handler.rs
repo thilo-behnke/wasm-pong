@@ -88,7 +88,7 @@ async fn handle_session_create(
             .unwrap());
     }
     let session_event = session_create_res.unwrap();
-    error!("session created: {:?}", session_event);
+    info!("session created: {:?}", session_event);
     let serialized = json!(session_event);
     return build_success_res(&serialized.to_string());
 }

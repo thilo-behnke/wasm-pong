@@ -1,193 +1,233 @@
+use async_trait::async_trait;
+use std::collections::{BTreeMap, HashMap};
+use std::fs::read;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Duration;
+use futures::{StreamExt, TryFutureExt};
 use futures::future::err;
 
 use hyper::{Body, Client, Method, Request, Uri};
-use kafka::client::ProduceMessage;
-use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage, MessageSet};
-use kafka::producer::{Partitioner, Producer, Record, RequiredAcks, Topics};
 use log::{debug, error, info, trace};
+use rskafka::client::ClientBuilder;
+use rskafka::client::consumer::{StartOffset, StreamConsumer, StreamConsumerBuilder};
+use rskafka::client::partition::{Compression, PartitionClient};
+use rskafka::record::Record;
+use rskafka::time::OffsetDateTime;
 use serde::Deserialize;
 
 use pong::event::event::{EventWrapper, EventReaderImpl, EventWriterImpl};
 use crate::session::Session;
 
 pub struct KafkaSessionEventWriterImpl {
-    producer: Producer<SessionPartitioner>,
+    topics: Vec<String>,
+    partitions: Vec<i32>,
+    producers: HashMap<String, PartitionClient>
 }
 
 impl KafkaSessionEventWriterImpl {
-    pub fn new(host: &str) -> KafkaSessionEventWriterImpl {
+    pub async fn new(host: &str, topics: Vec<&str>, partition: &i32) -> KafkaSessionEventWriterImpl {
         info!("Connecting session_writer producer to kafka host: {}", host);
-        let producer = Producer::from_hosts(vec![host.to_owned()])
-            .with_ack_timeout(Duration::from_secs(1))
-            .with_required_acks(RequiredAcks::One)
-            .with_partitioner(SessionPartitioner {})
-            .create();
-        if let Err(ref e) = producer {
-            error!("Failed to connect kafka producer: {:?}", e)
+        let owned_topics = topics.iter().map(|t| t.to_owned().to_owned()).collect();
+        let mut producers = HashMap::new();
+        for topic in topics {
+            let client = ClientBuilder::new(vec![host.to_owned()]).build().await.unwrap();
+            let producer = client.partition_client(topic.to_owned(), partition.clone()).await;
+            if let Err(ref e) = producer {
+                error!("Failed to connect kafka producer: {:?}", e)
+            }
+            let producer = producer.unwrap();
+            producers.insert(topic.to_owned(), producer);
         }
-        let producer = producer.unwrap();
-        KafkaSessionEventWriterImpl { producer }
+        KafkaSessionEventWriterImpl { topics: owned_topics, partitions: vec![partition.clone()], producers }
     }
 }
 
-pub struct KafkaDefaultEventWriterImpl {
-    producer: Producer,
-}
-
-impl KafkaDefaultEventWriterImpl {
-    pub fn new(host: &str) -> KafkaDefaultEventWriterImpl {
-        info!("connecting default producer to kafka host: {}", host);
-        let producer = Producer::from_hosts(vec![host.to_owned()])
-            .with_ack_timeout(Duration::from_secs(1))
-            .with_required_acks(RequiredAcks::One)
-            .create();
-        if let Err(e) = producer {
-            error!("failed to connect producer to kafka host {}: {:?}", host, e);
-            panic!("kafka connection failed, no recovery possible.")
-        }
-        let producer = producer.unwrap();
-        KafkaDefaultEventWriterImpl { producer }
-    }
-}
-
+#[async_trait]
 impl EventWriterImpl for KafkaSessionEventWriterImpl {
-    fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String> {
-        write_events(events, &mut self.producer)
+    async fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String> {
+        let mut by_topic: HashMap<String, Vec<EventWrapper>> = HashMap::new();
+        for e in events {
+            match by_topic.get_mut(&e.topic) {
+                Some(events) => events.push(e),
+                None => {
+                    let mut events = vec![];
+                    let topic = e.topic.clone();
+                    events.push(e);
+                    by_topic.insert(topic, events);
+                }
+            }
+        }
+        for topic_events in by_topic {
+            let mut producer = self.producers.get_mut(&topic_events.0);
+            if let None = producer {
+                let available = self.producers.keys().collect::<Vec<&String>>();
+                return Err(format!("Could not find producer for topic: {}. Available topic producers: {:?}", &topic_events.0, available));
+            }
+            let producer = producer.unwrap();
+            let res = write_events(topic_events.1, producer).await;
+            if let Err(e) = res {
+                return Err(e);
+            }
+        }
+        Ok(())
     }
 }
 
-impl EventWriterImpl for KafkaDefaultEventWriterImpl {
-    fn write(&mut self, events: Vec<EventWrapper>) -> Result<(), String> {
-        write_events(events, &mut self.producer)
-    }
-}
-
-fn write_events<T>(events: Vec<EventWrapper>, producer: &mut Producer<T>) -> Result<(), String> where T : Partitioner {
-    let mut records_without_key = vec![];
-    let mut records_with_key = vec![];
+async fn write_events(events: Vec<EventWrapper>, producer: &mut PartitionClient) -> Result<(), String> {
+    let mut records = vec![];
     for event in events.iter() {
         match &event.key {
             Some(key) => {
-                let record = Record::from_key_value(&event.topic, key.clone(), event.event.clone());
-                records_with_key.push(record);
+                let key = Some(key.clone().into_bytes());
+                let value = Some(event.event.clone().into_bytes());
+                let headers = BTreeMap::new();
+                let timestamp = OffsetDateTime::now_utc();
+                let record = Record { key, value, headers, timestamp };
+                records.push(record);
             }
             None => {
-                let record = Record::from_value(&event.topic, event.event.clone());
-                records_without_key.push(record);
+                let key = None;
+                let value = Some(event.event.clone().into_bytes());
+                let headers = BTreeMap::new();
+                let timestamp = OffsetDateTime::now_utc();
+                let record = Record { key, value, headers, timestamp };
+                records.push(record);
             }
         }
     }
 
-    let res_with_key = match producer.send_all::<String, String>(&*records_with_key) {
+    let res = match producer.produce(records, Compression::NoCompression).await {
         Ok(_) => Ok(()),
-        Err(e) => Err(format!("{}", e)),
+        Err(e) => Err(format!("{:?}", e)),
     };
-    let res_without_key = match producer.send_all::<(), String>(&*records_without_key) {
-        Ok(_) => Ok(()),
-        Err(e) => Err(format!("{}", e)),
-    };
-    res_with_key.and(res_without_key)
+    res
 }
 
 pub struct KafkaEventReaderImpl {
-    consumer: Consumer,
-    topics: Vec<String>,
-    partitions: Vec<i32>
+    consumer: StreamConsumer,
+    topic: String,
+    partition: i32
 }
 
-impl KafkaEventReaderImpl {
-    pub fn for_partitions(
-        host: &str,
-        partitions: &[i32],
-        topics: &[&str],
-    ) -> Result<KafkaEventReaderImpl, String> {
-        debug!("connecting partition specific consumer to kafka host {} with topics {:?} / partitions {:?}", host, topics, partitions);
-        let mut builder = Consumer::from_hosts(vec![host.to_owned()]);
-        let topics = topics.iter().map(|s| s.to_owned().to_owned()).collect::<Vec<String>>();
-        let partitions = partitions.iter().map(|i| *i).collect::<Vec<i32>>();
-        for topic in topics.iter() {
-            builder = builder.with_topic_partitions(topic.parse().unwrap(), &*partitions);
-        }
-        builder = builder
-            .with_fallback_offset(FetchOffset::Earliest)
-            .with_group("group".to_owned())
-            .with_offset_storage(GroupOffsetStorage::Kafka);
+// TODO: Hotfix, but does this really work?
+unsafe impl Send for KafkaEventReaderImpl {}
+unsafe impl Sync for KafkaEventReaderImpl {}
 
-        let consumer = builder.create();
-        if let Err(e) = consumer {
+impl KafkaEventReaderImpl {
+    pub async fn for_partition(
+        host: &str,
+        partition: &i32,
+        topic: &str,
+    ) -> Result<KafkaEventReaderImpl, String> {
+        debug!("connecting partition specific consumer to kafka host {} with topic {:?} / partition {:?}", host, topic, partition);
+        let partition_client = ClientBuilder::new(vec![host.to_owned()]).build().await.unwrap()
+            .partition_client(topic.to_owned(), partition.clone()).await;
+
+        if let Err(e) = partition_client {
             let error = format!("Failed to connect consumer: {:?}", e);
             error!("{}", error);
             return Err(error);
         }
-        let consumer = consumer.unwrap();
-        debug!("successfully connected partition specific consumer to kafka host {} with topics {:?} / partitions {:?}", host, topics, partitions);
-        Ok(KafkaEventReaderImpl { consumer, topics, partitions })
+        let partition_client = Arc::new(partition_client.unwrap());
+        let consumer = StreamConsumerBuilder::new(
+            partition_client,
+            StartOffset::Earliest
+        ).with_max_wait_ms(1).build();
+        debug!("successfully connected partition specific consumer to kafka host {} with topic {:?} / partition {:?}", host, topic, partition);
+        Ok(KafkaEventReaderImpl { consumer, topic: topic.to_owned(), partition: partition.clone() })
     }
 }
 
+#[async_trait]
 impl EventReaderImpl for KafkaEventReaderImpl {
-    fn read(&mut self) -> Result<Vec<EventWrapper>, String> {
-        self.consume()
+    async fn read(&mut self) -> Result<Vec<EventWrapper>, String> {
+        self.consume().await
     }
 }
 
 impl KafkaEventReaderImpl {
-    fn consume(&mut self) -> Result<Vec<EventWrapper>, String> {
-        debug!("kafka consumer called to consume messages for {:?} / {:?}", self.topics, self.partitions);
-        let polled = self.consumer.poll().unwrap();
-        let message_sets: Vec<MessageSet<'_>> = polled.iter().collect();
-        let mut events = vec![];
-        for ms in message_sets {
-            let mut topic_event_count = 0;
-            let topic = ms.topic();
-            let partition = ms.partition();
-            trace!("querying kafka topic={} partition={}", topic, partition);
-            for m in ms.messages() {
-                let event = EventWrapper {
-                    topic: String::from(topic),
-                    key: Some(std::str::from_utf8(m.key).unwrap().parse().unwrap()),
-                    event: std::str::from_utf8(m.value).unwrap().parse().unwrap(),
-                };
-                topic_event_count += 1;
-                events.push(event);
-            }
-            trace!(
-                "returned {:?} events for topic={} partition={}",
-                topic_event_count, topic, partition
-            );
-            self.consumer.consume_messageset(ms).unwrap();
+    async fn consume(&mut self) -> Result<Vec<EventWrapper>, String> {
+        debug!("kafka consumer called to consume messages for {:?} / {:?}", self.topic, self.partition);
+        // TODO: This is a problem:
+        // - The peer inputs are intermittent to the host, because sometimes it will timeout without receiving the peer's inputs
+        // - The peer will receive the host's inputs intermittent in the same way.
+        let next_res = tokio::time::timeout(Duration::from_millis(3), self.consumer.next()).await;
+        if let Err(e) = next_res {
+            info!("No record received in time after {}, timeout for {} / {}.", e, self.topic, self.partition);
+            return Ok(vec![]);
         }
-        self.consumer.commit_consumed().unwrap();
-        trace!("kafka consumed {} messages for {:?} / {:?}", events.len(), self.topics, self.partitions);
+        let next_res = next_res.unwrap();
+        if let None = next_res {
+            debug!("No record retrieved for {} / {}", self.topic, self.partition);
+            return Err("No record.".to_owned());
+        }
+        let next_res = next_res.unwrap();
+        if let Err(e) = next_res {
+            let error = format!("Failed to extract record for {} / {}: {:?}", self.topic, self.partition, e);
+            error!("{}", error);
+            return Err(error);
+        }
+        let (record, _) = next_res.unwrap();
+        debug!("kafka consumer retrieved record: {:?}", record);
+        let key = match record.record.key {
+            Some(k) => Some(std::str::from_utf8(&*k).unwrap().to_owned()),
+            None => None
+        };
+        let event = match record.record.value {
+            Some(e) => std::str::from_utf8(&*e).unwrap().to_owned(),
+            None => panic!("event without payload!")
+        };
+        let event = EventWrapper {
+            topic: String::from(self.topic.clone()),
+            key,
+            event,
+        };
+        debug!("converted record to event: {:?}", event);
+        let events = vec![event];
         Ok(events)
     }
 }
 
 pub struct KafkaSessionEventReaderImpl {
-    inner: KafkaEventReaderImpl,
+    inner: HashMap<String, KafkaEventReaderImpl>
 }
 
 impl KafkaSessionEventReaderImpl {
-    pub fn new(
+    pub async fn new(
         host: &str,
         session: &Session,
         topics: &[&str],
     ) -> Result<KafkaSessionEventReaderImpl, String> {
-        let partitions = [session.id as i32];
-        let reader = KafkaEventReaderImpl::for_partitions(host, &partitions, topics);
-        if let Err(_) = reader {
-            return Err("Failed to create kafka session event reader".to_string());
+        let mut reader_map = HashMap::new();
+        for topic in topics {
+            let reader = KafkaEventReaderImpl::for_partition(host, &i32::from(session.id), *topic).await;
+            if let Err(_) = reader {
+                return Err("Failed to create kafka session event reader".to_string());
+            }
+            let reader = reader.unwrap();
+            reader_map.insert(topic.to_owned().to_owned(), reader);
         }
-        let reader = reader.unwrap();
-        Ok(KafkaSessionEventReaderImpl { inner: reader })
+        Ok(KafkaSessionEventReaderImpl { inner: reader_map })
     }
 }
 
+#[async_trait]
 impl EventReaderImpl for KafkaSessionEventReaderImpl {
-    fn read(&mut self) -> Result<Vec<EventWrapper>, String> {
-        self.inner.read()
+    async fn read(&mut self) -> Result<Vec<EventWrapper>, String> {
+        let mut events = vec![];
+        for topic_reader in self.inner.iter_mut() {
+            let topic_events = topic_reader.1.read().await;
+            if let Err(e) = topic_events {
+                let error = format!("Failed to consume events for topic {}: {}", topic_reader.0, e);
+                return Err(error);
+            }
+            let topic_events = topic_events.unwrap();
+            for event in topic_events {
+                events.push(event);
+            }
+        }
+        Ok(events)
     }
 }
 
@@ -259,19 +299,4 @@ impl KafkaTopicManager {
 #[derive(Deserialize)]
 struct PartitionApiDTO {
     data: u16,
-}
-
-pub struct SessionPartitioner {}
-
-impl Partitioner for SessionPartitioner {
-    fn partition(&mut self, _topics: Topics, msg: &mut ProduceMessage) {
-        match msg.key {
-            Some(key) => {
-                let key = std::str::from_utf8(key).unwrap();
-                msg.partition = key.parse::<i32>().unwrap();
-                // println!("Overriding message partition with key: {}", msg.partition);
-            }
-            None => panic!("Producing message without key not allowed!"),
-        }
-    }
 }

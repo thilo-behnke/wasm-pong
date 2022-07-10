@@ -7,10 +7,18 @@
 
     let frame: number;
 
+    let lastTick;
+
     $: if (networkTickEvents && $networkTickEvents.hasNext) {
         const tick = networkTickEvents.next() as HostSessionSnapshot;
         if (tick != null) {
-            gameField.update(tick.objects, tick.state);
+            if (lastTick && lastTick.ts >= tick.ts) {
+                // TODO: How is this possible?
+                console.warn(`!!!! Duplicated Tick ${tick.ts} (vs ${lastTick.ts}) !!!!`)
+            } else {
+                gameField.update(tick.objects, tick.state);
+                lastTick = tick;
+            }
         }
     }
 

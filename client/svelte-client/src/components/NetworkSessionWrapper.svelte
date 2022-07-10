@@ -19,6 +19,8 @@
     let cachedSessionId;
     let relevantKeyboardEvents: Readable<Input[]>;
 
+    let lastTick: number = null;
+
     $: if (!cachedSessionId && session && isPlayer(session.you)) {
         cachedSessionId = session.session_id;
         console.log("NetworkSessionWrapper ready, now setting up sessionEvents")
@@ -29,26 +31,32 @@
     }
 
     $: if (session && session.type === SessionType.HOST && session.state === SessionState.RUNNING) {
-        console.debug("sending host snapshot")
-        const state: GameState = $gameField.state;
-        networkEvents.produce({
-            state,
-            inputs: $sessionInputs,
-            session_id: session.session_id,
-            objects: $gameField.objects,
-            player_id: session.you.id,
-            ts: $gameField.ts
-        })
+        if (lastTick != $gameField.ts) {
+            console.debug("sending host snapshot")
+            const state: GameState = $gameField.state;
+            networkEvents.produce({
+                state,
+                inputs: $sessionInputs,
+                session_id: session.session_id,
+                objects: $gameField.objects,
+                player_id: session.you.id,
+                ts: $gameField.ts
+            });
+            lastTick = $gameField.ts;
+        }
     }
 
     $: if (session && session.type === SessionType.PEER && session.state === SessionState.RUNNING) {
-        console.debug("sending peer snapshot")
-        networkEvents.produce({
-            inputs: $relevantKeyboardEvents,
-            session_id: session.session_id,
-            player_id: session.you.id,
-            ts: $gameField.ts
-        })
+        if (lastTick != $gameField.ts) {
+            console.debug("sending peer snapshot")
+            networkEvents.produce({
+                inputs: $relevantKeyboardEvents,
+                session_id: session.session_id,
+                player_id: session.you.id,
+                ts: $gameField.ts
+            })
+            lastTick = $gameField.ts;
+        }
     }
 
     $: console.debug($networkSessionStateEvents)

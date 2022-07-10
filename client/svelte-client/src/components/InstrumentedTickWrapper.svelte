@@ -14,14 +14,9 @@
     $: if (networkTickEvents && $networkTickEvents.hasNext) {
         const tick = networkTickEvents.next() as HostSessionSnapshot;
         if (tick != null) {
-            if (lastTick && lastTick.ts >= tick.ts) {
-                // TODO: How is this possible?
-                console.error(`!!!! Duplicated Tick ${tick.ts} (vs ${lastTick.ts}) !!!!`)
-            } else {
-                inputs = tick.inputs;
-                gameField.update(tick.objects, tick.state);
-                lastTick = tick;
-            }
+            inputs = tick.inputs;
+            gameField.update(tick.objects, tick.state);
+            lastTick = tick;
         }
     }
 

@@ -1,26 +1,24 @@
-use std::collections::HashMap;
-use std::fmt::{Debug, format};
+use std::fmt::{Debug};
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::Duration;
-use hyper_tungstenite::HyperWebsocket;
-use tokio::sync::Mutex;
+
 use async_trait::async_trait;
 use futures::{SinkExt, StreamExt};
-use futures::future::err;
+use hyper_tungstenite::HyperWebsocket;
 use hyper_tungstenite::tungstenite::{Error, Message};
 use log::{debug, error, info, trace};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tokio::time::sleep;
-use serde::{Serialize, Deserialize};
+use tokio::sync::Mutex;
 use tokio::task;
-use pong::event::event::{EventWrapper, EventWriter};
+
+use pong::event::event::{EventWriter};
 use pong::game_field::{GameState, Input};
-use crate::event::{HeartBeatEventPayload, InputEventPayload, MoveEventBatchPayload, MoveEventPayload, SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType, StatusEventPayload, TickEvent};
-use crate::actor::{Actor, Player};
+
+use crate::actor::{Actor};
+use crate::event::{HeartBeatEventPayload, MoveEventBatchPayload, MoveEventPayload, SessionEvent, SessionEventListDTO, SessionEventPayload, SessionEventType, StatusEventPayload, TickEvent};
 use crate::session::{Session, SessionState};
 use crate::session_manager::{SessionManager, SessionWriter};
-use crate::utils::json_utils::unescape;
 
 #[async_trait]
 pub trait WebsocketHandler {
@@ -165,7 +163,7 @@ impl WebsocketHandler for DefaultWebsocketHandler {
                         };
 
                         let reason = format!("ws closed: {}", reason);
-                        write_session_close_event(&mut event_writer, &websocket_session_read_copy, reason.as_str());
+                        write_session_close_event(&mut event_writer, &websocket_session_read_copy, reason.as_str()).await;
                         break;
                     }
                     _ => {}

@@ -4,6 +4,10 @@ set -e
 
 echo "Environment prepared."
 
+echo "Hack for copying the main cargo.lock into the workspace members"
+cp Cargo.toml ./pong/
+cp Cargo.toml ./server/
+
 echo "Copy local dependencies into components."
 cp -r ./pong ./client/wasm/
 cp -r ./pong ./server/

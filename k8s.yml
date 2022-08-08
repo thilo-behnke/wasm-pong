@@ -1,0 +1,63 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kafka-zookeeper
+  labels:
+    wasm.pong.io/name: kafka-zookeeper
+spec:
+  containers:
+    - name: kafka-zookeeper
+      image: bitnami/zookeeper:latest
+      env:
+        - name: ALLOW_ANONYMOUS_LOGIN
+          value: yes
+      ports:
+        - containerPort: 2181
+          name: zookeeper-svc
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kafka
+  labels:
+    wasm.pong.io/name: kafka
+spec:
+  containers:
+    - name: kafka
+      image: localhost:5000/wasm-pong/kafka
+      ports:
+        - containerPort: 9092
+          name: kafka-bootstrap-svc-1
+        - containerPort: 9093
+          name: kafka-bootstrap-svc-2
+        - containerPort: 7243
+          name: kafka-topic-manager-svc
+      env:
+        - name: KAFKA_BROKER_ID
+          value: 1
+        - name: KAFKA_CFG_INTER_BROKER_LISTENER_NAME
+          value: K8S
+        - name: KAFKA_CFG_LISTENERS
+          value: LOCAL://:9093,K8S://kafka:9092
+        - name: KAFKA_CFG_ADVERTISED_LISTENERS
+          value: LOCAL://127.0.0.1:9093,K8S://kafka:9092
+        - name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
+          value: LOCAL:PLAINTEXT,K8S:PLAINTEXT
+        - name: KAFKA_CFG_ZOOKEEPER_CONNECT
+          value: zookeeper:2181
+        - name: ALLOW_PLAINTEXT_LISTENER
+          value: yes
+      livenessProbe:
+        exec:
+          command:
+            - "/opt/bitnami/kafka/bin/kafka-topics.sh"
+            - "--bootstrap-server localhost:9093"
+            - "--describe"
+          initialDelaySeconds: 10
+          periodSeconds: 30
+
+
+
+
+

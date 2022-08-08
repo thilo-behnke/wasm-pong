@@ -85,3 +85,30 @@ spec:
       protocol: TCP
       port: 7243
       targetPort: topic-svc
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    wasm.pong.io/name: nginx
+spec:
+  containers:
+    - name: client
+      image: docker-registry:443/wasm-pong/nginx
+      ports:
+        - containerPort: 80
+          name: http-svc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    wasm.pong.io/name: nginx
+  ports:
+    - name: nginx-port
+      protocol: TCP
+      port: 80
+      targetPort: http-svc

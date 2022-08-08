@@ -28,6 +28,28 @@ spec:
       protocol: TCP
       port: 2181
       targetPort: zookeeper-svc
+#---
+#apiVersion: v1
+#kind: Deployment
+#metadata:
+#  name: kafka-zookeeper-deployment
+#  labels:
+#    wasm.pong.io/name: kafka-zookeeper
+#spec:
+#  replicas: 1
+#  selector:
+#    matchLabels:
+#      wasm.pong.io/name: kafka-zookeeper
+#  template:
+#    metadata:
+#      labels:
+#        wasm.pong.io/name: kafka-zookeeper
+#    spec:
+#      containers:
+#        - name:
+#
+#
+#
 ---
 apiVersion: v1
 kind: Pod
@@ -96,6 +118,9 @@ spec:
   containers:
     - name: client
       image: docker-registry:443/wasm-pong/nginx
+      env:
+        - name: API_SERVER
+          value: pong-server-service
       ports:
         - containerPort: 80
           name: http-svc
@@ -107,6 +132,7 @@ metadata:
 spec:
   selector:
     wasm.pong.io/name: nginx
+  type: LoadBalancer
   ports:
     - name: nginx-port
       protocol: TCP

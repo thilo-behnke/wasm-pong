@@ -46,6 +46,8 @@ services:
     container_name: pong_nginx
     build:
       context: ./client
+    environment:
+      - API_SERVER=pong_server
     ports:
       - '80:80'
     network_mode: 'host'

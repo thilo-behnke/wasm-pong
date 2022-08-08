@@ -112,3 +112,37 @@ spec:
       protocol: TCP
       port: 80
       targetPort: http-svc
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pong-server
+  labels:
+    wasm.pong.io/name: pong-server
+spec:
+  containers:
+    - name: client
+      image: docker-registry:443/wasm-pong/pong-server
+      env:
+        - name: KAFKA_HOST
+          value: 'kafka-service:9092'
+        - name: KAFKA_TOPIC_MANAGER_HOST
+          value: 'kafka-service:7243'
+        - name: RUST_BACKTRACE
+          value: '1'
+      ports:
+        - containerPort: 4000
+          name: http-svc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pong-server-service
+spec:
+  selector:
+    wasm.pong.io/name: pong-server
+  ports:
+    - name: pong-server-port
+      protocol: TCP
+      port: 4000
+      targetPort: http-svc

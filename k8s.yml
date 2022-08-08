@@ -17,6 +17,19 @@ spec:
           name: zookeeper-svc
 ---
 apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-zookeeper-service
+spec:
+  selector:
+    wasm.pong.io/name: kafka-zookeeper
+  ports:
+    - name: kafka-zookeeper-service-port
+      protocol: TCP
+      port: 2181
+      targetPort: zookeeper-svc
+---
+apiVersion: v1
 kind: Pod
 metadata:
   name: kafka
@@ -45,7 +58,7 @@ spec:
         - name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
           value: LOCAL:PLAINTEXT,K8S:PLAINTEXT
         - name: KAFKA_CFG_ZOOKEEPER_CONNECT
-          value: zookeeper:2181
+          value: kafka-zookeeper-service:2181
         - name: ALLOW_PLAINTEXT_LISTENER
           value: "yes"
       livenessProbe:

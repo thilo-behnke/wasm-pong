@@ -39,9 +39,22 @@ async fn handle_request(req: Request<Body>) -> Result<Response<Body>, Infallible
     ))
     .await;
     match (req.method(), req.uri().path()) {
+        (&Method::GET, "/health_check") => handle_health_check().await,
         (&Method::POST, "/create_topic") => handle_create_topic(&req.uri()).await,
         (&Method::POST, "/add_partition") => handle_add_partition().await,
         _ => build_error_res("not found", StatusCode::NOT_FOUND),
+    }
+}
+
+async fn handle_health_check() -> Result<Response<Body>, Infallible> {
+    return match run_command(&format!("/opt/bitnami/kafka/bin/kafka-topics.sh --describe --bootstrap-server localhost:9093")).await {
+        Ok(_) => {
+            build_success_res("health check passed")
+        },
+        Err(e) => {
+            write_to_log(&format!("health check failed: {:?}", e));
+            build_error_res("health check failed", StatusCode::NOT_FOUND)
+        }
     }
 }
 
@@ -54,14 +67,16 @@ async fn handle_create_topic(uri: &Uri) -> Result<Response<Body>, Infallible> {
     let topic = topic.unwrap();
 
     write_to_log(&format!("Called to create topic {}.", topic)).await;
-    if verify_topic_exists(topic) {
+    if verify_topic_exists(topic).await {
+        write_to_log(&format!("Topic {} already exists, noop.", topic)).await;
         return build_success_res("topic already exists");
     }
 
-    run_command(&format!("/opt/bitnami/kafka/bin/kafka-topics.sh --create --topic {} --localhost:9093", topic)).await
-        .map(|| build_success_res(&format!("successfully created topic {}", topic)))
+    write_to_log(&format!("Topic {} does not already exists, try to create it now.", topic)).await;
+
+    run_command(&format!("/opt/bitnami/kafka/bin/kafka-topics.sh --create --topic {} --bootstrap-server localhost:9093", topic)).await
+        .map(|_| build_success_res(&format!("successfully created topic {}", topic)))
         .map_err(|e| {
-            write_to_log(&format!("Failed to create topic {}: {:?}", topic, e)).await;
             build_error_res(&format!("failed to create topic {}", topic), StatusCode::INTERNAL_SERVER_ERROR)
         })
         .unwrap()
@@ -82,13 +97,13 @@ pub fn get_query_params(uri: &Uri) -> HashMap<&str, &str> {
 
 
 async fn verify_topic_exists(topic: &str) -> bool {
-    return match run_command(&format!("/opt/bitnami/kafka/bin/kafka-topics.sh --describe --topic {} --localhost:9093", topic)).await {
+    return match run_command(&format!("/opt/bitnami/kafka/bin/kafka-topics.sh --describe --topic {} --bootstrap-server localhost:9093", topic)).await {
         Ok(_) => {
-            write_to_log(&format!("topic {} exists", topic));
+            write_to_log(&format!("topic {} exists", topic)).await;
             true
         },
         Err(e) => {
-            write_to_log(&format!("topic {} does not exist or caused other issues: {:?}", topic, e));
+            write_to_log(&format!("topic {} does not exist or caused other issues: {:?}", topic, e)).await;
             false
         }
     }
@@ -149,7 +164,7 @@ struct PartitionCountQueryError {
     message: String
 }
 
-async fn run_command(command: &str) -> std::io::Result<Output> {
+async fn run_command(command: &str) -> Result<Output, String> {
     write_to_log(&format!("Running command: {}", command)).await;
     let output = Command::new("/bin/bash")
         .arg("-c")
@@ -160,7 +175,10 @@ async fn run_command(command: &str) -> std::io::Result<Output> {
     let stderr = std::str::from_utf8(&*output.stderr).unwrap();
     write_to_log(&format!("Command returned stdout: {}", stdout)).await;
     write_to_log(&format!("Command returned stderr: {}", stderr)).await;
-    Ok(output)
+    return match output.status.success() {
+        true => Ok(output),
+        false => Err(stderr.to_owned())
+    };
 }
 
 pub fn build_success_res(value: &str) -> Result<Response<Body>, Infallible> {

@@ -77,14 +77,21 @@ pub async fn main() {
     let topics = ["session", "host_tick", "peer_tick", "heart_beat"];
     let http_client = Client::new();
     for topic in topics {
-        let req = Request::builder().method(Method::POST).uri(format!("{}/create_topic?topic={}", kafka_topic_manager_host, topic)).body(Body::empty()).expect("request builder for topic creation");
+        let req = Request::builder().method(Method::POST).uri(format!("http://{}/create_topic?topic={}", kafka_topic_manager_host, topic)).body(Body::empty()).expect("request builder for topic creation");
         let res = http_client.request(req).await;
         match res {
-            Ok(_) => {
-                info!("Successfully created topic {}", topic);
+            Ok(response) => {
+                let status = response.status();
+                if status == 200 {
+                    info!("Successfully created topic {}", topic);
+                } else {
+                    error!("Failed to create topic {}: {:?}", topic, status);
+                    panic!("unable to bootstrap app - failed at topic initialization")
+                }
             },
             Err(e) => {
                 error!("Failed to create topic {}: {:?}", topic, e);
+                panic!("unable to bootstrap app - failed at topic initialization")
             }
         }
     }

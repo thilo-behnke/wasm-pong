@@ -146,6 +146,19 @@ metadata:
   labels:
     wasm.pong.io/name: pong-server
 spec:
+  # https://stackoverflow.com/a/53852500/14388607
+  initContainers:
+    - name: wait-for-grafana
+      image: darthcabs/tiny-tools:1
+      args:
+        - /bin/bash
+        - -c
+        - >
+          set -x;
+          while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://kafka-service:7243/health_check)" != "200" ]]; do 
+            echo '.'
+            sleep 15;
+          done
   containers:
     - name: client
       image: docker-registry:443/wasm-pong/pong-server

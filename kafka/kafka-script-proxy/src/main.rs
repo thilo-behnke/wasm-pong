@@ -1,7 +1,8 @@
 extern crate core;
 
+use std::collections::HashMap;
 use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Method, Request, Response, Server, StatusCode};
+use hyper::{Body, Method, Request, Response, Server, StatusCode, Uri};
 use std::convert::Infallible;
 use std::process::Output;
 use tokio::fs::OpenOptions;
@@ -38,8 +39,58 @@ async fn handle_request(req: Request<Body>) -> Result<Response<Body>, Infallible
     ))
     .await;
     match (req.method(), req.uri().path()) {
+        (&Method::POST, "/create_topic") => handle_create_topic(&req.uri()).await,
         (&Method::POST, "/add_partition") => handle_add_partition().await,
         _ => build_error_res("not found", StatusCode::NOT_FOUND),
+    }
+}
+
+async fn handle_create_topic(uri: &Uri) -> Result<Response<Body>, Infallible> {
+    let query_params = get_query_params(uri);
+    let topic = query_params.get("topic");
+    if let None = topic {
+        return build_error_res("Missing mandatory query param >topic<", StatusCode::BAD_REQUEST);
+    }
+    let topic = topic.unwrap();
+
+    write_to_log(&format!("Called to create topic {}.", topic)).await;
+    if verify_topic_exists(topic) {
+        return build_success_res("topic already exists");
+    }
+
+    run_command(&format!("/opt/bitnami/kafka/bin/kafka-topics.sh --create --topic {} --localhost:9093", topic)).await
+        .map(|| build_success_res(&format!("successfully created topic {}", topic)))
+        .map_err(|e| {
+            write_to_log(&format!("Failed to create topic {}: {:?}", topic, e)).await;
+            build_error_res(&format!("failed to create topic {}", topic), StatusCode::INTERNAL_SERVER_ERROR)
+        })
+        .unwrap()
+}
+
+pub fn get_query_params(uri: &Uri) -> HashMap<&str, &str> {
+    let query = uri.query();
+    println!("uri={:?}, query={:?}", uri, query);
+    match query {
+        None => HashMap::new(),
+        Some(query) => query
+            .split("&")
+            .map(|s| s.split_at(s.find("=").unwrap()))
+            .map(|(key, value)| (key, &value[1..]))
+            .collect(),
+    }
+}
+
+
+async fn verify_topic_exists(topic: &str) -> bool {
+    return match run_command(&format!("/opt/bitnami/kafka/bin/kafka-topics.sh --describe --topic {} --localhost:9093", topic)).await {
+        Ok(_) => {
+            write_to_log(&format!("topic {} exists", topic));
+            true
+        },
+        Err(e) => {
+            write_to_log(&format!("topic {} does not exist or caused other issues: {:?}", topic, e));
+            false
+        }
     }
 }
 

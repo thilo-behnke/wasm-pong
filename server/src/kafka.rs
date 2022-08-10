@@ -38,6 +38,7 @@ impl KafkaSessionEventWriterImpl {
             }
             let producer = producer.unwrap();
             producers.insert(topic.to_owned(), producer);
+            debug!("Successfully connected kafka producer for topic={}, partition={}", topic, partition)
         }
         KafkaSessionEventWriterImpl { topics: owned_topics, partitions: vec![partition.clone()], producers }
     }
@@ -59,7 +60,7 @@ impl EventWriterImpl for KafkaSessionEventWriterImpl {
             }
         }
         for topic_events in by_topic {
-            let mut producer = self.producers.get_mut(&topic_events.0);
+            let producer = self.producers.get_mut(&topic_events.0);
             if let None = producer {
                 let available = self.producers.keys().collect::<Vec<&String>>();
                 return Err(format!("Could not find producer for topic: {}. Available topic producers: {:?}", &topic_events.0, available));
@@ -97,9 +98,16 @@ async fn write_events(events: Vec<EventWrapper>, producer: &mut PartitionClient)
         }
     }
 
+    debug!("producer ready to write records to kafka: {:?}", records);
     let res = match producer.produce(records, Compression::NoCompression).await {
-        Ok(_) => Ok(()),
-        Err(e) => Err(format!("{:?}", e)),
+        Ok(_) => {
+            debug!("producer successfully wrote records to kafka");
+            Ok(())
+        },
+        Err(e) => {
+            debug!("producer failed to write records to kafka: {:?}", e);
+            Err(format!("{:?}", e))
+        },
     };
     res
 }

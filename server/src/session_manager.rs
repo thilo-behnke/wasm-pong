@@ -179,7 +179,6 @@ impl SessionManager {
         let json_event = json_event.unwrap();
         info!("preparing to write session event to kafka: {}", json_event);
         let mut session_writer = self.get_session_writer(session_id).await.unwrap();
-        // TODO: This gets stuck in K8S - fix
         let session_event_write = session_writer.write_to_session("session", vec![&json_event]).await;
         if let Err(e) = session_event_write {
             let message = format!("Failed to write session event to kafka: {:?}", e);

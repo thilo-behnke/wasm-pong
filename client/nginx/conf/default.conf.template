@@ -1,3 +1,11 @@
+upstream api_server {
+    server ${API_SERVER}:4000;
+}
+
+upstream web_client {
+    server localhost:8080;
+}
+
 server {
     listen 443 ssl;
     ssl_protocols TLSv1 TLSv1.1 TLSv1.2;

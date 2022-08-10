@@ -13,8 +13,8 @@ cp -r ./pong ./client/wasm/
 cp -r ./pong ./server/
 
 echo "Start docker containers."
-docker-compose down
-docker-compose up -d --build --force-recreate kafka zookeeper nginx
+docker-compose -f docker-compose.dev.yml down
+docker-compose -f docker-compose.dev.yml up -d --build --force-recreate kafka zookeeper nginx
 
 echo "Remove temporary local dependencies from components."
 rm -rf ./client/wasm/pong

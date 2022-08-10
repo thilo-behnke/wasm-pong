@@ -1,4 +1,4 @@
-FROM rust:latest as build_stage
+FROM rust:1.61.0 as build_stage
 
 RUN mkdir /build
 ADD ./ /build/server

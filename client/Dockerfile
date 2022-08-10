@@ -29,7 +29,7 @@ FROM nginx:latest
 
 COPY --from=svelte_build_stage /build/svelte-client/dist/ /usr/share/nginx/pong/web
 
-COPY ./nginx/conf/default.conf /etc/nginx/conf.d/default.conf
+COPY nginx/conf/default.conf.template /etc/nginx/templates/default.conf.template
 COPY ./nginx/conf/nginx.conf /etc/nginx/nginx.conf
 COPY ./nginx/ssl/wasm-pong.pem /etc/ssl/wasm-pong.pem
 COPY ./nginx/ssl/private.key /etc/ssl/private.key

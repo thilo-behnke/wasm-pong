@@ -1,5 +1,6 @@
 extern crate core;
 
+use hyper::{Body, Client, Method, Request};
 use log::{debug, error, info, Level, LevelFilter};
 use log4rs::append::console::{ConsoleAppender, ConsoleAppenderConfig};
 use log4rs::append::file::FileAppender;
@@ -71,6 +72,29 @@ pub async fn main() {
         Err(_) => "localhost:7243".to_owned(),
     };
     info!("KAFKA_TOPIC_MANAGER_HOST={}", kafka_topic_manager_host);
+
+    info!("BOOTSTRAP: Create topics if needed");
+    let topics = ["session", "host_tick", "peer_tick", "heart_beat"];
+    let http_client = Client::new();
+    for topic in topics {
+        let req = Request::builder().method(Method::POST).uri(format!("http://{}/create_topic?topic={}", kafka_topic_manager_host, topic)).body(Body::empty()).expect("request builder for topic creation");
+        let res = http_client.request(req).await;
+        match res {
+            Ok(response) => {
+                let status = response.status();
+                if status == 200 {
+                    info!("Successfully created topic {}", topic);
+                } else {
+                    error!("Failed to create topic {}: {:?}", topic, status);
+                    panic!("unable to bootstrap app - failed at topic initialization")
+                }
+            },
+            Err(e) => {
+                error!("Failed to create topic {}: {:?}", topic, e);
+                panic!("unable to bootstrap app - failed at topic initialization")
+            }
+        }
+    }
 
     info!("booting up server");
     HttpServer::new([0, 0, 0, 0], 4000, &kafka_host, &kafka_topic_manager_host)

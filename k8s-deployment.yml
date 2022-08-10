@@ -1,0 +1,210 @@
+---
+# TODO: Breaks if the pong-server is restarted => 499
+# https://serverfault.com/questions/833466/nginx-failing-once-a-week-responds-with-499-until-nignx-reload
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    wasm.pong.io/name: nginx
+  type: LoadBalancer
+  ports:
+    - name: nginx-port
+      protocol: TCP
+      port: 80
+      targetPort: http-svc
+    - name: nginx-sec-port
+      protocol: TCP
+      port: 443
+      targetPort: https-svc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    wasm.pong.io/name: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      wasm.pong.io/name: nginx
+  template:
+    metadata:
+      name: nginx
+      labels:
+        wasm.pong.io/name: nginx
+    spec:
+      containers:
+        - name: client
+          image: docker-registry:443/wasm-pong/nginx
+          env:
+            - name: API_SERVER
+              value: pong-server-service
+          ports:
+            - containerPort: 80
+              name: http-svc
+            - containerPort: 443
+              name: https-svc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-zookeeper-service
+spec:
+  selector:
+    wasm.pong.io/name: kafka-zookeeper
+  ports:
+    - name: kafka-zookeeper-service-port
+      protocol: TCP
+      port: 2181
+      targetPort: zookeeper-svc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-zookeeper-deployment
+  labels:
+    wasm.pong.io/name: kafka-zookeeper
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      wasm.pong.io/name: kafka-zookeeper
+  template:
+    metadata:
+      name: kafka-zookeeper
+      labels:
+        wasm.pong.io/name: kafka-zookeeper
+    spec:
+      containers:
+      - name: kafka-zookeeper
+        image: bitnami/zookeeper:latest
+        env:
+        - name: ALLOW_ANONYMOUS_LOGIN
+          value: "yes"
+        ports:
+        - containerPort: 2181
+          name: zookeeper-svc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service
+spec:
+  selector:
+    wasm.pong.io/name: kafka
+  ports:
+    - name: kafka-service-port
+      protocol: TCP
+      port: 9092
+      targetPort: bootstrap-svc
+    - name: kafka-topic-service-port
+      protocol: TCP
+      port: 7243
+      targetPort: topic-svc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-deployment
+  labels:
+    wasm.pong.io/name: kafka
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      wasm.pong.io/name: kafka
+  template:
+    metadata:
+      labels:
+        wasm.pong.io/name: kafka
+    spec:
+      containers:
+      - name: kafka
+        image: docker-registry:443/wasm-pong/kafka
+        ports:
+        - containerPort: 9092
+          name: bootstrap-svc
+        - containerPort: 7243
+          name: topic-svc
+        env:
+        - name: KAFKA_CFG_INTER_BROKER_LISTENER_NAME
+          # TODO: This will not work with multiple replicas
+          value: LOCAL
+        - name: KAFKA_CFG_LISTENERS
+          value: LOCAL://localhost:9093,K8S://:9092
+        - name: KAFKA_CFG_ADVERTISED_LISTENERS
+          value: LOCAL://localhost:9093,K8S://kafka-service:9092
+        - name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
+          value: LOCAL:PLAINTEXT,K8S:PLAINTEXT
+        - name: KAFKA_CFG_ZOOKEEPER_CONNECT
+          value: kafka-zookeeper-service:2181
+        - name: ALLOW_PLAINTEXT_LISTENER
+          value: "yes"
+        livenessProbe:
+          exec:
+            command:
+            - "/opt/bitnami/kafka/bin/kafka-topics.sh"
+            - "--bootstrap-server localhost:9093"
+            - "--describe"
+          initialDelaySeconds: 10
+          periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pong-server-service
+spec:
+  selector:
+    wasm.pong.io/name: pong-server
+  ports:
+    - name: pong-server-port
+      protocol: TCP
+      port: 4000
+      targetPort: http-svc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pong-server-deployment
+  labels:
+    wasm.pong.io/name: pong-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      wasm.pong.io/name: pong-server
+  template:
+    metadata:
+      labels:
+        wasm.pong.io/name: pong-server
+    spec:
+    # https://stackoverflow.com/a/53852500/14388607
+      initContainers:
+      - name: wait-for-kafka
+        image: darthcabs/tiny-tools:1
+        args:
+        - /bin/bash
+        - -c
+        - >
+          set -x;
+          while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://kafka-service:7243/health_check)" != "200" ]]; do 
+            echo '.'
+            sleep 15;
+          done
+      containers:
+      - name: client
+        image: docker-registry:443/wasm-pong/pong-server
+        env:
+        - name: KAFKA_HOST
+          value: 'kafka-service:9092'
+        - name: KAFKA_TOPIC_MANAGER_HOST
+          value: 'kafka-service:7243'
+        - name: RUST_BACKTRACE
+          value: '1'
+        ports:
+        - containerPort: 4000
+          name: http-svc
+---

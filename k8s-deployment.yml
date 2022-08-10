@@ -85,3 +85,71 @@ spec:
         ports:
         - containerPort: 2181
           name: zookeeper-svc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service
+spec:
+  selector:
+    wasm.pong.io/name: kafka
+  ports:
+    - name: kafka-service-port
+      protocol: TCP
+      port: 9092
+      targetPort: bootstrap-svc
+    - name: kafka-topic-service-port
+      protocol: TCP
+      port: 7243
+      targetPort: topic-svc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-deployment
+  labels:
+    wasm.pong.io/name: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      wasm.pong.io/name: kafka
+  template:
+    metadata:
+      labels:
+        wasm.pong.io/name: kafka
+    spec:
+      containers:
+      - name: kafka
+        image: docker-registry:443/wasm-pong/kafka
+        ports:
+        - containerPort: 9092
+          name: bootstrap-svc
+        - containerPort: 7243
+          name: topic-svc
+        env:
+        - name: KAFKA_BROKER_ID
+          # TODO: How to manage the broker id with multiple replicas?
+          value: "1"
+        - name: KAFKA_CFG_INTER_BROKER_LISTENER_NAME
+          # TODO: This will not work with multiple replicas
+          value: LOCAL
+        - name: KAFKA_CFG_LISTENERS
+          value: LOCAL://localhost:9093,K8S://:9092
+        - name: KAFKA_CFG_ADVERTISED_LISTENERS
+          value: LOCAL://localhost:9093,K8S://kafka-service:9092
+        - name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
+          value: LOCAL:PLAINTEXT,K8S:PLAINTEXT
+        - name: KAFKA_CFG_ZOOKEEPER_CONNECT
+          value: kafka-zookeeper-service:2181
+        - name: ALLOW_PLAINTEXT_LISTENER
+          value: "yes"
+        livenessProbe:
+          exec:
+            command:
+            - "/opt/bitnami/kafka/bin/kafka-topics.sh"
+            - "--bootstrap-server localhost:9093"
+            - "--describe"
+          initialDelaySeconds: 10
+          periodSeconds: 30
+---

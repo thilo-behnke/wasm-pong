@@ -71,12 +71,12 @@ spec:
           # TODO: How to manage the broker id with multiple replicas?
           value: "1"
         - name: KAFKA_CFG_INTER_BROKER_LISTENER_NAME
-          value: K8S
+          # TODO: This will not work with multiple replicas
+          value: LOCAL
         - name: KAFKA_CFG_LISTENERS
-          # TODO: Does not work with minikube
-          value: LOCAL://:9093,K8S://0.0.0.0:9092
+          value: LOCAL://localhost:9093,K8S://:9092
         - name: KAFKA_CFG_ADVERTISED_LISTENERS
-          value: LOCAL://127.0.0.1:9093,K8S://kafka-service:9092
+          value: LOCAL://localhost:9093,K8S://kafka-service:9092
         - name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
           value: LOCAL:PLAINTEXT,K8S:PLAINTEXT
         - name: KAFKA_CFG_ZOOKEEPER_CONNECT

@@ -1,5 +1,6 @@
 ---
 # TODO: Breaks if the pong-server is restarted => 499
+# https://serverfault.com/questions/833466/nginx-failing-once-a-week-responds-with-499-until-nignx-reload
 apiVersion: v1
 kind: Service
 metadata:

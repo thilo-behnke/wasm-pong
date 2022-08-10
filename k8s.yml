@@ -148,7 +148,7 @@ metadata:
 spec:
   # https://stackoverflow.com/a/53852500/14388607
   initContainers:
-    - name: wait-for-grafana
+    - name: wait-for-kafka
       image: darthcabs/tiny-tools:1
       args:
         - /bin/bash

@@ -45,3 +45,43 @@ spec:
               name: http-svc
             - containerPort: 443
               name: https-svc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-zookeeper-service
+spec:
+  selector:
+    wasm.pong.io/name: kafka-zookeeper
+  ports:
+    - name: kafka-zookeeper-service-port
+      protocol: TCP
+      port: 2181
+      targetPort: zookeeper-svc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-zookeeper-deployment
+  labels:
+    wasm.pong.io/name: kafka-zookeeper
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      wasm.pong.io/name: kafka-zookeeper
+  template:
+    metadata:
+      name: kafka-zookeeper
+      labels:
+        wasm.pong.io/name: kafka-zookeeper
+    spec:
+      containers:
+      - name: kafka-zookeeper
+        image: bitnami/zookeeper:latest
+        env:
+        - name: ALLOW_ANONYMOUS_LOGIN
+          value: "yes"
+        ports:
+        - containerPort: 2181
+          name: zookeeper-svc

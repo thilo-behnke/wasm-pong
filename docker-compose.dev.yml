@@ -47,8 +47,7 @@ services:
     build:
       context: ./client
     environment:
-      - API_SERVER=pong_server
+      - API_SERVER=localhost
     ports:
       - '80:80'
-    depends_on:
-      - server
+    network_mode: 'host'

@@ -112,7 +112,7 @@ metadata:
   labels:
     wasm.pong.io/name: kafka
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       wasm.pong.io/name: kafka
@@ -130,9 +130,6 @@ spec:
         - containerPort: 7243
           name: topic-svc
         env:
-        - name: KAFKA_BROKER_ID
-          # TODO: How to manage the broker id with multiple replicas?
-          value: "1"
         - name: KAFKA_CFG_INTER_BROKER_LISTENER_NAME
           # TODO: This will not work with multiple replicas
           value: LOCAL
